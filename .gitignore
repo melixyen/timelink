@@ -5,6 +5,7 @@ server/download/
 server/sqlite/
 server/backup/
 server/data/
+server/self/
 server/t/
 server/admin-setup.txt
 
