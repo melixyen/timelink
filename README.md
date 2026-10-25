@@ -90,16 +90,17 @@ SPDX-License-Identifier: Unicode-3.0
 
 ## 開發接續（給 AI 代理與新的開發對話）
 
-這一節記錄到 2026-10-25 為止的協作規則、已定案的設計決策與待辦，讓新的對話不必重新討論。這裡是公開 repo，**只寫通則**；站址、主機操作方式、密碼與 PAT 都不在 repo 裡。
+這一節是給 AI 代理的操作指引：開始前要讀的文件、協作規則與已定案的設計決策，讓新的對話不必重新討論。目前狀態與待辦是工作交接，寫在 [`server/agent/claude_session_transger_task.md`](server/agent/claude_session_transger_task.md)，不寫在這裡。這裡是公開 repo，**只寫通則**；站址、主機操作方式、密碼與 PAT 都不在 repo 裡。
 
 ### 開始前依序讀
 
 1. 本節
 2. [`server/agent/README.md`](server/agent/README.md)：agent 資料夾的規則、目錄與私密資料的分工
 3. 主機上的 `custom/agent/README.md`（私密筆記，不進版控）：站址、主機操作與部署、後臺帳號、本機開發環境的重建方式。連線方式與憑證由 Melix 在對話開頭提供，憑證只放環境變數
-4. 要改哪一塊就讀哪個 skill：`server/agent/skills/*/SKILL.md`（找路與轉乘的決策都在 `rail-transfer`）
-5. [`server/agent/claude/README.md`](server/agent/claude/README.md)：比對工具、基準與驗證流程
-6. 網站的 `/txapi/readme`：對外 API 的完整說明
+4. [`server/agent/claude_session_transger_task.md`](server/agent/claude_session_transger_task.md)：工作交接（接手步驟、目前狀態、待辦、操作上踩過的坑）
+5. 要改哪一塊就讀哪個 skill：`server/agent/skills/*/SKILL.md`（找路與轉乘的決策都在 `rail-transfer`）
+6. [`server/agent/claude/README.md`](server/agent/claude/README.md)：比對工具、基準與驗證流程
+7. 網站的 `/txapi/readme`：對外 API 的完整說明
 
 ### 協作規則
 
@@ -140,16 +141,3 @@ SPDX-License-Identifier: Unicode-3.0
 
 - 單一 public repo，`server/` 放網站、`client/` 留給未來的查詢網站
 - 程式放在 `server/` 子目錄，所以主機商內建的 Git 佈署（拉整個 repo）不適用
-
-### 目前狀態（2026-10-25）
-
-- 規劃的 `public_`、`app_` API 都已上線；`dev` 分支、線上主機、工作副本三邊一致
-- 回歸測試 `server/agent/skills/rail-transfer/scripts/route_regression.php` 53 條全過
-- 比對基準（離線資料 2026-10-15）：bench 25 組約 2.2 秒、高雄 480 組約 13 秒、北北基桃 400 組約 21 秒；改演算法或規則後照 `server/agent/claude/README.md` 跑比對，退步就修，不能直接改基準
-
-### 待辦與待決
-
-- [ ] 佈署方式：B（GitHub Actions＋FTP 同步）或 C（GitHub Actions 打包＋主機端 `admin_deploy` 解壓、健康檢查失敗自動還原），由 Melix 決定
-- [ ] 會員系統（暫停）：會員 token 的格式與簽發方式（先保留 `tlm_` 前綴）、各等級的上限數值（`APP_TIERS`）；會員系統開工前所有人都是 Guest、不另設限制
-- [ ] 未來功能：票價（只用 TDX 或官方公式）、路由用離線資料找出後每班車的時刻改用 TDX 線上最新資料（兩者都經由 `X-TDX-Authorization`）
-- [ ] `client/` 查詢網站
