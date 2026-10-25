@@ -18,6 +18,7 @@ Claude（AI 代理）自己的比對工具、基準資料與重建指引。內�
 | `compare/railtime_routes.php` | railtime 路由與本站路由的轉乘站比對，列出 railtime 有、本站沒有的走法並分類原因 |
 | `compare/railtime_bypass.php` | railtime 的 52 條「依起訖站排除的轉乘走法」改寫成 RouteBans 的轉乘走法排除（`--write` 寫進規則檔，保留人工 Disabled） |
 | `compare/rule_pairs.php`、`compare/rule_blame.php` | 轉乘走法排除的驗證：依每條規則的起訖條件抽起訖；比較規則開／關的結果，找出害方案變差的規則 |
+| `compare/livecmp.php` | 本機與線上的輸出比對：同一組查詢打兩邊的 `/txapi/`，去掉 meta 與計時欄位後比較 data（`TDX_BASE=<線上站址> php livecmp.php [本機站址] [查詢清單.json]`）；部署後確認線上與本機一致用 |
 | `data/railtime_*.json` | 從 railtime 匯出的車站、路線、對照表、北北基桃路由、bypass 走法 |
 | `data/pairs_*.json` | 比對起訖（題目固定，資料更新也不換） |
 | `data/baseline_*.json` | 目前的基準（標頭記錄離線資料版本、找路程式與規則檔的雜湊） |
