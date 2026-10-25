@@ -1,0 +1,397 @@
+{
+    "_說明": [
+        "TimeLink 設定項目與預設值（進版控）。每一項：group 分組、default 預設值、level 公開程度、desc 說明。",
+        "level：public＝公開顯示目前的值；private＝公開時只顯示預設值與「有自訂」，要後臺 admin_settings 讀取權限才看得到；secret＝任何人都只看得到「已設定／未設定」。",
+        "desc 可以是字串或多行字串陣列；快取時間單位是秒（例如 604800＝7 天）。",
+        "要覆蓋的值寫在 custom/libs/config.json（不進版控），只放要改的項目，例如 {\"QUERY_RATE_LIMIT_PER_MINUTE\": 30}；後臺「設定管理」也是寫那個檔案。",
+        "新增設定：在這裡加一項，程式就能用同名常數讀取（libs/config.php 會依這份清單 define）。"
+    ],
+    "items": {
+        "SITE_HOST": {
+            "group": "本站",
+            "level": "private",
+            "default": "localhost",
+            "desc": "本站的主機名稱（例如 api.example.com）：沒有 HTTP Host 時（命令列、排程）產生網址用"
+        },
+        "PRODUCT_NAME": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "TimeLink",
+            "desc": "商品名稱：整個產品（Proxy 服務＋用離線資料建構的查詢服務 /txapi/）的名稱，後臺標題（「<商品名稱> 後臺」）等處顯示"
+        },
+        "PRODUCT_SERVICE_NAME": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "TDX Proxy",
+            "desc": "Proxy 服務名稱：商品提供的 TDX 轉發服務（/api/，代管 token、把查過的資料存進快取以節省 TDX 用量），顯示在屬於 Proxy 的部分"
+        },
+        "ORG_NAME": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "",
+            "desc": "所屬單位（純文字）：用在頁面標題、純文字場合"
+        },
+        "ORG_NAME_HTML": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "",
+            "desc": "所屬單位的 HTML 寫法（可用有顏色的字，例如 <span style=\"color:blue\">…</span>）；空白時顯示 ORG_NAME"
+        },
+        "DEVELOPER_NAME": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "",
+            "desc": "開發者名稱"
+        },
+        "DEVELOPER_EMAIL": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "",
+            "desc": "開發者 Email"
+        },
+        "SITE_NOTICE_HTML": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "資料來源：交通部 <a href=\"https://tdx.transportdata.tw/\" target=\"_blank\" rel=\"noopener\">TDX 運輸資料流通服務平臺</a>，依<a href=\"https://data.gov.tw/license\" target=\"_blank\" rel=\"noopener\">政府資料開放授權條款</a>提供；查詢結果由本站整理計算，僅供參考，實際以各營運單位公告為準。<a href=\"https://tdx.transportdata.tw/\" target=\"_blank\" rel=\"noopener\" title=\"交通部 TDX 運輸資料流通服務平臺\" style=\"display:inline-block;vertical-align:middle;margin:2px 0 2px 6px;line-height:0\"><img src=\"https://tdx.transportdata.tw/images/tdxlogo.png\" alt=\"交通部 TDX 運輸資料流通服務\" width=\"119\" height=\"22\" loading=\"lazy\" style=\"height:22px;width:auto;background:#fff;border-radius:4px;padding:2px 4px\"></a>",
+            "desc": "頁尾聲明（HTML）：TDX 的使用規範要求標示資料來自交通部 TDX 平臺並加入平臺標章（預設附上 TDX 官方標章 https://tdx.transportdata.tw/images/tdxlogo.png，白底圓角，深色模式也看得清楚）"
+        },
+        "PRIVACY_NOTICE_HTML": {
+            "group": "商品、單位與聲明",
+            "level": "public",
+            "default": "本站會記錄連線的 IP 位址、瀏覽器資訊（User-Agent）與存取的網址，只用於防止濫用與流量統計，保留 {days} 天後自動刪除；不用於廣告或追蹤。本站不使用廣告或追蹤 Cookie，只在你的瀏覽器記住「已讀過這則提示」。",
+            "desc": [
+                "公開監控面板（/panel/）底部的資料收集提示（HTML）；第一次開啟時顯示，按下「我知道了」後記在瀏覽器（localStorage），內容改了會再顯示一次。",
+                "{days} 會換成流量紀錄的保留天數（TRAFFIC_LOG_RETENTION_DAYS）。空白＝不顯示提示。"
+            ]
+        },
+        "ALLOWED_ORIGINS": {
+            "group": "開放網域",
+            "level": "private",
+            "default": [
+                "localhost",
+                "127.0.0.1"
+            ],
+            "desc": [
+                "允許呼叫 TDX 轉發（/api/）、可以不帶自己金鑰直接用本站金鑰的前端網域（陣列）。CORS header 一律全面開放（*），瀏覽器不會擋；這份名單是 PHP 端判斷「要不要處理」，不在名單內回 403。",
+                "看 Origin，沒有 Origin 時看 Referer，只比對主機名稱（不含通訊協定與 port）；'*.example.com' 匹配任意層子網域，但不含 example.com 本身。",
+                "特殊值：'null' = 瀏覽器送 Origin: null（直接開啟本機 HTML、沙盒 iframe）；'' = 完全沒有 Origin 與 Referer（網址列、curl、Node 等）。",
+                "註：/txapi/ 的查詢不限來源，改用下面的 IP 查詢次數限制。"
+            ]
+        },
+        "QUERY_RATE_LIMIT_PER_MINUTE": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 60,
+            "desc": "同一 IP 每分鐘最多幾次查詢（固定時間窗），超過回 HTTP 429（錯誤代碼 42901）。0＝不限制。已登入後臺或帶 PAT 的請求不計。"
+        },
+        "QUERY_RATE_LIMIT_PER_HOUR": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 1000,
+            "desc": "同一 IP 每小時最多幾次查詢（固定時間窗），超過回 HTTP 429（錯誤代碼 42902）。0＝不限制。"
+        },
+        "QUERY_MAX_RANGE_MINUTES": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 180,
+            "desc": "查詢時段的最長範圍（分鐘），也是只給 start（或只給 end）時自動補的長度：app_trip 的 journeys、route_trains（end − start 超過回 40001）、direct、app_line/timetable 只給一端時補這個長度；舊 /txapi/transfer 的 func=route 的 end − start（沒給 end 時最多搜到 start＋這個值）、func=follow 的 before＋after。0＝不限（只給一端時延伸到營運日頭尾）。"
+        },
+        "APP_JOURNEY_ROUTES": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 25,
+            "desc": "journeys 每次最多串接幾條路由（核心 A 取前幾條基本路由，其補充路由另外帶上）；越大越不會漏走法、越吃 CPU"
+        },
+        "APP_JOURNEYS_LIMIT_DEFAULT": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 10,
+            "desc": "journeys 沒給 limit 時回幾個方案"
+        },
+        "APP_JOURNEYS_LIMIT_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 50,
+            "desc": "journeys 的 limit 上限"
+        },
+        "APP_ROUTES_LIMIT_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 50,
+            "desc": "app_trip/routes 的 limit 上限（預設值是找路規則檔的 Search.DefaultLimit）"
+        },
+        "APP_DIRECT_LIMIT_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 500,
+            "desc": "app_trip/direct 的 limit 上限（沒給 limit 時也是這個數）"
+        },
+        "APP_LINE_DEFAULT_LIMIT": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 100,
+            "desc": "app_line/timetable 沒給 limit 時最多幾班（欄）"
+        },
+        "APP_LINE_MAX_LIMIT": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 300,
+            "desc": "app_line/timetable 的 limit 上限"
+        },
+        "APP_DEPARTURES_COUNT_DEFAULT": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 3,
+            "desc": "app_station/departures 沒給 count 時每個方向幾班"
+        },
+        "APP_DEPARTURES_COUNT_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 20,
+            "desc": "app_station/departures 的 count 上限"
+        },
+        "APP_STATION_SEARCH_LIMIT_DEFAULT": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 10,
+            "desc": "public_station/search 沒給 limit 時回幾站"
+        },
+        "APP_STATION_SEARCH_LIMIT_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 50,
+            "desc": "public_station/search 的 limit 上限"
+        },
+        "APP_MAX_TRANSFERS_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 5,
+            "desc": "max_transfers 參數可以給到多少"
+        },
+        "APP_DEEPER_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 3,
+            "desc": "deeper 參數（比最少轉乘多找幾次轉乘）可以給到多少；預設值是找路規則檔的 Search.Deeper"
+        },
+        "APP_ROUTE_MAX_LEGS": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 12,
+            "desc": "路由代碼 route 最多幾段（搭乘＋步行）"
+        },
+        "APP_ROUTE_WALK_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 99,
+            "desc": "路由代碼 walk-<分鐘> 可以指定的最長步行分鐘（最多兩位數）"
+        },
+        "APP_PUBLIC_MAX_AGE": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 600,
+            "desc": "public_ 開頭 API 回應的 Cache-Control 秒數（離線資料大約一天更新一次；ETag 讓過期後重新驗證不必重傳）"
+        },
+        "DISABLE_CACHE": {
+            "group": "快取開關",
+            "level": "public",
+            "default": false,
+            "desc": "true：停用軌道與公車靜態資料快取，所有請求直接轉給 TDX；已存的快取檔保留不動，改回 false 後會繼續使用。"
+        },
+        "RAIL_CACHE_STATIC_FRESH": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 604800,
+            "desc": "軌道：站點、路線、設施、線形、票價的確認間隔（秒，預設 7 天）"
+        },
+        "RAIL_CACHE_STATIC_MAX": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 2592000,
+            "desc": "軌道：同上的最長保存（秒，預設 30 天）"
+        },
+        "RAIL_CACHE_TIMETABLE": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 86400,
+            "desc": "軌道：定期時刻表（秒，預設 1 天）"
+        },
+        "RAIL_CACHE_DAILY": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 3600,
+            "desc": "軌道：今天與未來日期的時刻表（秒，預設 1 小時；Today 固定快取到午夜）"
+        },
+        "RAIL_CACHE_DAILY_PAST": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 31536000,
+            "desc": "軌道：過去日期的時刻表（秒，預設 365 天）"
+        },
+        "BUS_CACHE_STATIC_FRESH": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 604800,
+            "desc": "公車：路線、站牌、線形、票價的確認間隔（秒，預設 7 天）"
+        },
+        "BUS_CACHE_STATIC_MAX": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 2592000,
+            "desc": "公車：同上的最長保存（秒，預設 30 天）"
+        },
+        "BUS_CACHE_TIMETABLE": {
+            "group": "快取時間",
+            "level": "public",
+            "default": 86400,
+            "desc": "公車：班表（秒，預設 1 天）"
+        },
+        "TRANSFER_HISTORY_KEEP": {
+            "group": "轉乘產生檔",
+            "level": "public",
+            "default": 5,
+            "desc": "轉乘產生檔（custom/libs/txapi/transfer/data/）每個檔案保留幾份舊版在 history/，轉車出問題時可用 /txapi/admin_transfer/restore 換回。0＝不保留。"
+        },
+        "TRAFFIC_LOG_RETENTION_DAYS": {
+            "group": "流量管理",
+            "level": "public",
+            "default": 7,
+            "desc": "各 IP 請求次數紀錄保留天數（後臺「流量管理」；紀錄在 download/tdx_proxy_files/cache/traffic.sqlite）"
+        },
+        "TRAFFIC_FLUSH_BYTES": {
+            "group": "流量管理",
+            "level": "public",
+            "default": 16384,
+            "desc": "流量紀錄先寫暫存檔，滿這個大小（位元組，約 100 筆）就合併寫進資料庫"
+        },
+        "TRAFFIC_FLUSH_SECONDS": {
+            "group": "流量管理",
+            "level": "public",
+            "default": 60,
+            "desc": "流量紀錄暫存最久幾秒就合併寫進資料庫"
+        },
+        "ADMIN_LOG_RETENTION_DAYS": {
+            "group": "後臺",
+            "level": "public",
+            "default": 90,
+            "desc": "後臺登入紀錄保留天數"
+        },
+        "ADMIN_SESSION_HOURS": {
+            "group": "後臺",
+            "level": "public",
+            "default": 24,
+            "desc": "後臺登入狀態的有效時數（每次使用會延長）"
+        },
+        "ADMIN_SETUP_HOURS": {
+            "group": "後臺",
+            "level": "public",
+            "default": 24,
+            "desc": "新主機的「首次設定」（建立第一個管理者帳號）在第一次執行後開放幾小時；逾時要在網站根目錄放 admin-setup.txt 重新開放"
+        },
+        "ADMIN_LOGIN_MAX_FAILS": {
+            "group": "後臺",
+            "level": "public",
+            "default": 10,
+            "desc": "同一 IP 在 ADMIN_LOGIN_FAIL_WINDOW_MINUTES（預設 15）分鐘內最多幾次登入失敗，超過暫停登入（錯誤代碼 42903）。0＝不限制。"
+        },
+        "ADMIN_LOGIN_FAIL_WINDOW_MINUTES": {
+            "group": "後臺",
+            "level": "public",
+            "default": 15,
+            "desc": "登入失敗次數（ADMIN_LOGIN_MAX_FAILS）的計算時間窗（分鐘）"
+        },
+        "TDX_CLIENT_ID": {
+            "group": "金鑰",
+            "level": "secret",
+            "default": "",
+            "desc": "TDX API 金鑰的 Client Id（TDX 會員中心 → 資料服務 → API 金鑰）"
+        },
+        "TDX_CLIENT_SECRET": {
+            "group": "金鑰",
+            "level": "secret",
+            "default": "",
+            "desc": "TDX API 金鑰的 Client Secret"
+        },
+        "APP_SECRET_KEY": {
+            "group": "金鑰",
+            "level": "secret",
+            "default": "",
+            "desc": [
+                "本站的秘密字串：PAT 雜湊、後臺登入狀態、表單防偽造都用它。更換後所有 PAT 與登入狀態都會失效。",
+                "需要它的功能（後臺）啟用前一定要先有；沒設定時後臺初始化會自動產生並寫進這個檔案。"
+            ]
+        },
+        "HTTP_TIMEOUT": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 30,
+            "desc": "轉發 TDX（/api/）等一般 HTTP 請求的逾時（秒）"
+        },
+        "HTTP_CONNECT_TIMEOUT": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 10,
+            "desc": "HTTP 連線逾時（秒）"
+        },
+        "TOKEN_MARGIN": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 300,
+            "desc": "TDX access token 到期前幾秒就視為過期、提早重取"
+        },
+        "SQLITE_BUSY_TIMEOUT_MS": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 5000,
+            "desc": "SQLite 遇到其他連線寫入時最多等多久（毫秒）"
+        },
+        "DOWNLOAD_FETCH_TIMEOUT": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 120,
+            "desc": "離線資料下載每個 TDX 檔案的逾時（秒）"
+        },
+        "TIME_LIMIT_SQLITE_BROWSE": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 60,
+            "desc": "後臺資料庫瀏覽單次查詢的 PHP 執行時間上限（秒）"
+        },
+        "TIME_LIMIT_CUSTOM_DOWNLOAD": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 120,
+            "desc": "後臺整包下載 custom/ 的 PHP 執行時間上限（秒）"
+        },
+        "TIME_LIMIT_FINDERDB_BUILD": {
+            "group": "連線與執行時間",
+            "level": "public",
+            "default": 300,
+            "desc": "重建 finder 資料庫的 PHP 執行時間上限（秒）"
+        },
+        "DOWNLOAD_MAX_PER_MINUTE": {
+            "group": "TDX 呼叫",
+            "level": "public",
+            "default": 3,
+            "desc": "本站自己（離線資料下載）每分鐘最多呼叫 TDX 幾次（開發者金鑰上限每分鐘 5 次，留餘裕給轉發）；換了等級較高的金鑰可以調高"
+        },
+        "DOWNLOAD_RATE_RESERVE": {
+            "group": "TDX 呼叫",
+            "level": "public",
+            "default": 1,
+            "desc": "TDX 回報的每分鐘剩餘額度低於等於這個數時，離線資料下載先停，留給轉發（/api/）"
+        },
+        "DOWNLOAD_MAX_AGE": {
+            "group": "TDX 呼叫",
+            "level": "public",
+            "default": 604800,
+            "desc": "離線資料檔超過幾秒算過期、要重新下載（預設 7 天）"
+        },
+        "RATELIMIT_PROBE_MIN_INTERVAL": {
+            "group": "TDX 呼叫",
+            "level": "public",
+            "default": 30,
+            "desc": "查 TDX 剩餘額度時，最近一次觀測比這個秒數新就不再額外探測"
+        }
+    }
+}

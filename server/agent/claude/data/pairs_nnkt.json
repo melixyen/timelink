@@ -1,0 +1,3205 @@
+{
+    "Description": "北北基桃比對起訖（make_pairs.php，種子 2026）",
+    "pairs": [
+        {
+            "rt": [
+                "tymetro_a04",
+                "trtc_053"
+            ],
+            "from": "TYMC-A4",
+            "to": "TRTC-G14"
+        },
+        {
+            "rt": [
+                "tra_1110",
+                "trtc_031"
+            ],
+            "from": "TRA-1110",
+            "to": "TRTC-BL23"
+        },
+        {
+            "rt": [
+                "trtc_105",
+                "tra_1090"
+            ],
+            "from": "TRTC-G13",
+            "to": "TRA-1090"
+        },
+        {
+            "rt": [
+                "tra_1050",
+                "trtc_br06"
+            ],
+            "from": "TRA-1050",
+            "to": "TRTC-BR06"
+        },
+        {
+            "rt": [
+                "trtc_056",
+                "trtc_br21"
+            ],
+            "from": "TRTC-R14",
+            "to": "TRTC-BR21"
+        },
+        {
+            "rt": [
+                "trtc_077",
+                "trtc_br07"
+            ],
+            "from": "TRTC-BL02",
+            "to": "TRTC-BR07"
+        },
+        {
+            "rt": [
+                "trtc_035",
+                "tra_1000"
+            ],
+            "from": "TRTC-G03",
+            "to": "TRA-1000"
+        },
+        {
+            "rt": [
+                "trtc_br20",
+                "trtc_y10"
+            ],
+            "from": "TRTC-BR20",
+            "to": "NTMC-Y10"
+        },
+        {
+            "rt": [
+                "trtc_130",
+                "trtc_175"
+            ],
+            "from": "TRTC-O10",
+            "to": "TRTC-O53"
+        },
+        {
+            "rt": [
+                "trtc_130",
+                "tra_1140"
+            ],
+            "from": "TRTC-O10",
+            "to": "TRA-1140"
+        },
+        {
+            "rt": [
+                "trtc_y10",
+                "trtc_081"
+            ],
+            "from": "NTMC-Y10",
+            "to": "TRTC-BL06"
+        },
+        {
+            "rt": [
+                "trtc_069",
+                "tra_0920"
+            ],
+            "from": "TRTC-R26",
+            "to": "TRA-0920"
+        },
+        {
+            "rt": [
+                "tra_1030",
+                "tymetro_a04"
+            ],
+            "from": "TRA-1030",
+            "to": "TYMC-A4"
+        },
+        {
+            "rt": [
+                "tra_1100",
+                "trtc_062"
+            ],
+            "from": "TRA-1100",
+            "to": "TRTC-R20"
+        },
+        {
+            "rt": [
+                "trtc_r01",
+                "trtc_y20"
+            ],
+            "from": "TRTC-R01",
+            "to": "NTMC-Y20"
+        },
+        {
+            "rt": [
+                "tymetro_a14a",
+                "trtc_y08"
+            ],
+            "from": "TYMC-A14a",
+            "to": "NTMC-Y08"
+        },
+        {
+            "rt": [
+                "tra_1080",
+                "trtc_y13"
+            ],
+            "from": "TRA-1080",
+            "to": "NTMC-Y13"
+        },
+        {
+            "rt": [
+                "trtc_175",
+                "trtc_034"
+            ],
+            "from": "TRTC-O53",
+            "to": "TRTC-G02"
+        },
+        {
+            "rt": [
+                "tra_1030",
+                "trtc_057"
+            ],
+            "from": "TRA-1030",
+            "to": "TRTC-R15"
+        },
+        {
+            "rt": [
+                "trtc_127",
+                "tymetro_a11"
+            ],
+            "from": "TRTC-O13",
+            "to": "TYMC-A11"
+        },
+        {
+            "rt": [
+                "trtc_br05",
+                "trtc_061"
+            ],
+            "from": "TRTC-BR05",
+            "to": "TRTC-R19"
+        },
+        {
+            "rt": [
+                "trtc_y14",
+                "trtc_lb03"
+            ],
+            "from": "NTMC-Y14",
+            "to": "NTMC-LB03"
+        },
+        {
+            "rt": [
+                "trtc_br16",
+                "trtc_070"
+            ],
+            "from": "TRTC-BR16",
+            "to": "TRTC-R27"
+        },
+        {
+            "rt": [
+                "trtc_br20",
+                "trtc_037"
+            ],
+            "from": "TRTC-BR20",
+            "to": "TRTC-G05"
+        },
+        {
+            "rt": [
+                "trtc_y09",
+                "trtc_br15"
+            ],
+            "from": "NTMC-Y09",
+            "to": "TRTC-BR15"
+        },
+        {
+            "rt": [
+                "tra_1100",
+                "trtc_040"
+            ],
+            "from": "TRA-1100",
+            "to": "TRTC-G08"
+        },
+        {
+            "rt": [
+                "tymetro_a01",
+                "trtc_077"
+            ],
+            "from": "TYMC-A1",
+            "to": "TRTC-BL02"
+        },
+        {
+            "rt": [
+                "trtc_122",
+                "trtc_069"
+            ],
+            "from": "TRTC-O18",
+            "to": "TRTC-R26"
+        },
+        {
+            "rt": [
+                "trtc_lb07",
+                "trtc_130"
+            ],
+            "from": "NTMC-LB07",
+            "to": "TRTC-O10"
+        },
+        {
+            "rt": [
+                "trtc_lb10",
+                "trtc_122"
+            ],
+            "from": "NTMC-LB10",
+            "to": "TRTC-O18"
+        },
+        {
+            "rt": [
+                "trtc_lb03",
+                "trtc_br16"
+            ],
+            "from": "NTMC-LB03",
+            "to": "TRTC-BR16"
+        },
+        {
+            "rt": [
+                "trtc_042",
+                "trtc_067"
+            ],
+            "from": "TRTC-G10",
+            "to": "TRTC-R24"
+        },
+        {
+            "rt": [
+                "tymetro_a15",
+                "trtc_093"
+            ],
+            "from": "TYMC-A15",
+            "to": "TRTC-BL18"
+        },
+        {
+            "rt": [
+                "trtc_053",
+                "trtc_034"
+            ],
+            "from": "TRTC-G14",
+            "to": "TRTC-G02"
+        },
+        {
+            "rt": [
+                "tra_1070",
+                "trtc_br15"
+            ],
+            "from": "TRA-1070",
+            "to": "TRTC-BR15"
+        },
+        {
+            "rt": [
+                "tra_1030",
+                "tra_0920"
+            ],
+            "from": "TRA-1030",
+            "to": "TRA-0920"
+        },
+        {
+            "rt": [
+                "trtc_lb06",
+                "trtc_062"
+            ],
+            "from": "NTMC-LB06",
+            "to": "TRTC-R20"
+        },
+        {
+            "rt": [
+                "trtc_076",
+                "trtc_101"
+            ],
+            "from": "TRTC-BL01",
+            "to": "TRTC-R04"
+        },
+        {
+            "rt": [
+                "trtc_178",
+                "trtc_085"
+            ],
+            "from": "TRTC-O50",
+            "to": "TRTC-BL10"
+        },
+        {
+            "rt": [
+                "trtc_085",
+                "trtc_br06"
+            ],
+            "from": "TRTC-BL10",
+            "to": "TRTC-BR06"
+        },
+        {
+            "rt": [
+                "trtc_179",
+                "trtc_br02"
+            ],
+            "from": "TRTC-O21",
+            "to": "TRTC-BR02"
+        },
+        {
+            "rt": [
+                "trtc_lb07",
+                "tra_1000"
+            ],
+            "from": "NTMC-LB07",
+            "to": "TRA-1000"
+        },
+        {
+            "rt": [
+                "trtc_091",
+                "trtc_046"
+            ],
+            "from": "TRTC-BL16",
+            "to": "TRTC-O03"
+        },
+        {
+            "rt": [
+                "tra_1105",
+                "trtc_178"
+            ],
+            "from": "TRA-1105",
+            "to": "TRTC-O50"
+        },
+        {
+            "rt": [
+                "trtc_124",
+                "tra_1100"
+            ],
+            "from": "TRTC-O16",
+            "to": "TRA-1100"
+        },
+        {
+            "rt": [
+                "trtc_br13",
+                "tymetro_a01"
+            ],
+            "from": "TRTC-BR13",
+            "to": "TYMC-A1"
+        },
+        {
+            "rt": [
+                "trtc_121",
+                "tra_0970"
+            ],
+            "from": "TRTC-O19",
+            "to": "TRA-0970"
+        },
+        {
+            "rt": [
+                "tymetro_a18",
+                "trtc_050"
+            ],
+            "from": "TYMC-A18",
+            "to": "TRTC-R09"
+        },
+        {
+            "rt": [
+                "trtc_093",
+                "trtc_071"
+            ],
+            "from": "TRTC-BL18",
+            "to": "TRTC-R28"
+        },
+        {
+            "rt": [
+                "tra_1030",
+                "trtc_070"
+            ],
+            "from": "TRA-1030",
+            "to": "TRTC-R27"
+        },
+        {
+            "rt": [
+                "tra_1080",
+                "tra_0980"
+            ],
+            "from": "TRA-1080",
+            "to": "TRA-0980"
+        },
+        {
+            "rt": [
+                "trtc_y16",
+                "tra_1070"
+            ],
+            "from": "NTMC-Y16",
+            "to": "TRA-1070"
+        },
+        {
+            "rt": [
+                "trtc_066",
+                "trtc_080"
+            ],
+            "from": "TRTC-R23",
+            "to": "TRTC-BL05"
+        },
+        {
+            "rt": [
+                "trtc_077",
+                "trtc_125"
+            ],
+            "from": "TRTC-BL02",
+            "to": "TRTC-O15"
+        },
+        {
+            "rt": [
+                "trtc_081",
+                "trtc_br01"
+            ],
+            "from": "TRTC-BL06",
+            "to": "TRTC-BR01"
+        },
+        {
+            "rt": [
+                "trtc_096",
+                "trtc_lb04"
+            ],
+            "from": "TRTC-BL21",
+            "to": "NTMC-LB04"
+        },
+        {
+            "rt": [
+                "tymetro_a02",
+                "tra_1120"
+            ],
+            "from": "TYMC-A2",
+            "to": "TRA-1120"
+        },
+        {
+            "rt": [
+                "trtc_039",
+                "trtc_095"
+            ],
+            "from": "TRTC-G07",
+            "to": "TRTC-BL20"
+        },
+        {
+            "rt": [
+                "tra_1090",
+                "trtc_y20"
+            ],
+            "from": "TRA-1090",
+            "to": "NTMC-Y20"
+        },
+        {
+            "rt": [
+                "trtc_083",
+                "tymetro_a04"
+            ],
+            "from": "TRTC-BL08",
+            "to": "TYMC-A4"
+        },
+        {
+            "rt": [
+                "trtc_068",
+                "tymetro_a05"
+            ],
+            "from": "TRTC-R25",
+            "to": "TYMC-A5"
+        },
+        {
+            "rt": [
+                "trtc_y19",
+                "trtc_080"
+            ],
+            "from": "NTMC-Y19",
+            "to": "TRTC-BL05"
+        },
+        {
+            "rt": [
+                "tymetro_a19",
+                "tymetro_a04"
+            ],
+            "from": "TYMC-A19",
+            "to": "TYMC-A4"
+        },
+        {
+            "rt": [
+                "tra_1120",
+                "trtc_105"
+            ],
+            "from": "TRA-1120",
+            "to": "TRTC-G13"
+        },
+        {
+            "rt": [
+                "trtc_br20",
+                "trtc_lb08"
+            ],
+            "from": "TRTC-BR20",
+            "to": "NTMC-LB08"
+        },
+        {
+            "rt": [
+                "trtc_lb07",
+                "trtc_126"
+            ],
+            "from": "NTMC-LB07",
+            "to": "TRTC-O14"
+        },
+        {
+            "rt": [
+                "tra_1080",
+                "trtc_y12"
+            ],
+            "from": "TRA-1080",
+            "to": "NTMC-Y12"
+        },
+        {
+            "rt": [
+                "trtc_br16",
+                "tra_1040"
+            ],
+            "from": "TRTC-BR16",
+            "to": "TRA-1040"
+        },
+        {
+            "rt": [
+                "trtc_095",
+                "tra_0900"
+            ],
+            "from": "TRTC-BL20",
+            "to": "TRA-0900"
+        },
+        {
+            "rt": [
+                "tymetro_a10",
+                "trtc_lb04"
+            ],
+            "from": "TYMC-A10",
+            "to": "NTMC-LB04"
+        },
+        {
+            "rt": [
+                "trtc_099",
+                "tra_1020"
+            ],
+            "from": "TRTC-R02",
+            "to": "TRA-1020"
+        },
+        {
+            "rt": [
+                "trtc_009",
+                "trtc_033"
+            ],
+            "from": "TRTC-BR11",
+            "to": "TRTC-G01"
+        },
+        {
+            "rt": [
+                "trtc_035",
+                "tymetro_a06"
+            ],
+            "from": "TRTC-G03",
+            "to": "TYMC-A6"
+        },
+        {
+            "rt": [
+                "tra_1050",
+                "trtc_045"
+            ],
+            "from": "TRA-1050",
+            "to": "TRTC-O04"
+        },
+        {
+            "rt": [
+                "trtc_103",
+                "trtc_179"
+            ],
+            "from": "TRTC-R06",
+            "to": "TRTC-O21"
+        },
+        {
+            "rt": [
+                "trtc_056",
+                "tra_1100"
+            ],
+            "from": "TRTC-R14",
+            "to": "TRA-1100"
+        },
+        {
+            "rt": [
+                "trtc_096",
+                "trtc_038"
+            ],
+            "from": "TRTC-BL21",
+            "to": "TRTC-G06"
+        },
+        {
+            "rt": [
+                "trtc_lb11",
+                "trtc_051"
+            ],
+            "from": "NTMC-LB11",
+            "to": "TRTC-BL12"
+        },
+        {
+            "rt": [
+                "trtc_lb10",
+                "trtc_068"
+            ],
+            "from": "NTMC-LB10",
+            "to": "TRTC-R25"
+        },
+        {
+            "rt": [
+                "trtc_078",
+                "trtc_br21"
+            ],
+            "from": "TRTC-BL03",
+            "to": "TRTC-BR21"
+        },
+        {
+            "rt": [
+                "tra_1075",
+                "trtc_br19"
+            ],
+            "from": "TRA-1075",
+            "to": "TRTC-BR19"
+        },
+        {
+            "rt": [
+                "tra_0990",
+                "trtc_br04"
+            ],
+            "from": "TRA-0990",
+            "to": "TRTC-BR04"
+        },
+        {
+            "rt": [
+                "tra_1075",
+                "tra_0960"
+            ],
+            "from": "TRA-1075",
+            "to": "TRA-0960"
+        },
+        {
+            "rt": [
+                "tra_0910",
+                "trtc_177"
+            ],
+            "from": "TRA-0910",
+            "to": "TRTC-O51"
+        },
+        {
+            "rt": [
+                "trtc_060",
+                "trtc_lb04"
+            ],
+            "from": "TRTC-R18",
+            "to": "NTMC-LB04"
+        },
+        {
+            "rt": [
+                "tra_0980",
+                "trtc_056"
+            ],
+            "from": "TRA-0980",
+            "to": "TRTC-R14"
+        },
+        {
+            "rt": [
+                "tra_1110",
+                "trtc_125"
+            ],
+            "from": "TRA-1110",
+            "to": "TRTC-O15"
+        },
+        {
+            "rt": [
+                "trtc_011",
+                "tra_1010"
+            ],
+            "from": "TRTC-BR09",
+            "to": "TRA-1010"
+        },
+        {
+            "rt": [
+                "trtc_br17",
+                "trtc_124"
+            ],
+            "from": "TRTC-BR17",
+            "to": "TRTC-O16"
+        },
+        {
+            "rt": [
+                "tymetro_a14a",
+                "trtc_054"
+            ],
+            "from": "TYMC-A14a",
+            "to": "TRTC-R12"
+        },
+        {
+            "rt": [
+                "tra_0990",
+                "trtc_092"
+            ],
+            "from": "TRA-0990",
+            "to": "TRTC-BL17"
+        },
+        {
+            "rt": [
+                "trtc_095",
+                "trtc_br08"
+            ],
+            "from": "TRTC-BL20",
+            "to": "TRTC-BR08"
+        },
+        {
+            "rt": [
+                "trtc_y08",
+                "trtc_095"
+            ],
+            "from": "NTMC-Y08",
+            "to": "TRTC-BL20"
+        },
+        {
+            "rt": [
+                "trtc_y10",
+                "trtc_100"
+            ],
+            "from": "NTMC-Y10",
+            "to": "TRTC-R03"
+        },
+        {
+            "rt": [
+                "trtc_br07",
+                "tymetro_a08"
+            ],
+            "from": "TRTC-BR07",
+            "to": "TYMC-A8"
+        },
+        {
+            "rt": [
+                "trtc_109",
+                "trtc_066"
+            ],
+            "from": "TRTC-G17",
+            "to": "TRTC-R23"
+        },
+        {
+            "rt": [
+                "tra_0960",
+                "trtc_y20"
+            ],
+            "from": "TRA-0960",
+            "to": "NTMC-Y20"
+        },
+        {
+            "rt": [
+                "trtc_y15",
+                "trtc_076"
+            ],
+            "from": "NTMC-Y15",
+            "to": "TRTC-BL01"
+        },
+        {
+            "rt": [
+                "trtc_080",
+                "trtc_096"
+            ],
+            "from": "TRTC-BL05",
+            "to": "TRTC-BL21"
+        },
+        {
+            "rt": [
+                "trtc_011",
+                "trtc_br22"
+            ],
+            "from": "TRTC-BR09",
+            "to": "TRTC-BR22"
+        },
+        {
+            "rt": [
+                "trtc_043",
+                "tra_0930"
+            ],
+            "from": "TRTC-G11",
+            "to": "TRA-0930"
+        },
+        {
+            "rt": [
+                "trtc_011",
+                "tymetro_a02"
+            ],
+            "from": "TRTC-BR09",
+            "to": "TYMC-A2"
+        },
+        {
+            "rt": [
+                "trtc_105",
+                "trtc_br17"
+            ],
+            "from": "TRTC-G13",
+            "to": "TRTC-BR17"
+        },
+        {
+            "rt": [
+                "trtc_046",
+                "trtc_040"
+            ],
+            "from": "TRTC-O03",
+            "to": "TRTC-G08"
+        },
+        {
+            "rt": [
+                "trtc_036",
+                "tra_0990"
+            ],
+            "from": "TRTC-G04",
+            "to": "TRA-0990"
+        },
+        {
+            "rt": [
+                "trtc_094",
+                "trtc_062"
+            ],
+            "from": "TRTC-BL19",
+            "to": "TRTC-R20"
+        },
+        {
+            "rt": [
+                "tymetro_a11",
+                "trtc_lb05"
+            ],
+            "from": "TYMC-A11",
+            "to": "NTMC-LB05"
+        },
+        {
+            "rt": [
+                "trtc_121",
+                "trtc_111"
+            ],
+            "from": "TRTC-O19",
+            "to": "TRTC-G19"
+        },
+        {
+            "rt": [
+                "trtc_y19",
+                "tra_0900"
+            ],
+            "from": "NTMC-Y19",
+            "to": "TRA-0900"
+        },
+        {
+            "rt": [
+                "trtc_036",
+                "tymetro_a20"
+            ],
+            "from": "TRTC-G04",
+            "to": "TYMC-A20"
+        },
+        {
+            "rt": [
+                "trtc_br22",
+                "trtc_101"
+            ],
+            "from": "TRTC-BR22",
+            "to": "TRTC-R04"
+        },
+        {
+            "rt": [
+                "trtc_040",
+                "trtc_056"
+            ],
+            "from": "TRTC-G08",
+            "to": "TRTC-R14"
+        },
+        {
+            "rt": [
+                "tra_1070",
+                "tra_0990"
+            ],
+            "from": "TRA-1070",
+            "to": "TRA-0990"
+        },
+        {
+            "rt": [
+                "tra_1010",
+                "trtc_048"
+            ],
+            "from": "TRA-1010",
+            "to": "TRTC-O01"
+        },
+        {
+            "rt": [
+                "trtc_086",
+                "trtc_064"
+            ],
+            "from": "TRTC-BL11",
+            "to": "TRTC-R22"
+        },
+        {
+            "rt": [
+                "trtc_r01",
+                "trtc_054"
+            ],
+            "from": "TRTC-R01",
+            "to": "TRTC-R12"
+        },
+        {
+            "rt": [
+                "trtc_123",
+                "trtc_br19"
+            ],
+            "from": "TRTC-O17",
+            "to": "TRTC-BR19"
+        },
+        {
+            "rt": [
+                "trtc_100",
+                "trtc_036"
+            ],
+            "from": "TRTC-R03",
+            "to": "TRTC-G04"
+        },
+        {
+            "rt": [
+                "trtc_036",
+                "trtc_br15"
+            ],
+            "from": "TRTC-G04",
+            "to": "TRTC-BR15"
+        },
+        {
+            "rt": [
+                "trtc_br14",
+                "trtc_058"
+            ],
+            "from": "TRTC-BR14",
+            "to": "TRTC-R16"
+        },
+        {
+            "rt": [
+                "trtc_121",
+                "trtc_061"
+            ],
+            "from": "TRTC-O19",
+            "to": "TRTC-R19"
+        },
+        {
+            "rt": [
+                "trtc_101",
+                "trtc_178"
+            ],
+            "from": "TRTC-R04",
+            "to": "TRTC-O50"
+        },
+        {
+            "rt": [
+                "trtc_130",
+                "tymetro_a01"
+            ],
+            "from": "TRTC-O10",
+            "to": "TYMC-A1"
+        },
+        {
+            "rt": [
+                "trtc_081",
+                "trtc_036"
+            ],
+            "from": "TRTC-BL06",
+            "to": "TRTC-G04"
+        },
+        {
+            "rt": [
+                "tymetro_a06",
+                "trtc_103"
+            ],
+            "from": "TYMC-A6",
+            "to": "TRTC-R06"
+        },
+        {
+            "rt": [
+                "trtc_084",
+                "trtc_031"
+            ],
+            "from": "TRTC-BL09",
+            "to": "TRTC-BL23"
+        },
+        {
+            "rt": [
+                "trtc_y16",
+                "tra_1140"
+            ],
+            "from": "NTMC-Y16",
+            "to": "TRA-1140"
+        },
+        {
+            "rt": [
+                "trtc_174",
+                "trtc_067"
+            ],
+            "from": "TRTC-O54",
+            "to": "TRTC-R24"
+        },
+        {
+            "rt": [
+                "trtc_105",
+                "tra_1020"
+            ],
+            "from": "TRTC-G13",
+            "to": "TRA-1020"
+        },
+        {
+            "rt": [
+                "trtc_092",
+                "trtc_br18"
+            ],
+            "from": "TRTC-BL17",
+            "to": "TRTC-BR18"
+        },
+        {
+            "rt": [
+                "trtc_br12",
+                "tra_0980"
+            ],
+            "from": "TRTC-BR12",
+            "to": "TRA-0980"
+        },
+        {
+            "rt": [
+                "trtc_175",
+                "tymetro_a07"
+            ],
+            "from": "TRTC-O53",
+            "to": "TYMC-A7"
+        },
+        {
+            "rt": [
+                "trtc_179",
+                "tra_0940"
+            ],
+            "from": "TRTC-O21",
+            "to": "TRA-0940"
+        },
+        {
+            "rt": [
+                "trtc_060",
+                "tra_1090"
+            ],
+            "from": "TRTC-R18",
+            "to": "TRA-1090"
+        },
+        {
+            "rt": [
+                "trtc_101",
+                "trtc_048"
+            ],
+            "from": "TRTC-R04",
+            "to": "TRTC-O01"
+        },
+        {
+            "rt": [
+                "trtc_101",
+                "tra_1000"
+            ],
+            "from": "TRTC-R04",
+            "to": "TRA-1000"
+        },
+        {
+            "rt": [
+                "trtc_051",
+                "trtc_036"
+            ],
+            "from": "TRTC-BL12",
+            "to": "TRTC-G04"
+        },
+        {
+            "rt": [
+                "trtc_105",
+                "tymetro_a18"
+            ],
+            "from": "TRTC-G13",
+            "to": "TYMC-A18"
+        },
+        {
+            "rt": [
+                "trtc_178",
+                "trtc_lb10"
+            ],
+            "from": "TRTC-O50",
+            "to": "NTMC-LB10"
+        },
+        {
+            "rt": [
+                "trtc_058",
+                "trtc_y15"
+            ],
+            "from": "TRTC-R16",
+            "to": "NTMC-Y15"
+        },
+        {
+            "rt": [
+                "trtc_057",
+                "trtc_038"
+            ],
+            "from": "TRTC-R15",
+            "to": "TRTC-G06"
+        },
+        {
+            "rt": [
+                "trtc_038",
+                "trtc_042"
+            ],
+            "from": "TRTC-G06",
+            "to": "TRTC-G10"
+        },
+        {
+            "rt": [
+                "tymetro_a02",
+                "trtc_038"
+            ],
+            "from": "TYMC-A2",
+            "to": "TRTC-G06"
+        },
+        {
+            "rt": [
+                "tra_0950",
+                "trtc_y12"
+            ],
+            "from": "TRA-0950",
+            "to": "NTMC-Y12"
+        },
+        {
+            "rt": [
+                "trtc_y12",
+                "trtc_062"
+            ],
+            "from": "NTMC-Y12",
+            "to": "TRTC-R20"
+        },
+        {
+            "rt": [
+                "tra_0980",
+                "trtc_048"
+            ],
+            "from": "TRA-0980",
+            "to": "TRTC-O01"
+        },
+        {
+            "rt": [
+                "tymetro_a20",
+                "tymetro_a17"
+            ],
+            "from": "TYMC-A20",
+            "to": "TYMC-A17"
+        },
+        {
+            "rt": [
+                "trtc_lb07",
+                "trtc_176"
+            ],
+            "from": "NTMC-LB07",
+            "to": "TRTC-O52"
+        },
+        {
+            "rt": [
+                "tymetro_a21",
+                "trtc_lb04"
+            ],
+            "from": "TYMC-A21",
+            "to": "NTMC-LB04"
+        },
+        {
+            "rt": [
+                "trtc_066",
+                "trtc_053"
+            ],
+            "from": "TRTC-R23",
+            "to": "TRTC-G14"
+        },
+        {
+            "rt": [
+                "trtc_br17",
+                "trtc_067"
+            ],
+            "from": "TRTC-BR17",
+            "to": "TRTC-R24"
+        },
+        {
+            "rt": [
+                "trtc_042",
+                "trtc_089"
+            ],
+            "from": "TRTC-G10",
+            "to": "TRTC-BL14"
+        },
+        {
+            "rt": [
+                "trtc_086",
+                "trtc_081"
+            ],
+            "from": "TRTC-BL11",
+            "to": "TRTC-BL06"
+        },
+        {
+            "rt": [
+                "trtc_099",
+                "tra_0940"
+            ],
+            "from": "TRTC-R02",
+            "to": "TRA-0940"
+        },
+        {
+            "rt": [
+                "tra_1140",
+                "tra_0980"
+            ],
+            "from": "TRA-1140",
+            "to": "TRA-0980"
+        },
+        {
+            "rt": [
+                "tymetro_a09",
+                "trtc_045"
+            ],
+            "from": "TYMC-A9",
+            "to": "TRTC-O04"
+        },
+        {
+            "rt": [
+                "tymetro_a15",
+                "tymetro_a16"
+            ],
+            "from": "TYMC-A15",
+            "to": "TYMC-A16"
+        },
+        {
+            "rt": [
+                "tra_1080",
+                "trtc_br22"
+            ],
+            "from": "TRA-1080",
+            "to": "TRTC-BR22"
+        },
+        {
+            "rt": [
+                "trtc_br01",
+                "tra_0950"
+            ],
+            "from": "TRTC-BR01",
+            "to": "TRA-0950"
+        },
+        {
+            "rt": [
+                "trtc_110",
+                "trtc_109"
+            ],
+            "from": "TRTC-G18",
+            "to": "TRTC-G17"
+        },
+        {
+            "rt": [
+                "tra_0970",
+                "trtc_lb09"
+            ],
+            "from": "TRA-0970",
+            "to": "NTMC-LB09"
+        },
+        {
+            "rt": [
+                "trtc_179",
+                "trtc_175"
+            ],
+            "from": "TRTC-O21",
+            "to": "TRTC-O53"
+        },
+        {
+            "rt": [
+                "trtc_178",
+                "tra_1020"
+            ],
+            "from": "TRTC-O50",
+            "to": "TRA-1020"
+        },
+        {
+            "rt": [
+                "trtc_lb03",
+                "tra_1030"
+            ],
+            "from": "NTMC-LB03",
+            "to": "TRA-1030"
+        },
+        {
+            "rt": [
+                "tra_1090",
+                "trtc_105"
+            ],
+            "from": "TRA-1090",
+            "to": "TRTC-G13"
+        },
+        {
+            "rt": [
+                "trtc_y13",
+                "trtc_047"
+            ],
+            "from": "NTMC-Y13",
+            "to": "TRTC-O02"
+        },
+        {
+            "rt": [
+                "trtc_br15",
+                "tra_1090"
+            ],
+            "from": "TRTC-BR15",
+            "to": "TRA-1090"
+        },
+        {
+            "rt": [
+                "trtc_054",
+                "tra_1105"
+            ],
+            "from": "TRTC-R12",
+            "to": "TRA-1105"
+        },
+        {
+            "rt": [
+                "trtc_br06",
+                "trtc_122"
+            ],
+            "from": "TRTC-BR06",
+            "to": "TRTC-O18"
+        },
+        {
+            "rt": [
+                "tra_0930",
+                "trtc_038"
+            ],
+            "from": "TRA-0930",
+            "to": "TRTC-G06"
+        },
+        {
+            "rt": [
+                "trtc_134",
+                "trtc_070"
+            ],
+            "from": "TRTC-O06",
+            "to": "TRTC-R27"
+        },
+        {
+            "rt": [
+                "trtc_br06",
+                "trtc_y17"
+            ],
+            "from": "TRTC-BR06",
+            "to": "NTMC-Y17"
+        },
+        {
+            "rt": [
+                "trtc_059",
+                "trtc_093"
+            ],
+            "from": "TRTC-R17",
+            "to": "TRTC-BL18"
+        },
+        {
+            "rt": [
+                "tymetro_a02",
+                "trtc_089"
+            ],
+            "from": "TYMC-A2",
+            "to": "TRTC-BL14"
+        },
+        {
+            "rt": [
+                "trtc_130",
+                "trtc_br21"
+            ],
+            "from": "TRTC-O10",
+            "to": "TRTC-BR21"
+        },
+        {
+            "rt": [
+                "trtc_br12",
+                "tra_0990"
+            ],
+            "from": "TRTC-BR12",
+            "to": "TRA-0990"
+        },
+        {
+            "rt": [
+                "tra_0990",
+                "tra_1040"
+            ],
+            "from": "TRA-0990",
+            "to": "TRA-1040"
+        },
+        {
+            "rt": [
+                "trtc_045",
+                "trtc_y16"
+            ],
+            "from": "TRTC-O04",
+            "to": "NTMC-Y16"
+        },
+        {
+            "rt": [
+                "trtc_068",
+                "tymetro_a04"
+            ],
+            "from": "TRTC-R25",
+            "to": "TYMC-A4"
+        },
+        {
+            "rt": [
+                "trtc_066",
+                "trtc_081"
+            ],
+            "from": "TRTC-R23",
+            "to": "TRTC-BL06"
+        },
+        {
+            "rt": [
+                "tymetro_a19",
+                "trtc_br08"
+            ],
+            "from": "TYMC-A19",
+            "to": "TRTC-BR08"
+        },
+        {
+            "rt": [
+                "trtc_178",
+                "trtc_084"
+            ],
+            "from": "TRTC-O50",
+            "to": "TRTC-BL09"
+        },
+        {
+            "rt": [
+                "trtc_123",
+                "trtc_046"
+            ],
+            "from": "TRTC-O17",
+            "to": "TRTC-O03"
+        },
+        {
+            "rt": [
+                "trtc_060",
+                "trtc_br20"
+            ],
+            "from": "TRTC-R18",
+            "to": "TRTC-BR20"
+        },
+        {
+            "rt": [
+                "tymetro_a02",
+                "trtc_lb11"
+            ],
+            "from": "TYMC-A2",
+            "to": "NTMC-LB11"
+        },
+        {
+            "rt": [
+                "trtc_078",
+                "trtc_y17"
+            ],
+            "from": "TRTC-BL03",
+            "to": "NTMC-Y17"
+        },
+        {
+            "rt": [
+                "trtc_101",
+                "trtc_y08"
+            ],
+            "from": "TRTC-R04",
+            "to": "NTMC-Y08"
+        },
+        {
+            "rt": [
+                "trtc_080",
+                "trtc_175"
+            ],
+            "from": "TRTC-BL05",
+            "to": "TRTC-O53"
+        },
+        {
+            "rt": [
+                "trtc_051",
+                "trtc_071"
+            ],
+            "from": "TRTC-BL12",
+            "to": "TRTC-R28"
+        },
+        {
+            "rt": [
+                "tymetro_a01",
+                "trtc_063"
+            ],
+            "from": "TYMC-A1",
+            "to": "TRTC-R21"
+        },
+        {
+            "rt": [
+                "trtc_127",
+                "trtc_125"
+            ],
+            "from": "TRTC-O13",
+            "to": "TRTC-O15"
+        },
+        {
+            "rt": [
+                "tymetro_a21",
+                "tymetro_a10"
+            ],
+            "from": "TYMC-A21",
+            "to": "TYMC-A10"
+        },
+        {
+            "rt": [
+                "tra_0910",
+                "trtc_br15"
+            ],
+            "from": "TRA-0910",
+            "to": "TRTC-BR15"
+        },
+        {
+            "rt": [
+                "tymetro_a18",
+                "trtc_092"
+            ],
+            "from": "TYMC-A18",
+            "to": "TRTC-BL17"
+        },
+        {
+            "rt": [
+                "trtc_lb05",
+                "trtc_br04"
+            ],
+            "from": "NTMC-LB05",
+            "to": "TRTC-BR04"
+        },
+        {
+            "rt": [
+                "tymetro_a14a",
+                "trtc_061"
+            ],
+            "from": "TYMC-A14a",
+            "to": "TRTC-R19"
+        },
+        {
+            "rt": [
+                "trtc_130",
+                "trtc_070"
+            ],
+            "from": "TRTC-O10",
+            "to": "TRTC-R27"
+        },
+        {
+            "rt": [
+                "trtc_010",
+                "tymetro_a05"
+            ],
+            "from": "TRTC-BL15",
+            "to": "TYMC-A5"
+        },
+        {
+            "rt": [
+                "trtc_066",
+                "trtc_br23"
+            ],
+            "from": "TRTC-R23",
+            "to": "TRTC-BR23"
+        },
+        {
+            "rt": [
+                "trtc_077",
+                "tymetro_a12"
+            ],
+            "from": "TRTC-BL02",
+            "to": "TYMC-A12"
+        },
+        {
+            "rt": [
+                "trtc_br20",
+                "trtc_084"
+            ],
+            "from": "TRTC-BR20",
+            "to": "TRTC-BL09"
+        },
+        {
+            "rt": [
+                "trtc_053",
+                "trtc_y09"
+            ],
+            "from": "TRTC-G14",
+            "to": "NTMC-Y09"
+        },
+        {
+            "rt": [
+                "trtc_033",
+                "trtc_lb04"
+            ],
+            "from": "TRTC-G01",
+            "to": "NTMC-LB04"
+        },
+        {
+            "rt": [
+                "trtc_067",
+                "trtc_048"
+            ],
+            "from": "TRTC-R24",
+            "to": "TRTC-O01"
+        },
+        {
+            "rt": [
+                "trtc_lb06",
+                "trtc_lb08"
+            ],
+            "from": "NTMC-LB06",
+            "to": "NTMC-LB08"
+        },
+        {
+            "rt": [
+                "trtc_069",
+                "trtc_br15"
+            ],
+            "from": "TRTC-R26",
+            "to": "TRTC-BR15"
+        },
+        {
+            "rt": [
+                "trtc_054",
+                "trtc_051"
+            ],
+            "from": "TRTC-R12",
+            "to": "TRTC-BL12"
+        },
+        {
+            "rt": [
+                "trtc_101",
+                "tra_1140"
+            ],
+            "from": "TRTC-R04",
+            "to": "TRA-1140"
+        },
+        {
+            "rt": [
+                "trtc_088",
+                "trtc_y20"
+            ],
+            "from": "TRTC-BL13",
+            "to": "NTMC-Y20"
+        },
+        {
+            "rt": [
+                "trtc_br22",
+                "trtc_071"
+            ],
+            "from": "TRTC-BR22",
+            "to": "TRTC-R28"
+        },
+        {
+            "rt": [
+                "trtc_088",
+                "trtc_lb07"
+            ],
+            "from": "TRTC-BL13",
+            "to": "NTMC-LB07"
+        },
+        {
+            "rt": [
+                "trtc_br16",
+                "trtc_085"
+            ],
+            "from": "TRTC-BR16",
+            "to": "TRTC-BL10"
+        },
+        {
+            "rt": [
+                "trtc_lb02",
+                "trtc_057"
+            ],
+            "from": "NTMC-LB02",
+            "to": "TRTC-R15"
+        },
+        {
+            "rt": [
+                "trtc_lb12",
+                "trtc_br06"
+            ],
+            "from": "NTMC-LB12",
+            "to": "TRTC-BR06"
+        },
+        {
+            "rt": [
+                "trtc_054",
+                "trtc_010"
+            ],
+            "from": "TRTC-R12",
+            "to": "TRTC-BL15"
+        },
+        {
+            "rt": [
+                "trtc_178",
+                "trtc_128"
+            ],
+            "from": "TRTC-O50",
+            "to": "TRTC-O12"
+        },
+        {
+            "rt": [
+                "tymetro_a09",
+                "tra_1060"
+            ],
+            "from": "TYMC-A9",
+            "to": "TRA-1060"
+        },
+        {
+            "rt": [
+                "trtc_y14",
+                "trtc_096"
+            ],
+            "from": "NTMC-Y14",
+            "to": "TRTC-BL21"
+        },
+        {
+            "rt": [
+                "tymetro_a02",
+                "trtc_r01"
+            ],
+            "from": "TYMC-A2",
+            "to": "TRTC-R01"
+        },
+        {
+            "rt": [
+                "tra_0980",
+                "tymetro_a09"
+            ],
+            "from": "TRA-0980",
+            "to": "TYMC-A9"
+        },
+        {
+            "rt": [
+                "trtc_y09",
+                "trtc_045"
+            ],
+            "from": "NTMC-Y09",
+            "to": "TRTC-O04"
+        },
+        {
+            "rt": [
+                "tymetro_a10",
+                "trtc_lb03"
+            ],
+            "from": "TYMC-A10",
+            "to": "NTMC-LB03"
+        },
+        {
+            "rt": [
+                "trtc_062",
+                "tymetro_a06"
+            ],
+            "from": "TRTC-R20",
+            "to": "TYMC-A6"
+        },
+        {
+            "rt": [
+                "trtc_br23",
+                "trtc_br20"
+            ],
+            "from": "TRTC-BR23",
+            "to": "TRTC-BR20"
+        },
+        {
+            "rt": [
+                "trtc_180",
+                "tymetro_a05"
+            ],
+            "from": "TRTC-O20",
+            "to": "TYMC-A5"
+        },
+        {
+            "rt": [
+                "trtc_180",
+                "trtc_lb09"
+            ],
+            "from": "TRTC-O20",
+            "to": "NTMC-LB09"
+        },
+        {
+            "rt": [
+                "tymetro_a08",
+                "trtc_063"
+            ],
+            "from": "TYMC-A8",
+            "to": "TRTC-R21"
+        },
+        {
+            "rt": [
+                "tra_0950",
+                "trtc_y09"
+            ],
+            "from": "TRA-0950",
+            "to": "NTMC-Y09"
+        },
+        {
+            "rt": [
+                "tymetro_a14a",
+                "trtc_br23"
+            ],
+            "from": "TYMC-A14a",
+            "to": "TRTC-BR23"
+        },
+        {
+            "rt": [
+                "tra_0910",
+                "tra_1075"
+            ],
+            "from": "TRA-0910",
+            "to": "TRA-1075"
+        },
+        {
+            "rt": [
+                "trtc_039",
+                "tra_0900"
+            ],
+            "from": "TRTC-G07",
+            "to": "TRA-0900"
+        },
+        {
+            "rt": [
+                "trtc_089",
+                "trtc_076"
+            ],
+            "from": "TRTC-BL14",
+            "to": "TRTC-BL01"
+        },
+        {
+            "rt": [
+                "tymetro_a06",
+                "tymetro_a11"
+            ],
+            "from": "TYMC-A6",
+            "to": "TYMC-A11"
+        },
+        {
+            "rt": [
+                "trtc_086",
+                "trtc_089"
+            ],
+            "from": "TRTC-BL11",
+            "to": "TRTC-BL14"
+        },
+        {
+            "rt": [
+                "trtc_088",
+                "trtc_046"
+            ],
+            "from": "TRTC-BL13",
+            "to": "TRTC-O03"
+        },
+        {
+            "rt": [
+                "trtc_031",
+                "tra_0990"
+            ],
+            "from": "TRTC-BL23",
+            "to": "TRA-0990"
+        },
+        {
+            "rt": [
+                "trtc_br12",
+                "trtc_094"
+            ],
+            "from": "TRTC-BR12",
+            "to": "TRTC-BL19"
+        },
+        {
+            "rt": [
+                "trtc_111",
+                "tra_0950"
+            ],
+            "from": "TRTC-G19",
+            "to": "TRA-0950"
+        },
+        {
+            "rt": [
+                "trtc_br22",
+                "trtc_y13"
+            ],
+            "from": "TRTC-BR22",
+            "to": "NTMC-Y13"
+        },
+        {
+            "rt": [
+                "trtc_097",
+                "trtc_179"
+            ],
+            "from": "TRTC-BL22",
+            "to": "TRTC-O21"
+        },
+        {
+            "rt": [
+                "trtc_br07",
+                "trtc_082"
+            ],
+            "from": "TRTC-BR07",
+            "to": "TRTC-BL07"
+        },
+        {
+            "rt": [
+                "trtc_036",
+                "trtc_179"
+            ],
+            "from": "TRTC-G04",
+            "to": "TRTC-O21"
+        },
+        {
+            "rt": [
+                "trtc_y16",
+                "trtc_105"
+            ],
+            "from": "NTMC-Y16",
+            "to": "TRTC-G13"
+        },
+        {
+            "rt": [
+                "trtc_101",
+                "trtc_050"
+            ],
+            "from": "TRTC-R04",
+            "to": "TRTC-R09"
+        },
+        {
+            "rt": [
+                "trtc_037",
+                "trtc_lb07"
+            ],
+            "from": "TRTC-G05",
+            "to": "NTMC-LB07"
+        },
+        {
+            "rt": [
+                "trtc_086",
+                "tymetro_a12"
+            ],
+            "from": "TRTC-BL11",
+            "to": "TYMC-A12"
+        },
+        {
+            "rt": [
+                "trtc_y10",
+                "tymetro_a16"
+            ],
+            "from": "NTMC-Y10",
+            "to": "TYMC-A16"
+        },
+        {
+            "rt": [
+                "trtc_br15",
+                "tra_1010"
+            ],
+            "from": "TRTC-BR15",
+            "to": "TRA-1010"
+        },
+        {
+            "rt": [
+                "trtc_069",
+                "trtc_110"
+            ],
+            "from": "TRTC-R26",
+            "to": "TRTC-G18"
+        },
+        {
+            "rt": [
+                "trtc_068",
+                "trtc_066"
+            ],
+            "from": "TRTC-R25",
+            "to": "TRTC-R23"
+        },
+        {
+            "rt": [
+                "trtc_br03",
+                "trtc_041"
+            ],
+            "from": "TRTC-BR03",
+            "to": "TRTC-G09"
+        },
+        {
+            "rt": [
+                "tra_0970",
+                "trtc_046"
+            ],
+            "from": "TRA-0970",
+            "to": "TRTC-O03"
+        },
+        {
+            "rt": [
+                "tymetro_a06",
+                "trtc_111"
+            ],
+            "from": "TYMC-A6",
+            "to": "TRTC-G19"
+        },
+        {
+            "rt": [
+                "trtc_br07",
+                "trtc_125"
+            ],
+            "from": "TRTC-BR07",
+            "to": "TRTC-O15"
+        },
+        {
+            "rt": [
+                "trtc_062",
+                "tra_1070"
+            ],
+            "from": "TRTC-R20",
+            "to": "TRA-1070"
+        },
+        {
+            "rt": [
+                "trtc_105",
+                "trtc_br18"
+            ],
+            "from": "TRTC-G13",
+            "to": "TRTC-BR18"
+        },
+        {
+            "rt": [
+                "trtc_132",
+                "tra_0910"
+            ],
+            "from": "TRTC-G15",
+            "to": "TRA-0910"
+        },
+        {
+            "rt": [
+                "trtc_061",
+                "tra_0900"
+            ],
+            "from": "TRTC-R19",
+            "to": "TRA-0900"
+        },
+        {
+            "rt": [
+                "trtc_054",
+                "trtc_177"
+            ],
+            "from": "TRTC-R12",
+            "to": "TRTC-O51"
+        },
+        {
+            "rt": [
+                "trtc_100",
+                "trtc_y13"
+            ],
+            "from": "TRTC-R03",
+            "to": "NTMC-Y13"
+        },
+        {
+            "rt": [
+                "trtc_br17",
+                "trtc_080"
+            ],
+            "from": "TRTC-BR17",
+            "to": "TRTC-BL05"
+        },
+        {
+            "rt": [
+                "tymetro_a15",
+                "trtc_077"
+            ],
+            "from": "TYMC-A15",
+            "to": "TRTC-BL02"
+        },
+        {
+            "rt": [
+                "trtc_061",
+                "trtc_062"
+            ],
+            "from": "TRTC-R19",
+            "to": "TRTC-R20"
+        },
+        {
+            "rt": [
+                "tra_1080",
+                "trtc_085"
+            ],
+            "from": "TRA-1080",
+            "to": "TRTC-BL10"
+        },
+        {
+            "rt": [
+                "trtc_066",
+                "tymetro_a05"
+            ],
+            "from": "TRTC-R23",
+            "to": "TYMC-A5"
+        },
+        {
+            "rt": [
+                "trtc_br14",
+                "trtc_109"
+            ],
+            "from": "TRTC-BR14",
+            "to": "TRTC-G17"
+        },
+        {
+            "rt": [
+                "tra_0980",
+                "trtc_038"
+            ],
+            "from": "TRA-0980",
+            "to": "TRTC-G06"
+        },
+        {
+            "rt": [
+                "trtc_103",
+                "tra_1040"
+            ],
+            "from": "TRTC-R06",
+            "to": "TRA-1040"
+        },
+        {
+            "rt": [
+                "trtc_175",
+                "trtc_y15"
+            ],
+            "from": "TRTC-O53",
+            "to": "NTMC-Y15"
+        },
+        {
+            "rt": [
+                "trtc_011",
+                "tra_0910"
+            ],
+            "from": "TRTC-BR09",
+            "to": "TRA-0910"
+        },
+        {
+            "rt": [
+                "tymetro_a12",
+                "trtc_122"
+            ],
+            "from": "TYMC-A12",
+            "to": "TRTC-O18"
+        },
+        {
+            "rt": [
+                "tra_1090",
+                "tra_0910"
+            ],
+            "from": "TRA-1090",
+            "to": "TRA-0910"
+        },
+        {
+            "rt": [
+                "tra_1050",
+                "trtc_046"
+            ],
+            "from": "TRA-1050",
+            "to": "TRTC-O03"
+        },
+        {
+            "rt": [
+                "tra_1140",
+                "tymetro_a09"
+            ],
+            "from": "TRA-1140",
+            "to": "TYMC-A9"
+        },
+        {
+            "rt": [
+                "trtc_y16",
+                "trtc_103"
+            ],
+            "from": "NTMC-Y16",
+            "to": "TRTC-R06"
+        },
+        {
+            "rt": [
+                "trtc_094",
+                "trtc_lb09"
+            ],
+            "from": "TRTC-BL19",
+            "to": "NTMC-LB09"
+        },
+        {
+            "rt": [
+                "tra_0970",
+                "tymetro_a05"
+            ],
+            "from": "TRA-0970",
+            "to": "TYMC-A5"
+        },
+        {
+            "rt": [
+                "trtc_lb04",
+                "trtc_101"
+            ],
+            "from": "NTMC-LB04",
+            "to": "TRTC-R04"
+        },
+        {
+            "rt": [
+                "trtc_046",
+                "trtc_lb02"
+            ],
+            "from": "TRTC-O03",
+            "to": "NTMC-LB02"
+        },
+        {
+            "rt": [
+                "trtc_009",
+                "trtc_055"
+            ],
+            "from": "TRTC-BR11",
+            "to": "TRTC-O11"
+        },
+        {
+            "rt": [
+                "tra_0960",
+                "trtc_br03"
+            ],
+            "from": "TRA-0960",
+            "to": "TRTC-BR03"
+        },
+        {
+            "rt": [
+                "trtc_y20",
+                "trtc_122"
+            ],
+            "from": "NTMC-Y20",
+            "to": "TRTC-O18"
+        },
+        {
+            "rt": [
+                "tra_1070",
+                "trtc_125"
+            ],
+            "from": "TRA-1070",
+            "to": "TRTC-O15"
+        },
+        {
+            "rt": [
+                "tra_0900",
+                "trtc_125"
+            ],
+            "from": "TRA-0900",
+            "to": "TRTC-O15"
+        },
+        {
+            "rt": [
+                "trtc_081",
+                "trtc_178"
+            ],
+            "from": "TRTC-BL06",
+            "to": "TRTC-O50"
+        },
+        {
+            "rt": [
+                "trtc_069",
+                "trtc_lb02"
+            ],
+            "from": "TRTC-R26",
+            "to": "NTMC-LB02"
+        },
+        {
+            "rt": [
+                "trtc_180",
+                "tra_1140"
+            ],
+            "from": "TRTC-O20",
+            "to": "TRA-1140"
+        },
+        {
+            "rt": [
+                "trtc_122",
+                "trtc_lb06"
+            ],
+            "from": "TRTC-O18",
+            "to": "NTMC-LB06"
+        },
+        {
+            "rt": [
+                "tra_1030",
+                "tra_1020"
+            ],
+            "from": "TRA-1030",
+            "to": "TRA-1020"
+        },
+        {
+            "rt": [
+                "trtc_063",
+                "tra_0950"
+            ],
+            "from": "TRTC-R21",
+            "to": "TRA-0950"
+        },
+        {
+            "rt": [
+                "trtc_057",
+                "tymetro_a13"
+            ],
+            "from": "TRTC-R15",
+            "to": "TYMC-A13"
+        },
+        {
+            "rt": [
+                "trtc_127",
+                "trtc_lb12"
+            ],
+            "from": "TRTC-O13",
+            "to": "NTMC-LB12"
+        },
+        {
+            "rt": [
+                "tra_1075",
+                "tra_1030"
+            ],
+            "from": "TRA-1075",
+            "to": "TRA-1030"
+        },
+        {
+            "rt": [
+                "trtc_br03",
+                "tymetro_a06"
+            ],
+            "from": "TRTC-BR03",
+            "to": "TYMC-A6"
+        },
+        {
+            "rt": [
+                "trtc_y16",
+                "trtc_088"
+            ],
+            "from": "NTMC-Y16",
+            "to": "TRTC-BL13"
+        },
+        {
+            "rt": [
+                "trtc_060",
+                "trtc_127"
+            ],
+            "from": "TRTC-R18",
+            "to": "TRTC-O13"
+        },
+        {
+            "rt": [
+                "trtc_lb03",
+                "tra_0930"
+            ],
+            "from": "NTMC-LB03",
+            "to": "TRA-0930"
+        },
+        {
+            "rt": [
+                "tymetro_a18",
+                "trtc_088"
+            ],
+            "from": "TYMC-A18",
+            "to": "TRTC-BL13"
+        },
+        {
+            "rt": [
+                "trtc_br19",
+                "trtc_br17"
+            ],
+            "from": "TRTC-BR19",
+            "to": "TRTC-BR17"
+        },
+        {
+            "rt": [
+                "trtc_128",
+                "trtc_081"
+            ],
+            "from": "TRTC-O12",
+            "to": "TRTC-BL06"
+        },
+        {
+            "rt": [
+                "tra_0900",
+                "tymetro_a04"
+            ],
+            "from": "TRA-0900",
+            "to": "TYMC-A4"
+        },
+        {
+            "rt": [
+                "trtc_093",
+                "trtc_y17"
+            ],
+            "from": "TRTC-BL18",
+            "to": "NTMC-Y17"
+        },
+        {
+            "rt": [
+                "trtc_br13",
+                "trtc_126"
+            ],
+            "from": "TRTC-BR13",
+            "to": "TRTC-O14"
+        },
+        {
+            "rt": [
+                "trtc_176",
+                "trtc_br22"
+            ],
+            "from": "TRTC-O52",
+            "to": "TRTC-BR22"
+        },
+        {
+            "rt": [
+                "trtc_059",
+                "trtc_y17"
+            ],
+            "from": "TRTC-R17",
+            "to": "NTMC-Y17"
+        },
+        {
+            "rt": [
+                "trtc_043",
+                "tymetro_a09"
+            ],
+            "from": "TRTC-G11",
+            "to": "TYMC-A9"
+        },
+        {
+            "rt": [
+                "tra_1140",
+                "trtc_054"
+            ],
+            "from": "TRA-1140",
+            "to": "TRTC-R12"
+        },
+        {
+            "rt": [
+                "trtc_111",
+                "trtc_y12"
+            ],
+            "from": "TRTC-G19",
+            "to": "NTMC-Y12"
+        },
+        {
+            "rt": [
+                "tymetro_a05",
+                "tymetro_a16"
+            ],
+            "from": "TYMC-A5",
+            "to": "TYMC-A16"
+        },
+        {
+            "rt": [
+                "trtc_131",
+                "trtc_br21"
+            ],
+            "from": "TRTC-O09",
+            "to": "TRTC-BR21"
+        },
+        {
+            "rt": [
+                "tymetro_a19",
+                "tra_1050"
+            ],
+            "from": "TYMC-A19",
+            "to": "TRA-1050"
+        },
+        {
+            "rt": [
+                "trtc_br08",
+                "tra_0910"
+            ],
+            "from": "TRTC-BR08",
+            "to": "TRA-0910"
+        },
+        {
+            "rt": [
+                "trtc_lb10",
+                "trtc_094"
+            ],
+            "from": "NTMC-LB10",
+            "to": "TRTC-BL19"
+        },
+        {
+            "rt": [
+                "trtc_126",
+                "trtc_056"
+            ],
+            "from": "TRTC-O14",
+            "to": "TRTC-R14"
+        },
+        {
+            "rt": [
+                "trtc_041",
+                "tra_1020"
+            ],
+            "from": "TRTC-G09",
+            "to": "TRA-1020"
+        },
+        {
+            "rt": [
+                "tra_1000",
+                "tra_0920"
+            ],
+            "from": "TRA-1000",
+            "to": "TRA-0920"
+        },
+        {
+            "rt": [
+                "trtc_071",
+                "trtc_078"
+            ],
+            "from": "TRTC-R28",
+            "to": "TRTC-BL03"
+        },
+        {
+            "rt": [
+                "trtc_054",
+                "trtc_lb09"
+            ],
+            "from": "TRTC-R12",
+            "to": "NTMC-LB09"
+        },
+        {
+            "rt": [
+                "trtc_092",
+                "tra_1130"
+            ],
+            "from": "TRTC-BL17",
+            "to": "TRA-1130"
+        },
+        {
+            "rt": [
+                "trtc_011",
+                "trtc_060"
+            ],
+            "from": "TRTC-BR09",
+            "to": "TRTC-R18"
+        },
+        {
+            "rt": [
+                "trtc_035",
+                "trtc_099"
+            ],
+            "from": "TRTC-G03",
+            "to": "TRTC-R02"
+        },
+        {
+            "rt": [
+                "trtc_053",
+                "trtc_lb07"
+            ],
+            "from": "TRTC-G14",
+            "to": "NTMC-LB07"
+        },
+        {
+            "rt": [
+                "tra_1050",
+                "tymetro_a10"
+            ],
+            "from": "TRA-1050",
+            "to": "TYMC-A10"
+        },
+        {
+            "rt": [
+                "trtc_042",
+                "trtc_083"
+            ],
+            "from": "TRTC-G10",
+            "to": "TRTC-BL08"
+        },
+        {
+            "rt": [
+                "trtc_064",
+                "trtc_092"
+            ],
+            "from": "TRTC-R22",
+            "to": "TRTC-BL17"
+        },
+        {
+            "rt": [
+                "trtc_lb12",
+                "trtc_111"
+            ],
+            "from": "NTMC-LB12",
+            "to": "TRTC-G19"
+        },
+        {
+            "rt": [
+                "tra_0970",
+                "tymetro_a06"
+            ],
+            "from": "TRA-0970",
+            "to": "TYMC-A6"
+        },
+        {
+            "rt": [
+                "tymetro_a03",
+                "tra_1105"
+            ],
+            "from": "TYMC-A3",
+            "to": "TRA-1105"
+        },
+        {
+            "rt": [
+                "trtc_132",
+                "trtc_y17"
+            ],
+            "from": "TRTC-G15",
+            "to": "NTMC-Y17"
+        },
+        {
+            "rt": [
+                "trtc_177",
+                "trtc_127"
+            ],
+            "from": "TRTC-O51",
+            "to": "TRTC-O13"
+        },
+        {
+            "rt": [
+                "trtc_y19",
+                "trtc_086"
+            ],
+            "from": "NTMC-Y19",
+            "to": "TRTC-BL11"
+        },
+        {
+            "rt": [
+                "trtc_103",
+                "tymetro_a07"
+            ],
+            "from": "TRTC-R06",
+            "to": "TYMC-A7"
+        },
+        {
+            "rt": [
+                "trtc_175",
+                "trtc_y20"
+            ],
+            "from": "TRTC-O53",
+            "to": "NTMC-Y20"
+        },
+        {
+            "rt": [
+                "tra_1140",
+                "tymetro_a04"
+            ],
+            "from": "TRA-1140",
+            "to": "TYMC-A4"
+        },
+        {
+            "rt": [
+                "trtc_br08",
+                "trtc_055"
+            ],
+            "from": "TRTC-BR08",
+            "to": "TRTC-O11"
+        },
+        {
+            "rt": [
+                "trtc_079",
+                "trtc_111"
+            ],
+            "from": "TRTC-BL04",
+            "to": "TRTC-G19"
+        },
+        {
+            "rt": [
+                "trtc_y14",
+                "tymetro_a18"
+            ],
+            "from": "NTMC-Y14",
+            "to": "TYMC-A18"
+        },
+        {
+            "rt": [
+                "trtc_071",
+                "tymetro_a20"
+            ],
+            "from": "TRTC-R28",
+            "to": "TYMC-A20"
+        },
+        {
+            "rt": [
+                "trtc_y10",
+                "trtc_091"
+            ],
+            "from": "NTMC-Y10",
+            "to": "TRTC-BL16"
+        },
+        {
+            "rt": [
+                "tra_1100",
+                "trtc_071"
+            ],
+            "from": "TRA-1100",
+            "to": "TRTC-R28"
+        },
+        {
+            "rt": [
+                "tymetro_a14a",
+                "tra_1020"
+            ],
+            "from": "TYMC-A14a",
+            "to": "TRA-1020"
+        },
+        {
+            "rt": [
+                "tra_0990",
+                "trtc_132"
+            ],
+            "from": "TRA-0990",
+            "to": "TRTC-G15"
+        },
+        {
+            "rt": [
+                "trtc_070",
+                "trtc_br03"
+            ],
+            "from": "TRTC-R27",
+            "to": "TRTC-BR03"
+        },
+        {
+            "rt": [
+                "tymetro_a08",
+                "trtc_lb06"
+            ],
+            "from": "TYMC-A8",
+            "to": "NTMC-LB06"
+        },
+        {
+            "rt": [
+                "tymetro_a06",
+                "trtc_048"
+            ],
+            "from": "TYMC-A6",
+            "to": "TRTC-O01"
+        },
+        {
+            "rt": [
+                "trtc_054",
+                "tymetro_a02"
+            ],
+            "from": "TRTC-R12",
+            "to": "TYMC-A2"
+        },
+        {
+            "rt": [
+                "tra_0950",
+                "trtc_045"
+            ],
+            "from": "TRA-0950",
+            "to": "TRTC-O04"
+        },
+        {
+            "rt": [
+                "trtc_042",
+                "trtc_081"
+            ],
+            "from": "TRTC-G10",
+            "to": "TRTC-BL06"
+        },
+        {
+            "rt": [
+                "trtc_br23",
+                "trtc_y15"
+            ],
+            "from": "TRTC-BR23",
+            "to": "NTMC-Y15"
+        },
+        {
+            "rt": [
+                "trtc_053",
+                "trtc_y12"
+            ],
+            "from": "TRTC-G14",
+            "to": "NTMC-Y12"
+        },
+        {
+            "rt": [
+                "tra_0990",
+                "trtc_111"
+            ],
+            "from": "TRA-0990",
+            "to": "TRTC-G19"
+        },
+        {
+            "rt": [
+                "trtc_035",
+                "trtc_050"
+            ],
+            "from": "TRTC-G03",
+            "to": "TRTC-R09"
+        },
+        {
+            "rt": [
+                "trtc_br22",
+                "trtc_br19"
+            ],
+            "from": "TRTC-BR22",
+            "to": "TRTC-BR19"
+        },
+        {
+            "rt": [
+                "trtc_lb07",
+                "trtc_br22"
+            ],
+            "from": "NTMC-LB07",
+            "to": "TRTC-BR22"
+        },
+        {
+            "rt": [
+                "trtc_066",
+                "tra_1050"
+            ],
+            "from": "TRTC-R23",
+            "to": "TRA-1050"
+        },
+        {
+            "rt": [
+                "trtc_045",
+                "tra_0920"
+            ],
+            "from": "TRTC-O04",
+            "to": "TRA-0920"
+        },
+        {
+            "rt": [
+                "trtc_178",
+                "trtc_br03"
+            ],
+            "from": "TRTC-O50",
+            "to": "TRTC-BR03"
+        },
+        {
+            "rt": [
+                "trtc_178",
+                "trtc_y15"
+            ],
+            "from": "TRTC-O50",
+            "to": "NTMC-Y15"
+        },
+        {
+            "rt": [
+                "tra_0910",
+                "trtc_178"
+            ],
+            "from": "TRA-0910",
+            "to": "TRTC-O50"
+        },
+        {
+            "rt": [
+                "tra_1000",
+                "trtc_071"
+            ],
+            "from": "TRA-1000",
+            "to": "TRTC-R28"
+        },
+        {
+            "rt": [
+                "trtc_031",
+                "trtc_132"
+            ],
+            "from": "TRTC-BL23",
+            "to": "TRTC-G15"
+        },
+        {
+            "rt": [
+                "trtc_br08",
+                "trtc_043"
+            ],
+            "from": "TRTC-BR08",
+            "to": "TRTC-G11"
+        },
+        {
+            "rt": [
+                "trtc_y16",
+                "trtc_010"
+            ],
+            "from": "NTMC-Y16",
+            "to": "TRTC-BL15"
+        },
+        {
+            "rt": [
+                "trtc_lb08",
+                "trtc_br21"
+            ],
+            "from": "NTMC-LB08",
+            "to": "TRTC-BR21"
+        },
+        {
+            "rt": [
+                "trtc_lb09",
+                "trtc_046"
+            ],
+            "from": "NTMC-LB09",
+            "to": "TRTC-O03"
+        },
+        {
+            "rt": [
+                "trtc_047",
+                "tymetro_a06"
+            ],
+            "from": "TRTC-O02",
+            "to": "TYMC-A6"
+        },
+        {
+            "rt": [
+                "trtc_045",
+                "trtc_091"
+            ],
+            "from": "TRTC-O04",
+            "to": "TRTC-BL16"
+        },
+        {
+            "rt": [
+                "trtc_y10",
+                "trtc_111"
+            ],
+            "from": "NTMC-Y10",
+            "to": "TRTC-G19"
+        },
+        {
+            "rt": [
+                "tymetro_a06",
+                "trtc_br02"
+            ],
+            "from": "TYMC-A6",
+            "to": "TRTC-BR02"
+        },
+        {
+            "rt": [
+                "trtc_br06",
+                "trtc_br17"
+            ],
+            "from": "TRTC-BR06",
+            "to": "TRTC-BR17"
+        },
+        {
+            "rt": [
+                "tra_1130",
+                "tra_1120"
+            ],
+            "from": "TRA-1130",
+            "to": "TRA-1120"
+        },
+        {
+            "rt": [
+                "trtc_130",
+                "trtc_134"
+            ],
+            "from": "TRTC-O10",
+            "to": "TRTC-O06"
+        },
+        {
+            "rt": [
+                "tra_1100",
+                "trtc_lb02"
+            ],
+            "from": "TRA-1100",
+            "to": "NTMC-LB02"
+        },
+        {
+            "rt": [
+                "tra_0930",
+                "trtc_132"
+            ],
+            "from": "TRA-0930",
+            "to": "TRTC-G15"
+        },
+        {
+            "rt": [
+                "trtc_lb03",
+                "trtc_br08"
+            ],
+            "from": "NTMC-LB03",
+            "to": "TRTC-BR08"
+        },
+        {
+            "rt": [
+                "trtc_050",
+                "trtc_175"
+            ],
+            "from": "TRTC-R09",
+            "to": "TRTC-O53"
+        },
+        {
+            "rt": [
+                "tra_0970",
+                "trtc_131"
+            ],
+            "from": "TRA-0970",
+            "to": "TRTC-O09"
+        },
+        {
+            "rt": [
+                "tymetro_a05",
+                "trtc_lb03"
+            ],
+            "from": "TYMC-A5",
+            "to": "NTMC-LB03"
+        },
+        {
+            "rt": [
+                "trtc_059",
+                "tymetro_a21"
+            ],
+            "from": "TRTC-R17",
+            "to": "TYMC-A21"
+        },
+        {
+            "rt": [
+                "trtc_071",
+                "trtc_br08"
+            ],
+            "from": "TRTC-R28",
+            "to": "TRTC-BR08"
+        },
+        {
+            "rt": [
+                "tymetro_a15",
+                "trtc_037"
+            ],
+            "from": "TYMC-A15",
+            "to": "TRTC-G05"
+        },
+        {
+            "rt": [
+                "trtc_045",
+                "trtc_046"
+            ],
+            "from": "TRTC-O04",
+            "to": "TRTC-O03"
+        },
+        {
+            "rt": [
+                "trtc_br02",
+                "tra_1000"
+            ],
+            "from": "TRTC-BR02",
+            "to": "TRA-1000"
+        },
+        {
+            "rt": [
+                "trtc_br02",
+                "trtc_068"
+            ],
+            "from": "TRTC-BR02",
+            "to": "TRTC-R25"
+        },
+        {
+            "rt": [
+                "tra_0990",
+                "trtc_076"
+            ],
+            "from": "TRA-0990",
+            "to": "TRTC-BL01"
+        },
+        {
+            "rt": [
+                "trtc_y08",
+                "trtc_111"
+            ],
+            "from": "NTMC-Y08",
+            "to": "TRTC-G19"
+        },
+        {
+            "rt": [
+                "trtc_099",
+                "tymetro_a12"
+            ],
+            "from": "TRTC-R02",
+            "to": "TYMC-A12"
+        },
+        {
+            "rt": [
+                "trtc_070",
+                "tymetro_a03"
+            ],
+            "from": "TRTC-R27",
+            "to": "TYMC-A3"
+        },
+        {
+            "rt": [
+                "trtc_034",
+                "tra_1040"
+            ],
+            "from": "TRTC-G02",
+            "to": "TRA-1040"
+        },
+        {
+            "rt": [
+                "trtc_039",
+                "tymetro_a08"
+            ],
+            "from": "TRTC-G07",
+            "to": "TYMC-A8"
+        },
+        {
+            "rt": [
+                "tra_1050",
+                "tra_1020"
+            ],
+            "from": "TRA-1050",
+            "to": "TRA-1020"
+        },
+        {
+            "rt": [
+                "trtc_063",
+                "trtc_080"
+            ],
+            "from": "TRTC-R21",
+            "to": "TRTC-BL05"
+        },
+        {
+            "rt": [
+                "trtc_010",
+                "tymetro_a14a"
+            ],
+            "from": "TRTC-BL15",
+            "to": "TYMC-A14a"
+        },
+        {
+            "rt": [
+                "trtc_103",
+                "trtc_y16"
+            ],
+            "from": "TRTC-R06",
+            "to": "NTMC-Y16"
+        },
+        {
+            "rt": [
+                "trtc_br12",
+                "trtc_067"
+            ],
+            "from": "TRTC-BR12",
+            "to": "TRTC-R24"
+        },
+        {
+            "rt": [
+                "trtc_180",
+                "trtc_069"
+            ],
+            "from": "TRTC-O20",
+            "to": "TRTC-R26"
+        },
+        {
+            "rt": [
+                "trtc_176",
+                "trtc_132"
+            ],
+            "from": "TRTC-O52",
+            "to": "TRTC-G15"
+        },
+        {
+            "rt": [
+                "tra_0950",
+                "trtc_180"
+            ],
+            "from": "TRA-0950",
+            "to": "TRTC-O20"
+        },
+        {
+            "rt": [
+                "tymetro_a15",
+                "trtc_059"
+            ],
+            "from": "TYMC-A15",
+            "to": "TRTC-R17"
+        },
+        {
+            "rt": [
+                "trtc_br15",
+                "trtc_180"
+            ],
+            "from": "TRTC-BR15",
+            "to": "TRTC-O20"
+        }
+    ]
+}

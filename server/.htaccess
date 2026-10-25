@@ -1,0 +1,29 @@
+# TimeLink（TDX Proxy 與 /txapi/ 查詢服務）：所有請求都交給 index.php 處理
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 根目錄實際存在的 PHP 檔（index.php，以及主機自備的工具）直接執行，不進改寫，避免迴圈
+    RewriteRule ^index\.php$ - [L]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^[^/]+\.php$ - [L]
+
+    # 監控面板（Vue 3 靜態檔，資料來自 /txapi/monitor）
+    #   /panel → /panel/；/panel/ → libs/html/panel/index.html；/panel/<檔案> → libs/html/panel/<檔案>
+    RewriteRule ^panel$ /panel/ [R=301,L]
+    RewriteRule ^panel/$ libs/html/panel/index.html [L]
+    RewriteRule ^panel/(.+)$ libs/html/panel/$1 [L]
+    # 後臺（Vue 3 靜態檔，登入後才顯示畫面，資料來自 /txapi/admin_*）：/admin_panel/ → libs/html/admin_panel/
+    RewriteRule ^admin_panel$ /admin_panel/ [R=301,L]
+    RewriteRule ^admin_panel/$ libs/html/admin_panel/index.html [L]
+    RewriteRule ^admin_panel/(.+)$ libs/html/admin_panel/$1 [L]
+    # 上面改寫後的內部請求直接放行（只放行內部改寫，直接打 /libs/html/... 仍交給 index.php）
+    RewriteCond %{ENV:REDIRECT_STATUS} !^$
+    RewriteRule ^libs/html/ - [L]
+
+    # 其餘路徑一律交給 index.php。
+    # libs/ 底下的程式與設定（含金鑰）因此不會被當成靜態檔下載，libs/.htaccess 再擋一次。
+    RewriteRule ^ index.php [L]
+</IfModule>

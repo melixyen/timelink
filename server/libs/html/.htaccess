@@ -1,0 +1,12 @@
+# libs/html/：靜態網頁（例如監控面板），由根目錄 .htaccess 把網址對應過來後直接提供。
+# 覆寫 libs/.htaccess 的 Require all denied，但 PHP 等程式檔仍一律拒絕。
+Options -Indexes
+Require all granted
+<FilesMatch "\.(php|phtml|phar|inc)$">
+    Require all denied
+</FilesMatch>
+
+# 面板更新後要立刻生效：每次都向伺服器確認（仍可用 304）
+<IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+</IfModule>

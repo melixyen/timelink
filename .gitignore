@@ -1,0 +1,22 @@
+# 主機上的資料、私密設定與產生檔（不進版控）：server/ 的內容＝網站根目錄，
+# 佈署只覆蓋程式（index.php、.htaccess、libs/、agent/），下面這些由主機自己產生、保留
+server/custom/
+server/download/
+server/sqlite/
+server/backup/
+server/data/
+server/t/
+server/admin-setup.txt
+
+# 網站根目錄只有 index.php 進版控（其他 PHP，例如主機維護工具，不進）
+server/*.php
+!server/index.php
+
+# Claude 比對工具的暫存結果（基準 baseline_*.json 要進版控）
+server/agent/claude/data/run_*.json
+
+# 系統與編輯器暫存
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

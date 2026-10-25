@@ -1,0 +1,1029 @@
+{
+ "Description": "轉乘群組（TransferGroup）的人工補充資料。TDX 有的轉乘（捷運 LineTransfer、TransferStations、StationTransfer，臺鐵 LineTransfer）由產生器直接讀取，這裡只放 TDX 沒有的：跨系統群組成員、railtime／rocptx 的步行分鐘、同站換車分鐘、群組代碼用的漢語拼音",
+ "Settings": {
+  "SystemPriority": [
+   "TRA",
+   "THSR",
+   "TRTC",
+   "TYMC",
+   "NTMC",
+   "KRTC",
+   "TMRT",
+   "KLRT",
+   "NTDLRT",
+   "NTALRT"
+  ],
+  "TrainChangeDefault": {
+   "TRA": 3,
+   "THSR": 3,
+   "metro": 2
+  },
+  "TrainChangeAuto": {
+   "TRA": {
+    "ExpressTypeCodes": [
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "11"
+    ],
+    "MinExpressStopsPerDay": 10,
+    "MinTerminalsPerDay": 10
+   },
+   "THSR": "all"
+  },
+  "WalkEstimate": {
+   "BaseMinutes": 4,
+   "MetersPerMinute": 70,
+   "MinMinutes": 3,
+   "MaxMinutes": 15
+  },
+  "AutoLink": {
+   "MaxMeters": 300,
+   "SameNameMaxMeters": 450,
+   "CrossSystemOnly": true,
+   "Notes": "不同系統的兩站相距 MaxMeters 公尺內、或同名（去掉「車站、站」與臺／台差異）相距 SameNameMaxMeters 公尺內，自動成為轉乘站（加入 transfer_links.json）。自動只會新增，不會移除；要移除寫進 ExcludePairs"
+  }
+ },
+ "Groups": [
+  {
+   "Stations": [
+    "TRA-1000",
+    "TRA-1001",
+    "THSR-1000",
+    "TRTC-BL12",
+    "TRTC-R10",
+    "TYMC-A1"
+   ],
+   "Note": "臺北車站：臺鐵（含環島車次代碼 1001）、高鐵、北捷板南線與淡水信義線、機捷 A1"
+  },
+  {
+   "Stations": [
+    "TRA-1020",
+    "THSR-1010",
+    "TRTC-BL07",
+    "NTMC-Y16"
+   ],
+   "Note": "板橋：臺鐵、高鐵、板南線、環狀線"
+  },
+  {
+   "Stations": [
+    "TRA-0980",
+    "THSR-0990",
+    "TRTC-BL22"
+   ],
+   "Note": "南港：臺鐵、高鐵、板南線"
+  },
+  {
+   "Stations": [
+    "TRA-0990",
+    "TRTC-G19"
+   ],
+   "Note": "松山：臺鐵、松山新店線"
+  },
+  {
+   "Stations": [
+    "TRA-1070",
+    "NTMC-LB08"
+   ],
+   "Note": "鶯歌：臺鐵、三鶯線"
+  },
+  {
+   "Stations": [
+    "TRA-1194",
+    "THSR-1030"
+   ],
+   "Note": "六家／高鐵新竹"
+  },
+  {
+   "Stations": [
+    "TRA-3150",
+    "THSR-1035"
+   ],
+   "Note": "豐富／高鐵苗栗"
+  },
+  {
+   "Stations": [
+    "TRA-3340",
+    "THSR-1040",
+    "TMRT-G17"
+   ],
+   "Note": "新烏日／高鐵臺中／臺中捷運高鐵臺中站"
+  },
+  {
+   "Stations": [
+    "TRA-3320",
+    "TMRT-G13"
+   ],
+   "Note": "大慶：臺鐵、臺中捷運"
+  },
+  {
+   "Stations": [
+    "TRA-3270",
+    "TMRT-G4"
+   ],
+   "Note": "松竹：臺鐵、臺中捷運"
+  },
+  {
+   "Stations": [
+    "TRA-3330",
+    "TMRT-G16"
+   ],
+   "Note": "烏日：臺鐵、臺中捷運"
+  },
+  {
+   "Stations": [
+    "TRA-4272",
+    "THSR-1060"
+   ],
+   "Note": "沙崙／高鐵臺南"
+  },
+  {
+   "Stations": [
+    "TRA-4340",
+    "THSR-1070",
+    "KRTC-R16"
+   ],
+   "Note": "新左營／高鐵左營／高捷左營"
+  },
+  {
+   "Stations": [
+    "TRA-4400",
+    "KRTC-R11"
+   ],
+   "Note": "高雄車站：臺鐵、高捷紅線"
+  },
+  {
+   "Stations": [
+    "TRA-4310",
+    "KRTC-RK1"
+   ],
+   "Note": "岡山：臺鐵、高捷紅線岡山車站"
+  },
+  {
+   "Stations": [
+    "TRA-4320",
+    "KRTC-R23"
+   ],
+   "Note": "橋頭：臺鐵、高捷紅線橋頭火車站"
+  },
+  {
+   "Stations": [
+    "TRA-4370",
+    "KLRT-C20"
+   ],
+   "Note": "美術館：臺鐵、環狀輕軌臺鐵美術館"
+  },
+  {
+   "Stations": [
+    "TRA-4380",
+    "KLRT-C18"
+   ],
+   "Note": "鼓山：臺鐵、環狀輕軌"
+  },
+  {
+   "Stations": [
+    "TRA-4420",
+    "KLRT-C30"
+   ],
+   "Note": "科工館：臺鐵、環狀輕軌"
+  },
+  {
+   "Stations": [
+    "KRTC-R6",
+    "KLRT-C3"
+   ],
+   "Note": "凱旋／前鎮之星：高捷紅線、環狀輕軌"
+  },
+  {
+   "Stations": [
+    "KRTC-O1",
+    "KLRT-C14"
+   ],
+   "Note": "哈瑪星：高捷橘線、環狀輕軌"
+  },
+  {
+   "Stations": [
+    "KRTC-R13",
+    "KLRT-C24"
+   ],
+   "Note": "凹子底／愛河之心：高捷紅線、環狀輕軌"
+  },
+  {
+   "Stations": [
+    "NTMC-Y08",
+    "NTALRT-K09"
+   ],
+   "Note": "十四張：環狀線、安坑輕軌"
+  },
+  {
+   "Stations": [
+    "TRTC-R27",
+    "NTDLRT-V01"
+   ],
+   "Note": "紅樹林：淡水信義線、淡海輕軌"
+  }
+ ],
+ "Pairs": [
+  {
+   "Stations": [
+    "TRTC-G13",
+    "TYMC-A1"
+   ],
+   "Note": "北門 ↔ 機捷台北車站（地下街步行，TDX StationTransfer 也有、railtime taipei7）"
+  }
+ ],
+ "ExcludePairs": [],
+ "Bypass": [
+  {
+   "Stations": [
+    "TRA-1010",
+    "TRTC-BL10"
+   ],
+   "AllowAtEnds": true,
+   "Note": "萬華↔龍山寺：前後已有臺北、板橋可轉，不建議在此轉乘（使用者指定）"
+  }
+ ],
+ "Walks": [
+  {
+   "From": "TRA-0980",
+   "To": "TRTC-BL22",
+   "Minutes": 5,
+   "Source": "railtime",
+   "Ref": "nangang1"
+  },
+  {
+   "From": "TRA-0990",
+   "To": "TRTC-G19",
+   "Minutes": 6,
+   "Source": "railtime",
+   "Ref": "songshan1"
+  },
+  {
+   "From": "TRTC-BL11",
+   "To": "TRTC-G12",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "ximen1"
+  },
+  {
+   "From": "TRTC-G14",
+   "To": "TRTC-R11",
+   "Minutes": 2,
+   "Source": "railtime",
+   "Ref": "zhongshan1"
+  },
+  {
+   "From": "TRA-1000",
+   "To": "TRTC-BL12",
+   "Minutes": 7,
+   "Source": "railtime",
+   "Ref": "taipei1"
+  },
+  {
+   "From": "TRA-1000",
+   "To": "TRTC-R10",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "taipei2"
+  },
+  {
+   "From": "TRTC-BL12",
+   "To": "TRTC-R10",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "taipei3"
+  },
+  {
+   "From": "TRA-1000",
+   "To": "TYMC-A1",
+   "Minutes": 7,
+   "Source": "railtime",
+   "Ref": "taipei4"
+  },
+  {
+   "From": "TRTC-R10",
+   "To": "TYMC-A1",
+   "Minutes": 12,
+   "Source": "railtime",
+   "Ref": "taipei5"
+  },
+  {
+   "From": "TRTC-BL12",
+   "To": "TYMC-A1",
+   "Minutes": 11,
+   "Source": "railtime",
+   "Ref": "taipei6"
+  },
+  {
+   "From": "TRTC-G13",
+   "To": "TYMC-A1",
+   "Minutes": 11,
+   "Source": "railtime",
+   "Ref": "taipei7"
+  },
+  {
+   "From": "TRTC-O15",
+   "To": "TYMC-A2",
+   "Minutes": 7,
+   "Source": "railtime",
+   "Ref": "sanchong1"
+  },
+  {
+   "From": "NTMC-Y20",
+   "To": "TYMC-A3",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "xbcyyq1"
+  },
+  {
+   "From": "TRTC-G10",
+   "To": "TRTC-R08",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "cksmh1"
+  },
+  {
+   "From": "TRA-1020",
+   "To": "TRTC-BL07",
+   "Minutes": 7,
+   "Source": "railtime",
+   "Ref": "banqiao1"
+  },
+  {
+   "From": "TRTC-BL07",
+   "To": "NTMC-Y16",
+   "Minutes": 11,
+   "Source": "railtime",
+   "Ref": "banqiao2"
+  },
+  {
+   "From": "TRA-1020",
+   "To": "NTMC-Y16",
+   "Minutes": 8,
+   "Source": "railtime",
+   "Ref": "banqiao3"
+  },
+  {
+   "From": "TRTC-BL08",
+   "To": "NTMC-Y17",
+   "Minutes": 9,
+   "Source": "railtime",
+   "Ref": "xinpu1"
+  },
+  {
+   "From": "TRTC-R13",
+   "To": "TRTC-O11",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "mqxl1"
+  },
+  {
+   "From": "TRTC-R07",
+   "To": "TRTC-O06",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "dongmen1"
+  },
+  {
+   "From": "TRTC-G09",
+   "To": "TRTC-O05",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "guting1"
+  },
+  {
+   "From": "TRTC-BL14",
+   "To": "TRTC-O07",
+   "Minutes": 2,
+   "Source": "railtime",
+   "Ref": "zhongxiaoxs1"
+  },
+  {
+   "From": "TRTC-G15",
+   "To": "TRTC-O08",
+   "Minutes": 2,
+   "Source": "railtime",
+   "Ref": "sjnanjing1"
+  },
+  {
+   "From": "TRTC-R05",
+   "To": "TRTC-BR09",
+   "Minutes": 5,
+   "Source": "railtime",
+   "Ref": "daan1"
+  },
+  {
+   "From": "TRTC-BL15",
+   "To": "TRTC-BR10",
+   "Minutes": 5,
+   "Source": "railtime",
+   "Ref": "zhongxiaofx1"
+  },
+  {
+   "From": "TRTC-G16",
+   "To": "TRTC-BR11",
+   "Minutes": 5,
+   "Source": "railtime",
+   "Ref": "nanjingfx1"
+  },
+  {
+   "From": "TRTC-BL23",
+   "To": "TRTC-BR24",
+   "Minutes": 5,
+   "Source": "railtime",
+   "Ref": "nangangexpo1"
+  },
+  {
+   "From": "TRTC-O17",
+   "To": "NTMC-Y18",
+   "Minutes": 5,
+   "Source": "railtime",
+   "Ref": "touqianzhang1"
+  },
+  {
+   "From": "TRTC-O02",
+   "To": "NTMC-Y11",
+   "Minutes": 8,
+   "Source": "railtime",
+   "Ref": "jingan1"
+  },
+  {
+   "From": "TRTC-G04",
+   "To": "NTMC-Y07",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "dapinglin1"
+  },
+  {
+   "From": "TRTC-BL01",
+   "To": "NTMC-LB01",
+   "Minutes": 5,
+   "Source": "railtime",
+   "Ref": "dingpu1"
+  },
+  {
+   "From": "TRA-1070",
+   "To": "NTMC-LB08",
+   "Minutes": 7,
+   "Source": "railtime",
+   "Ref": "yingge1"
+  }
+ ],
+ "Videos": [
+  {
+   "From": "TRA-0980",
+   "To": "TRTC-BL22",
+   "Type": "YouTube",
+   "ID": "AIQETgZdBKM",
+   "Title": "轉乘-南港站台鐵轉捷運",
+   "Source": "railtime",
+   "Ref": "nangang1"
+  },
+  {
+   "From": "TRTC-BL22",
+   "To": "TRA-0980",
+   "Type": "YouTube",
+   "ID": "HNBdfyBxMa8",
+   "Title": "轉乘-南港站捷運轉台鐵",
+   "Source": "railtime",
+   "Ref": "nangang1"
+  },
+  {
+   "From": "TRA-0990",
+   "To": "TRTC-G19",
+   "Type": "YouTube",
+   "ID": "CFX9EdLwT9A",
+   "Title": "轉乘-松山站台鐵轉捷運松山新店線",
+   "Source": "railtime",
+   "Ref": "songshan1"
+  },
+  {
+   "From": "TRTC-G19",
+   "To": "TRA-0990",
+   "Type": "YouTube",
+   "ID": "64ADnwMTLyQ",
+   "Title": "松山站松山新店線轉台鐵縱貫線轉乘教學",
+   "Source": "railtime",
+   "Ref": "songshan1"
+  },
+  {
+   "From": "TRA-1000",
+   "To": "TYMC-A1",
+   "Type": "YouTube",
+   "ID": "dxfIJJ0b_3o",
+   "Title": "轉乘-台北站台鐵高鐵轉機捷",
+   "Source": "railtime",
+   "Ref": "taipei4"
+  },
+  {
+   "From": "THSR-1000",
+   "To": "TYMC-A1",
+   "Type": "YouTube",
+   "ID": "dxfIJJ0b_3o",
+   "Title": "轉乘-台北站台鐵高鐵轉機捷",
+   "Source": "railtime",
+   "Ref": "taipei4",
+   "Note": "影片標題為台鐵、高鐵共用（railtime 掛在臺鐵臺北）"
+  },
+  {
+   "From": "TYMC-A1",
+   "To": "TRA-1000",
+   "Type": "YouTube",
+   "ID": "ulOu7N85QRo",
+   "Title": "轉乘-台北站機捷轉台鐵高鐵",
+   "Source": "railtime",
+   "Ref": "taipei4"
+  },
+  {
+   "From": "TYMC-A1",
+   "To": "THSR-1000",
+   "Type": "YouTube",
+   "ID": "ulOu7N85QRo",
+   "Title": "轉乘-台北站機捷轉台鐵高鐵",
+   "Source": "railtime",
+   "Ref": "taipei4",
+   "Note": "影片標題為台鐵、高鐵共用（railtime 掛在臺鐵臺北）"
+  },
+  {
+   "From": "TRTC-R10",
+   "To": "TYMC-A1",
+   "Type": "YouTube",
+   "ID": "gq7FJbhUN7U",
+   "Title": "轉乘-台北站北捷淡水信義線至機捷",
+   "Source": "railtime",
+   "Ref": "taipei5"
+  },
+  {
+   "From": "TYMC-A1",
+   "To": "TRTC-R10",
+   "Type": "YouTube",
+   "ID": "A6PPO4zqxJI",
+   "Title": "轉乘-台北站機捷轉北捷淡水信義線",
+   "Source": "railtime",
+   "Ref": "taipei5"
+  },
+  {
+   "From": "TRTC-BL12",
+   "To": "TYMC-A1",
+   "Type": "YouTube",
+   "ID": "n7FgZ1-sDyk",
+   "Title": "轉乘-台北站北捷板南線至機捷",
+   "Source": "railtime",
+   "Ref": "taipei6"
+  },
+  {
+   "From": "TYMC-A1",
+   "To": "TRTC-BL12",
+   "Type": "YouTube",
+   "ID": "uaLbpXkDiX4",
+   "Title": "轉乘-台北站機捷至北捷板南線",
+   "Source": "railtime",
+   "Ref": "taipei6"
+  },
+  {
+   "From": "TRTC-G13",
+   "To": "TYMC-A1",
+   "Type": "YouTube",
+   "ID": "X_sjsSHqsoU",
+   "Title": "轉乘-北捷北門站至機捷台北站",
+   "Source": "railtime",
+   "Ref": "taipei7"
+  },
+  {
+   "From": "TYMC-A1",
+   "To": "TRTC-G13",
+   "Type": "YouTube",
+   "ID": "g5nm5Sbn6bw",
+   "Title": "轉乘-台北站機捷至北門站北捷松山新店線",
+   "Source": "railtime",
+   "Ref": "taipei7"
+  },
+  {
+   "From": "NTMC-Y20",
+   "To": "TYMC-A3",
+   "Type": "YouTube",
+   "ID": "LE_2S6_uLgc",
+   "Title": "轉乘-新北產業園區站環狀線轉機捷",
+   "Source": "railtime",
+   "Ref": "xbcyyq1"
+  },
+  {
+   "From": "TYMC-A3",
+   "To": "NTMC-Y20",
+   "Type": "YouTube",
+   "ID": "WTY9DFupGoI",
+   "Title": "轉乘-新北產業園區站機捷轉環狀線",
+   "Source": "railtime",
+   "Ref": "xbcyyq1"
+  },
+  {
+   "From": "TRTC-BL07",
+   "To": "NTMC-Y16",
+   "Type": "YouTube",
+   "ID": "Ez6tgxrpD9s",
+   "Title": "轉乘-板橋站板南線至環狀線",
+   "Source": "railtime",
+   "Ref": "banqiao2"
+  },
+  {
+   "From": "NTMC-Y16",
+   "To": "TRTC-BL07",
+   "Type": "YouTube",
+   "ID": "NozFAD2lGis",
+   "Title": "轉乘-板橋站環狀線至板南線",
+   "Source": "railtime",
+   "Ref": "banqiao2"
+  },
+  {
+   "From": "TRA-1020",
+   "To": "NTMC-Y16",
+   "Type": "YouTube",
+   "ID": "awJa3LJQfNs",
+   "Title": "轉乘-板橋站台鐵轉環狀線",
+   "Source": "railtime",
+   "Ref": "banqiao3"
+  },
+  {
+   "From": "NTMC-Y16",
+   "To": "TRA-1020",
+   "Type": "YouTube",
+   "ID": "Kj4rfjSkeVU",
+   "Title": "轉乘-板橋站環狀線轉台鐵",
+   "Source": "railtime",
+   "Ref": "banqiao3"
+  },
+  {
+   "From": "TRTC-BL08",
+   "To": "NTMC-Y17",
+   "Type": "YouTube",
+   "ID": "FV8D4MvxJRc",
+   "Title": "轉乘-新埔站板南線轉環狀線新埔民生站",
+   "Source": "railtime",
+   "Ref": "xinpu1"
+  },
+  {
+   "From": "NTMC-Y17",
+   "To": "TRTC-BL08",
+   "Type": "YouTube",
+   "ID": "NX5BQNQ---o",
+   "Title": "轉乘-新埔站環狀線轉板南線",
+   "Source": "railtime",
+   "Ref": "xinpu1"
+  },
+  {
+   "From": "TRTC-O17",
+   "To": "NTMC-Y18",
+   "Type": "YouTube",
+   "ID": "jcqOqz8gpV0",
+   "Title": "轉乘-頭前庄站中和新蘆線轉環狀線",
+   "Source": "railtime",
+   "Ref": "touqianzhang1"
+  },
+  {
+   "From": "TRTC-O02",
+   "To": "NTMC-Y11",
+   "Type": "YouTube",
+   "ID": "tDKgheERteg",
+   "Title": "轉乘-景安站中和新蘆線至環狀線",
+   "Source": "railtime",
+   "Ref": "jingan1"
+  },
+  {
+   "From": "TRTC-G04",
+   "To": "NTMC-Y07",
+   "Type": "YouTube",
+   "ID": "daFQkzy4NuY",
+   "Title": "轉乘-大坪林站松山新店線轉環狀線",
+   "Source": "railtime",
+   "Ref": "dapinglin1"
+  }
+ ],
+ "TrainChange": [
+  {
+   "Station": "TRA-6000",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "taidongtra1"
+  },
+  {
+   "Station": "TRA-6110",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "yulitra1"
+  },
+  {
+   "Station": "TRA-7000",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "hualiantra1"
+  },
+  {
+   "Station": "TRA-7030",
+   "Minutes": 2,
+   "Source": "railtime",
+   "Ref": "xingcheng"
+  },
+  {
+   "Station": "TRA-7090",
+   "Minutes": 2,
+   "Source": "railtime",
+   "Ref": "nanaotra1"
+  },
+  {
+   "Station": "TRA-7130",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "suaoxintra1"
+  },
+  {
+   "Station": "TRA-7160",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "luodongtra1"
+  },
+  {
+   "Station": "TRA-7190",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "yilantra1"
+  },
+  {
+   "Station": "TRA-7230",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "toucheng1"
+  },
+  {
+   "Station": "TRA-7360",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "ruifangtra1"
+  },
+  {
+   "Station": "TRA-0920",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "badutra1"
+  },
+  {
+   "Station": "TRA-0930",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "qidutra1"
+  },
+  {
+   "Station": "TRA-0990",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "songshantra1"
+  },
+  {
+   "Station": "TRA-1000",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "taipeitra1"
+  },
+  {
+   "Station": "TRA-1020",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "banqiaotra1"
+  },
+  {
+   "Station": "TRA-1080",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "taoyuantra1"
+  },
+  {
+   "Station": "TRA-1100",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "zhonglitra1"
+  },
+  {
+   "Station": "TRA-1190",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "northhsinchutra1"
+  },
+  {
+   "Station": "TRA-1210",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "hsinchutra1"
+  },
+  {
+   "Station": "TRA-1250",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "zhunantra1"
+  },
+  {
+   "Station": "TRA-3160",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "miaolitra1"
+  },
+  {
+   "Station": "TRA-3230",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "fengyuantra1"
+  },
+  {
+   "Station": "TRA-3300",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "taizhongtra1"
+  },
+  {
+   "Station": "TRA-3360",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "zhanghuatra1"
+  },
+  {
+   "Station": "TRA-3390",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "yuanlintra1"
+  },
+  {
+   "Station": "TRA-3470",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "douliutra1"
+  },
+  {
+   "Station": "TRA-4080",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "jiayitra1"
+  },
+  {
+   "Station": "TRA-4120",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "xinyingtra1"
+  },
+  {
+   "Station": "TRA-4220",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "tainantra1"
+  },
+  {
+   "Station": "TRA-4270",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "zhongzhoutra1"
+  },
+  {
+   "Station": "TRA-4310",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "gangshantra1"
+  },
+  {
+   "Station": "TRA-4400",
+   "Minutes": 4,
+   "Source": "railtime",
+   "Ref": "gaoxungtra1"
+  },
+  {
+   "Station": "TRA-4440",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "fongshantra1"
+  },
+  {
+   "Station": "TRA-5000",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "pingdongtra1"
+  },
+  {
+   "Station": "TRA-5050",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "chaozhoutra1"
+  },
+  {
+   "Station": "TRA-2130",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "holongtra1"
+  },
+  {
+   "Station": "TRA-2170",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "tongxiaotra1"
+  },
+  {
+   "Station": "TRA-2180",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "yuanlitra1"
+  },
+  {
+   "Station": "TRA-2200",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "dajiatra1"
+  },
+  {
+   "Station": "TRA-2220",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "qingshuitra1"
+  },
+  {
+   "Station": "TRA-2230",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "shalutra1"
+  },
+  {
+   "Station": "TRA-1193",
+   "Minutes": 3,
+   "Source": "railtime",
+   "Ref": "zhuzhongtra1"
+  },
+  {
+   "Station": "TRTC-O12",
+   "Minutes": 1,
+   "Source": "railtime",
+   "Ref": "daqiaotou1"
+  },
+  {
+   "Station": "TYMC-A8",
+   "Minutes": 2,
+   "Source": "rocptx",
+   "Ref": "src/router.v2.js 機捷 A8 Transfer（TrainType1↔TrainType2）"
+  },
+  {
+   "Station": "NTDLRT-V09",
+   "Minutes": 2,
+   "Source": "manual",
+   "Ref": "淡海輕軌綠山線（往崁頂）與藍海線（往淡水漁人碼頭）的分岔站"
+  },
+  {
+   "Station": "TRA-0980",
+   "Minutes": 3,
+   "Source": "manual",
+   "Ref": "manual",
+   "Note": "南港：東部幹線與西部幹線列車在臺北、松山、南港換車（自動選站本來也會選到，這裡補人工分鐘）"
+  },
+  {
+   "Station": "TRA-3430",
+   "Minutes": 3,
+   "Source": "manual",
+   "Ref": "manual",
+   "Note": "二水：集集線 22 班只有 3 班直通彰化，其餘在二水換車（TDX 交會站本來也會選到）"
+  }
+ ],
+ "ClassChange": {
+  "TRA": {
+   "Classify": "type",
+   "LocalTypeCodes": [
+    "6",
+    "7",
+    "10"
+   ],
+   "Note": "慢車＝區間（6）、普快（7）、區間快（10），其他車種代碼（莒光、自強以上，以及日後新增的代碼）一律算快車。區間車接力站、快慢車換車站移到 transfer_route_supplements.json（路由補充資料）"
+  },
+  "THSR": {
+   "Classify": "stops",
+   "Note": "停靠起迄之間每一站的是慢車（各站停），有跳站的是快車（直達、跳站）。換車站在 transfer_route_supplements.json"
+  },
+  "TYMC": {
+   "Classify": "stops",
+   "Note": "停靠起迄之間每一站的是慢車（普通車），有跳站的是快車（直達車）。換車站在 transfer_route_supplements.json"
+  }
+ },
+ "IdNames": {
+  "_說明": "群組代碼用的名稱。預設取群組代表車站（臺鐵＞高鐵＞捷運、輕軌）的英文站名轉小寫並去掉 station；英文站名是意譯而非音譯時，在這裡指定漢語拼音",
+  "TRTC-G10": "zhongzhengjiniantang",
+  "KRTC-O5": "meilidao",
+  "TRTC-O11": "minquanxilu",
+  "TRA-4370": "meishuguan",
+  "TYMC-A3": "xinbeichanyeyuanqu",
+  "TRA-4420": "kegongguan",
+  "TRTC-BL23": "nangangzhanlanguan",
+  "TYMC-A8": "changgengyiyuan"
+ },
+ "Notes": {
+  "Groups": "人工群組：群組內每兩站可步行轉乘（TDX 沒有的跨系統轉乘，例如臺鐵↔高鐵、臺鐵↔捷運）",
+  "Pairs": "人工兩站轉乘：兩站不在同一群組時另成一組（例如北門 ↔ 機捷台北車站）",
+  "ExcludePairs": "人工排除：[{\"Stations\":[甲,乙],\"Note\":…}]，自動偵測（TDX、座標距離）不會再加入，已在 transfer_links.json 的會在下次 build_groups 移除",
+  "TrainChange": "同站換車站與分鐘（railtime 的臺鐵大站、機捷 A8、淡海 V09 等）。另外 TDX 交會站、臺鐵依時刻表自動選站（Settings.TrainChangeAuto）、高鐵每站也都可換車",
+  "Links": "自動偵測的連結記在 transfer_links.json（只增不減），不要在這裡重複寫",
+  "Bypass": "排除記號：[{\"Stations\":[甲,乙,…],\"AllowAtEnds\":true,\"Note\":…}]。群組與步行資料保留（Transfers 標 Bypass），但查詢時不在這裡中途轉乘；AllowAtEnds=true 時，起站或迄站就是其中一站仍可步行過去（例如從萬華出發走到龍山寺搭板南線），false 則完全不用。和 ExcludePairs 的差別：ExcludePairs 直接刪掉連結。查詢時直接讀這裡，改了馬上生效（加速清單會自動停用到重跑 learn）",
+  "Videos": "轉乘實景影片（From→To 有方向：從 From 的月台或閘門走到 To）。Type＝YouTube、ID＝影片代碼、Title＝影片標題；網址樣式在 transfer_settings.json 的 Media。查詢時直接讀（不必重跑 build_groups）：func=route／follow 的轉乘步驟與 Pattern、func=groups 的 Transfers 會帶 Videos。2026-10 由 railtime（ttlib/data.js 的 transStation video、calc_tymetro.html）整理，方向依 YouTube 影片標題確認",
+  "ClassChange": "同系統快慢車：每個系統怎麼分慢車與快車（Classify：type＝依車種代碼、stops＝依停靠站）。extra 參數依這裡的分類判斷可不可以搭；路由的快慢車換車、區間車接力是補充資料（transfer_route_supplements.json）"
+ }
+}

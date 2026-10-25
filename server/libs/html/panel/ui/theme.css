@@ -1,0 +1,50 @@
+/* 監控面板設計變數與基礎樣式（淺色／深色自動切換，手機優先） */
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --text: #1d2330; --muted: #6b7385; --line: #e3e6ec;
+  --accent: #2563eb; --ok: #15803d; --warn: #b45309; --bad: #b91c1c;
+  --ok-bg: #e7f6ec; --warn-bg: #fdf3e2; --bad-bg: #fde8e8; --chip: #eef1f6;
+  --rail: #2563eb; --bus: #0d9488;
+  --maxw: 1100px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1218; --card: #181c24; --text: #e6e9ef; --muted: #98a1b3; --line: #2a303c;
+    --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --ok-bg: #12301f; --warn-bg: #3a2a0c; --bad-bg: #3b1515; --chip: #232936;
+    --rail: #60a5fa; --bus: #2dd4bf;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body {
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent); }
+button {
+  font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--card); color: var(--text);
+  border-radius: 10px; padding: 8px 12px; min-height: 40px; cursor: pointer;
+}
+button:active { transform: scale(.97); }
+button:disabled { opacity: .6; }
+input, select {
+  font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+  color: var(--text); padding: 8px 10px; min-height: 40px;
+}
+
+#app { min-height: 100vh; display: flex; flex-direction: column; }
+#main { flex: 1; width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 12px 16px calc(24px + env(safe-area-inset-bottom)); }
+.pageloading { max-width: var(--maxw); margin: 0 auto; padding: 60px 16px; color: var(--muted); text-align: center; }
+
+/* 版面 */
+.stack { display: grid; gap: 12px; }
+.grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 720px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .grid.three { grid-template-columns: repeat(3, 1fr); } }
+
+/* 共用小元素 */
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.empty { color: var(--muted); font-size: 14px; padding: 12px 0; text-align: center; }
+.err { background: var(--bad-bg); color: var(--bad); border-radius: 12px; padding: 12px 14px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }

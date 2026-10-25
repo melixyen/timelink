@@ -1,0 +1,191 @@
+{
+    "Version": 1,
+    "Description": "轉乘演算法的參數與靜態定義，PHP 與 Node.js 共用。時間單位為秒（欄位名稱有 Seconds）或分鐘（欄位名稱有 Minutes）。演算法程式不寫死這些值，改這個檔即可調整。",
+    "Router": {
+        "MaxTrips": 6,
+        "HorizonSeconds": 43200,
+        "RouteBudgetSeconds": 15,
+        "TransferPenaltySeconds": 480,
+        "WalkWeight": 1.5,
+        "ShiftWaitSeconds": 1800,
+        "MinGainSeconds": 180,
+        "Notes": {
+            "MaxTrips": "一個方案最多搭幾班車（轉乘次數＝班數−1）",
+            "HorizonSeconds": "出發後最多找多久內到達",
+            "RouteBudgetSeconds": "func=route 一次查詢最多花幾秒搜尋（全日查詢用）",
+            "TransferPenaltySeconds": "推薦（Best）：每轉乘一次視同多花幾秒",
+            "WalkWeight": "推薦（Best）：步行時間的權重",
+            "ShiftWaitSeconds": "轉乘等候超過幾秒，就把等候前的段落改搭最晚還趕得上的車",
+            "MinGainSeconds": "多轉乘一次至少要早到幾秒才留下（捷運到站是推算，1～2 分鐘的差距不可靠）"
+        }
+    },
+    "Tags": {
+        "Direct": {
+            "bit": 1,
+            "Zh_tw": "直達",
+            "desc": "不用轉乘（所有直達方案都有）"
+        },
+        "Fastest": {
+            "bit": 2,
+            "Zh_tw": "最快",
+            "desc": "最早到達迄站"
+        },
+        "ShortestTime": {
+            "bit": 4,
+            "Zh_tw": "最短時間",
+            "desc": "從出發（第一段搭乘或起站步行）到抵達的全程時間最短"
+        },
+        "ShortestDistance": {
+            "bit": 8,
+            "Zh_tw": "最短距離",
+            "desc": "軌道搭乘里程最短（不含步行）"
+        },
+        "FewestTransfers": {
+            "bit": 16,
+            "Zh_tw": "最少轉乘",
+            "desc": "轉乘次數最少"
+        },
+        "Best": {
+            "bit": 32,
+            "Zh_tw": "推薦",
+            "desc": "綜合：從 start 起算的到達時間，每轉乘一次加 8 分鐘，步行多算 0.5 倍"
+        }
+    },
+    "Distance": {
+        "StationAliases": {
+            "TRA-1001": "TRA-1000"
+        },
+        "StationAliasNotes": {
+            "TRA-1001": "臺北（環島列車用的站碼）與臺北同一地點"
+        },
+        "SplitSegments": [
+            {
+                "LineID": "WL",
+                "FromStationID": "1250",
+                "ToStationID": "3360",
+                "Tag": "WL-M",
+                "Note": "西部幹線竹南—彰化是山線，另標 WL-M 以便和海線 WL-C 分開"
+            }
+        ],
+        "TripLineAvoidTags": {
+            "1": [
+                "WL-C"
+            ],
+            "2": [
+                "WL-M"
+            ]
+        },
+        "TripLineNotes": "臺鐵列車 TripLine：1 山線（不走海線 WL-C）、2 海線（不走山線 WL-M）、0 不限",
+        "THSRLineTag": "HSRL"
+    },
+    "GroupSources": {
+        "MetroLineTransfer": [
+            "TRTC",
+            "NTMC",
+            "KRTC"
+        ],
+        "MetroStationTransfer": [
+            "TRTC",
+            "NTMC",
+            "TYMC"
+        ],
+        "MetroTransferStations": {
+            "TRTC_NTMC": "TRTC",
+            "KRTC": "KRTC"
+        },
+        "OperatorAliases": {
+            "NTMCC": "NTMC"
+        },
+        "SharedStationIdOperators": {
+            "TRTC": [
+                "TRTC",
+                "NTMC"
+            ],
+            "NTMC": [
+                "TRTC",
+                "NTMC"
+            ]
+        },
+        "ZeroPadStationId": {
+            "TRA": 4,
+            "THSR": 4
+        },
+        "Notes": "TDX 轉乘資料的檔案清單與站碼對應：捷運 LineTransfer／StationTransfer 讀哪些系統、TransferStations 檔案對應的營運單位、營運單位代碼別名、共用站碼的系統（臺北捷運與新北捷運）、需要補前導 0 的系統"
+    },
+    "Search": {
+        "MaxResults": 10,
+        "MaxResultsLimit": 50,
+        "StripSuffixes": [
+            "車站",
+            "站"
+        ],
+        "EnStripWords": [
+            "station",
+            "stn"
+        ],
+        "ExtraFold": {
+            "塩": "鹽",
+            "鷄": "雞",
+            "鶏": "雞",
+            "舘": "館",
+            "滙": "匯"
+        },
+        "Aliases": [
+            {
+                "Name": "北車",
+                "TransferGroupID": "TRANSGRP_taipei",
+                "Note": "臺北車站的俗稱"
+            }
+        ],
+        "MaxPinyinCombos": 64,
+        "Fuzzy": {
+            "MinLength": 4,
+            "MaxDistance": 1
+        },
+        "Weights": {
+            "Exact": 0,
+            "Prefix": 10,
+            "Contains": 20,
+            "Subsequence": 40,
+            "Fuzzy": 50,
+            "Zh": 0,
+            "Alias": 0,
+            "Id": 0,
+            "En": 1,
+            "Pinyin": 2,
+            "Initials": 5
+        },
+        "Notes": "車站搜尋（func=stations）：站名與輸入先把異體字、簡繁字歸一（hanzi_pinyin.json 的 Fold，再加 ExtraFold），比對中文站名（也比對去掉 StripSuffixes 的站名）、TDX 英文站名（只留英數、去掉 EnStripWords）、漢語拼音（多音字全部組合，最多 MaxPinyinCombos 種）與拼音首字母、站碼與 StationUID、別名 Aliases（指向轉乘群組或 StationUID）。分數＝比對方式（完全相同 Exact＜開頭 Prefix＜包含 Contains＜依序包含 Subsequence＜英文拼錯 Fuzzy：長度 ≥ MinLength、編輯距離 ≤ MaxDistance）＋欄位權重，越小越前面；同分依系統優先順序（transfer_seed.json 的 SystemPriority）"
+    },
+    "Media": {
+        "YouTube": {
+            "Url": "https://www.youtube.com/watch?v={ID}",
+            "EmbedUrl": "https://www.youtube.com/embed/{ID}",
+            "ThumbnailUrl": "https://i.ytimg.com/vi/{ID}/hqdefault.jpg"
+        },
+        "Notes": "轉乘影片（transfer_seed.json 的 Videos）輸出時依 Type 用這裡的網址樣式補上 Url、EmbedUrl（可放進 iframe）、ThumbnailUrl；{ID} 換成影片代碼"
+    },
+    "GeneratedFiles": [
+        "Groups",
+        "Links",
+        "Distance",
+        "AccelLearned"
+    ],
+    "GeneratedFilesNotes": "用主機上的離線資料算出的產生檔：放在 custom/libs/txapi/transfer/data/（不進版控、隨 custom/ 備份），改寫前舊版留在 history/，可用 /txapi/admin_transfer/restore 換回",
+    "TempFiles": [
+        "LearnState"
+    ],
+    "TempFilesNotes": "暫存檔：放在 download/tdx_proxy_files/transfer/（重新佈署程式不會中斷進行中的分析）。GeneratedFiles 與 TempFiles 以外的 Files 都在 libs/txapi/transfer/data/（人工維護的輸入，受版控）",
+    "Files": {
+        "Seed": "transfer_seed.json",
+        "Groups": "transfer_groups.json",
+        "Distance": "transfer_distance.json",
+        "Accel": "transfer_accel.json",
+        "AccelLearned": "transfer_accel_learned.json",
+        "LearnState": "transfer_learn_state.json",
+        "Links": "transfer_links.json",
+        "Hanzi": "hanzi_pinyin.json",
+        "RouteRules": "transfer_route_rules.json",
+        "RouteSupplements": "transfer_route_supplements.json"
+    }
+}

@@ -1,0 +1,1389 @@
+{
+    "Description": "railtime 車站、路線 → 本站 StationUID、路線範圍（station_map.php 產生）",
+    "map": {
+        "tra_0900": [
+            "TRA-0900"
+        ],
+        "tra_0910": [
+            "TRA-0910"
+        ],
+        "tra_0920": [
+            "TRA-0920"
+        ],
+        "tra_0930": [
+            "TRA-0930"
+        ],
+        "tra_0940": [
+            "TRA-0940"
+        ],
+        "tra_0950": [
+            "TRA-0950"
+        ],
+        "tra_0960": [
+            "TRA-0960"
+        ],
+        "tra_0970": [
+            "TRA-0970"
+        ],
+        "tra_0980": [
+            "TRA-0980"
+        ],
+        "tra_0990": [
+            "TRA-0990"
+        ],
+        "tra_1000": [
+            "TRA-1000"
+        ],
+        "tra_1010": [
+            "TRA-1010"
+        ],
+        "tra_1020": [
+            "TRA-1020"
+        ],
+        "tra_1030": [
+            "TRA-1030"
+        ],
+        "tra_1040": [
+            "TRA-1040"
+        ],
+        "tra_1050": [
+            "TRA-1050"
+        ],
+        "tra_1060": [
+            "TRA-1060"
+        ],
+        "tra_1070": [
+            "TRA-1070"
+        ],
+        "tra_1075": [
+            "TRA-1075"
+        ],
+        "tra_1080": [
+            "TRA-1080"
+        ],
+        "tra_1090": [
+            "TRA-1090"
+        ],
+        "tra_1100": [
+            "TRA-1100"
+        ],
+        "tra_1105": [
+            "TRA-1105"
+        ],
+        "tra_1110": [
+            "TRA-1110"
+        ],
+        "tra_1120": [
+            "TRA-1120"
+        ],
+        "tra_1130": [
+            "TRA-1130"
+        ],
+        "tra_1140": [
+            "TRA-1140"
+        ],
+        "tra_1150": [
+            "TRA-1150"
+        ],
+        "tra_1160": [
+            "TRA-1160"
+        ],
+        "tra_1170": [
+            "TRA-1170"
+        ],
+        "tra_1180": [
+            "TRA-1180"
+        ],
+        "tra_1190": [
+            "TRA-1190"
+        ],
+        "tra_1210": [
+            "TRA-1210"
+        ],
+        "tra_1220": [
+            "TRA-1220"
+        ],
+        "tra_1230": [
+            "TRA-1230"
+        ],
+        "tra_1240": [
+            "TRA-1240"
+        ],
+        "tra_1250": [
+            "TRA-1250"
+        ],
+        "tra_3140": [
+            "TRA-3140"
+        ],
+        "tra_3150": [
+            "TRA-3150"
+        ],
+        "tra_3160": [
+            "TRA-3160"
+        ],
+        "tra_3170": [
+            "TRA-3170"
+        ],
+        "tra_3180": [
+            "TRA-3180"
+        ],
+        "tra_3190": [
+            "TRA-3190"
+        ],
+        "tra_3210": [
+            "TRA-3210"
+        ],
+        "tra_3220": [
+            "TRA-3220"
+        ],
+        "tra_3230": [
+            "TRA-3230"
+        ],
+        "tra_3240": [
+            "TRA-3240"
+        ],
+        "tra_3250": [
+            "TRA-3250"
+        ],
+        "tra_3260": [
+            "TRA-3260"
+        ],
+        "tra_3270": [
+            "TRA-3270"
+        ],
+        "tra_3280": [
+            "TRA-3280"
+        ],
+        "tra_3290": [
+            "TRA-3290"
+        ],
+        "tra_3300": [
+            "TRA-3300"
+        ],
+        "tra_3310": [
+            "TRA-3310"
+        ],
+        "tra_3320": [
+            "TRA-3320"
+        ],
+        "tra_3330": [
+            "TRA-3330"
+        ],
+        "tra_3340": [
+            "TRA-3340"
+        ],
+        "tra_3350": [
+            "TRA-3350"
+        ],
+        "tra_3360": [
+            "TRA-3360"
+        ],
+        "tra_3370": [
+            "TRA-3370"
+        ],
+        "tra_3380": [
+            "TRA-3380"
+        ],
+        "tra_3390": [
+            "TRA-3390"
+        ],
+        "tra_3400": [
+            "TRA-3400"
+        ],
+        "tra_3410": [
+            "TRA-3410"
+        ],
+        "tra_3420": [
+            "TRA-3420"
+        ],
+        "tra_3430": [
+            "TRA-3430"
+        ],
+        "tra_3450": [
+            "TRA-3450"
+        ],
+        "tra_3460": [
+            "TRA-3460"
+        ],
+        "tra_3470": [
+            "TRA-3470"
+        ],
+        "tra_3480": [
+            "TRA-3480"
+        ],
+        "tra_3490": [
+            "TRA-3490"
+        ],
+        "tra_4050": [
+            "TRA-4050"
+        ],
+        "tra_4060": [
+            "TRA-4060"
+        ],
+        "tra_4070": [
+            "TRA-4070"
+        ],
+        "tra_4080": [
+            "TRA-4080"
+        ],
+        "tra_4090": [
+            "TRA-4090"
+        ],
+        "tra_4100": [
+            "TRA-4100"
+        ],
+        "tra_4110": [
+            "TRA-4110"
+        ],
+        "tra_4120": [
+            "TRA-4120"
+        ],
+        "tra_4130": [
+            "TRA-4130"
+        ],
+        "tra_4140": [
+            "TRA-4140"
+        ],
+        "tra_4150": [
+            "TRA-4150"
+        ],
+        "tra_4160": [
+            "TRA-4160"
+        ],
+        "tra_4170": [
+            "TRA-4170"
+        ],
+        "tra_4180": [
+            "TRA-4180"
+        ],
+        "tra_4190": [
+            "TRA-4190"
+        ],
+        "tra_4200": [
+            "TRA-4200"
+        ],
+        "tra_4210": [
+            "TRA-4210"
+        ],
+        "tra_4220": [
+            "TRA-4220"
+        ],
+        "tra_4250": [
+            "TRA-4250"
+        ],
+        "tra_4260": [
+            "TRA-4260"
+        ],
+        "tra_4270": [
+            "TRA-4270"
+        ],
+        "tra_4290": [
+            "TRA-4290"
+        ],
+        "tra_4300": [
+            "TRA-4300"
+        ],
+        "tra_4310": [
+            "TRA-4310"
+        ],
+        "tra_4320": [
+            "TRA-4320"
+        ],
+        "tra_4330": [
+            "TRA-4330"
+        ],
+        "tra_4340": [
+            "TRA-4340"
+        ],
+        "tra_4350": [
+            "TRA-4350"
+        ],
+        "tra_4360": [
+            "TRA-4360"
+        ],
+        "tra_4370": [
+            "TRA-4370"
+        ],
+        "tra_4380": [
+            "TRA-4380"
+        ],
+        "tra_4390": [
+            "TRA-4390"
+        ],
+        "tra_4400": [
+            "TRA-4400"
+        ],
+        "tra_4410": [
+            "TRA-4410"
+        ],
+        "tra_4420": [
+            "TRA-4420"
+        ],
+        "tra_4430": [
+            "TRA-4430"
+        ],
+        "tra_4440": [
+            "TRA-4440"
+        ],
+        "tra_4450": [
+            "TRA-4450"
+        ],
+        "tra_4460": [
+            "TRA-4460"
+        ],
+        "tra_4470": [
+            "TRA-4470"
+        ],
+        "tra_5000": [
+            "TRA-5000"
+        ],
+        "tra_5010": [
+            "TRA-5010"
+        ],
+        "tra_5020": [
+            "TRA-5020"
+        ],
+        "tra_5030": [
+            "TRA-5030"
+        ],
+        "tra_5040": [
+            "TRA-5040"
+        ],
+        "tra_5050": [
+            "TRA-5050"
+        ],
+        "tra_5060": [
+            "TRA-5060"
+        ],
+        "tra_5070": [
+            "TRA-5070"
+        ],
+        "tra_5080": [
+            "TRA-5080"
+        ],
+        "tra_5090": [
+            "TRA-5090"
+        ],
+        "tra_5100": [
+            "TRA-5100"
+        ],
+        "tra_5110": [
+            "TRA-5110"
+        ],
+        "tra_5120": [
+            "TRA-5120"
+        ],
+        "tra_7390": [
+            "TRA-7390"
+        ],
+        "tra_7380": [
+            "TRA-7380"
+        ],
+        "tra_7360": [
+            "TRA-7360"
+        ],
+        "tra_7350": [
+            "TRA-7350"
+        ],
+        "tra_7330": [
+            "TRA-7330"
+        ],
+        "tra_7320": [
+            "TRA-7320"
+        ],
+        "tra_7310": [
+            "TRA-7310"
+        ],
+        "tra_7300": [
+            "TRA-7300"
+        ],
+        "tra_7290": [
+            "TRA-7290"
+        ],
+        "tra_7280": [
+            "TRA-7280"
+        ],
+        "tra_7270": [
+            "TRA-7270"
+        ],
+        "tra_7260": [
+            "TRA-7260"
+        ],
+        "tra_7250": [
+            "TRA-7250"
+        ],
+        "tra_7240": [
+            "TRA-7240"
+        ],
+        "tra_7230": [
+            "TRA-7230"
+        ],
+        "tra_7220": [
+            "TRA-7220"
+        ],
+        "tra_7210": [
+            "TRA-7210"
+        ],
+        "tra_7200": [
+            "TRA-7200"
+        ],
+        "tra_7190": [
+            "TRA-7190"
+        ],
+        "tra_7180": [
+            "TRA-7180"
+        ],
+        "tra_7170": [
+            "TRA-7170"
+        ],
+        "tra_7160": [
+            "TRA-7160"
+        ],
+        "tra_7150": [
+            "TRA-7150"
+        ],
+        "tra_7140": [
+            "TRA-7140"
+        ],
+        "tra_7130": [
+            "TRA-7130"
+        ],
+        "tra_7120": [
+            "TRA-7120"
+        ],
+        "tra_7110": [
+            "TRA-7110"
+        ],
+        "tra_7100": [
+            "TRA-7100"
+        ],
+        "tra_7090": [
+            "TRA-7090"
+        ],
+        "tra_7080": [
+            "TRA-7080"
+        ],
+        "tra_7070": [
+            "TRA-7070"
+        ],
+        "tra_7060": [
+            "TRA-7060"
+        ],
+        "tra_7050": [
+            "TRA-7050"
+        ],
+        "tra_7040": [
+            "TRA-7040"
+        ],
+        "tra_7030": [
+            "TRA-7030"
+        ],
+        "tra_7020": [
+            "TRA-7020"
+        ],
+        "tra_7010": [
+            "TRA-7010"
+        ],
+        "tra_7000": [
+            "TRA-7000"
+        ],
+        "tra_6250": [
+            "TRA-6250"
+        ],
+        "tra_6240": [
+            "TRA-6240"
+        ],
+        "tra_6230": [
+            "TRA-6230"
+        ],
+        "tra_6220": [
+            "TRA-6220"
+        ],
+        "tra_6210": [
+            "TRA-6210"
+        ],
+        "tra_6200": [
+            "TRA-6200"
+        ],
+        "tra_6190": [
+            "TRA-6190"
+        ],
+        "tra_6180": [
+            "TRA-6180"
+        ],
+        "tra_6170": [
+            "TRA-6170"
+        ],
+        "tra_6160": [
+            "TRA-6160"
+        ],
+        "tra_6150": [
+            "TRA-6150"
+        ],
+        "tra_6140": [
+            "TRA-6140"
+        ],
+        "tra_6130": [
+            "TRA-6130"
+        ],
+        "tra_6120": [
+            "TRA-6120"
+        ],
+        "tra_6110": [
+            "TRA-6110"
+        ],
+        "tra_6100": [
+            "TRA-6100"
+        ],
+        "tra_6090": [
+            "TRA-6090"
+        ],
+        "tra_6080": [
+            "TRA-6080"
+        ],
+        "tra_6070": [
+            "TRA-6070"
+        ],
+        "tra_6060": [
+            "TRA-6060"
+        ],
+        "tra_6050": [
+            "TRA-6050"
+        ],
+        "tra_6040": [
+            "TRA-6040"
+        ],
+        "tra_6030": [
+            "TRA-6030"
+        ],
+        "tra_6020": [
+            "TRA-6020"
+        ],
+        "tra_6010": [
+            "TRA-6010"
+        ],
+        "tra_6000": [
+            "TRA-6000"
+        ],
+        "tra_5130": [
+            "TRA-5130"
+        ],
+        "tra_5140": [
+            "TRA-5140"
+        ],
+        "tra_5160": [
+            "TRA-5160"
+        ],
+        "tra_5190": [
+            "TRA-5190"
+        ],
+        "tra_5200": [
+            "TRA-5200"
+        ],
+        "tra_5210": [
+            "TRA-5210"
+        ],
+        "tra_5220": [
+            "TRA-5220"
+        ],
+        "tra_5230": [
+            "TRA-5230"
+        ],
+        "tra_5240": [
+            "TRA-5240"
+        ],
+        "tra_2110": [
+            "TRA-2110"
+        ],
+        "tra_2120": [
+            "TRA-2120"
+        ],
+        "tra_2130": [
+            "TRA-2130"
+        ],
+        "tra_2140": [
+            "TRA-2140"
+        ],
+        "tra_2150": [
+            "TRA-2150"
+        ],
+        "tra_2160": [
+            "TRA-2160"
+        ],
+        "tra_2170": [
+            "TRA-2170"
+        ],
+        "tra_2180": [
+            "TRA-2180"
+        ],
+        "tra_2190": [
+            "TRA-2190"
+        ],
+        "tra_2200": [
+            "TRA-2200"
+        ],
+        "tra_2210": [
+            "TRA-2210"
+        ],
+        "tra_2220": [
+            "TRA-2220"
+        ],
+        "tra_2230": [
+            "TRA-2230"
+        ],
+        "tra_2240": [
+            "TRA-2240"
+        ],
+        "tra_2250": [
+            "TRA-2250"
+        ],
+        "tra_2260": [
+            "TRA-2260"
+        ],
+        "tra_7362": [
+            "TRA-7362"
+        ],
+        "tra_7361": [
+            "TRA-7361"
+        ],
+        "tra_7331": [
+            "TRA-7331"
+        ],
+        "tra_7332": [
+            "TRA-7332"
+        ],
+        "tra_7333": [
+            "TRA-7333"
+        ],
+        "tra_7334": [
+            "TRA-7334"
+        ],
+        "tra_7335": [
+            "TRA-7335"
+        ],
+        "tra_7336": [
+            "TRA-7336"
+        ],
+        "tra_1191": [
+            "TRA-1191"
+        ],
+        "tra_1192": [
+            "TRA-1192"
+        ],
+        "tra_1193": [
+            "TRA-1193"
+        ],
+        "tra_1194": [
+            "TRA-1194"
+        ],
+        "tra_1201": [
+            "TRA-1201"
+        ],
+        "tra_1202": [
+            "TRA-1202"
+        ],
+        "tra_1203": [
+            "TRA-1203"
+        ],
+        "tra_1204": [
+            "TRA-1204"
+        ],
+        "tra_1205": [
+            "TRA-1205"
+        ],
+        "tra_1206": [
+            "TRA-1206"
+        ],
+        "tra_1207": [
+            "TRA-1207"
+        ],
+        "tra_1208": [
+            "TRA-1208"
+        ],
+        "tra_3431": [
+            "TRA-3431"
+        ],
+        "tra_3432": [
+            "TRA-3432"
+        ],
+        "tra_3433": [
+            "TRA-3433"
+        ],
+        "tra_3434": [
+            "TRA-3434"
+        ],
+        "tra_3435": [
+            "TRA-3435"
+        ],
+        "tra_3436": [
+            "TRA-3436"
+        ],
+        "tra_4271": [
+            "TRA-4271"
+        ],
+        "tra_4272": [
+            "TRA-4272"
+        ],
+        "trtc_br01": [
+            "TRTC-BR01"
+        ],
+        "trtc_br02": [
+            "TRTC-BR02"
+        ],
+        "trtc_br03": [
+            "TRTC-BR03"
+        ],
+        "trtc_br04": [
+            "TRTC-BR04"
+        ],
+        "trtc_br05": [
+            "TRTC-BR05"
+        ],
+        "trtc_br06": [
+            "TRTC-BR06"
+        ],
+        "trtc_br07": [
+            "TRTC-BR07"
+        ],
+        "trtc_br08": [
+            "TRTC-BR08"
+        ],
+        "trtc_br12": [
+            "TRTC-BR12"
+        ],
+        "trtc_br13": [
+            "TRTC-BR13"
+        ],
+        "trtc_br14": [
+            "TRTC-BR14"
+        ],
+        "trtc_br15": [
+            "TRTC-BR15"
+        ],
+        "trtc_br16": [
+            "TRTC-BR16"
+        ],
+        "trtc_br17": [
+            "TRTC-BR17"
+        ],
+        "trtc_br18": [
+            "TRTC-BR18"
+        ],
+        "trtc_br19": [
+            "TRTC-BR19"
+        ],
+        "trtc_br20": [
+            "TRTC-BR20"
+        ],
+        "trtc_br21": [
+            "TRTC-BR21"
+        ],
+        "trtc_br22": [
+            "TRTC-BR22"
+        ],
+        "trtc_br23": [
+            "TRTC-BR23"
+        ],
+        "trtc_031": [
+            "TRTC-BL23",
+            "TRTC-BR24"
+        ],
+        "trtc_097": [
+            "TRTC-BL22"
+        ],
+        "trtc_096": [
+            "TRTC-BL21"
+        ],
+        "trtc_095": [
+            "TRTC-BL20"
+        ],
+        "trtc_094": [
+            "TRTC-BL19"
+        ],
+        "trtc_093": [
+            "TRTC-BL18"
+        ],
+        "trtc_092": [
+            "TRTC-BL17"
+        ],
+        "trtc_091": [
+            "TRTC-BL16"
+        ],
+        "trtc_010": [
+            "TRTC-BL15",
+            "TRTC-BR10"
+        ],
+        "trtc_089": [
+            "TRTC-BL14",
+            "TRTC-O07"
+        ],
+        "trtc_088": [
+            "TRTC-BL13"
+        ],
+        "trtc_086": [
+            "TRTC-BL11",
+            "TRTC-G12"
+        ],
+        "trtc_085": [
+            "TRTC-BL10"
+        ],
+        "trtc_084": [
+            "TRTC-BL09"
+        ],
+        "trtc_083": [
+            "TRTC-BL08"
+        ],
+        "trtc_082": [
+            "TRTC-BL07"
+        ],
+        "trtc_081": [
+            "TRTC-BL06"
+        ],
+        "trtc_080": [
+            "TRTC-BL05"
+        ],
+        "trtc_079": [
+            "TRTC-BL04"
+        ],
+        "trtc_078": [
+            "TRTC-BL03"
+        ],
+        "trtc_077": [
+            "TRTC-BL02"
+        ],
+        "trtc_076": [
+            "TRTC-BL01",
+            "NTMC-LB01"
+        ],
+        "trtc_071": [
+            "TRTC-R28"
+        ],
+        "trtc_070": [
+            "TRTC-R27"
+        ],
+        "trtc_069": [
+            "TRTC-R26"
+        ],
+        "trtc_068": [
+            "TRTC-R25"
+        ],
+        "trtc_067": [
+            "TRTC-R24"
+        ],
+        "trtc_066": [
+            "TRTC-R23"
+        ],
+        "trtc_064": [
+            "TRTC-R22"
+        ],
+        "trtc_063": [
+            "TRTC-R21"
+        ],
+        "trtc_062": [
+            "TRTC-R20"
+        ],
+        "trtc_061": [
+            "TRTC-R19"
+        ],
+        "trtc_060": [
+            "TRTC-R18"
+        ],
+        "trtc_059": [
+            "TRTC-R17"
+        ],
+        "trtc_058": [
+            "TRTC-R16"
+        ],
+        "trtc_057": [
+            "TRTC-R15"
+        ],
+        "trtc_056": [
+            "TRTC-R14"
+        ],
+        "trtc_055": [
+            "TRTC-O11",
+            "TRTC-R13"
+        ],
+        "trtc_054": [
+            "TRTC-R12"
+        ],
+        "trtc_053": [
+            "TRTC-G14",
+            "TRTC-R11"
+        ],
+        "trtc_051": [
+            "TRTC-BL12",
+            "TRTC-R10"
+        ],
+        "trtc_050": [
+            "TRTC-R09"
+        ],
+        "trtc_134": [
+            "TRTC-O06",
+            "TRTC-R07"
+        ],
+        "trtc_103": [
+            "TRTC-R06"
+        ],
+        "trtc_011": [
+            "TRTC-BR09",
+            "TRTC-R05"
+        ],
+        "trtc_101": [
+            "TRTC-R04"
+        ],
+        "trtc_100": [
+            "TRTC-R03"
+        ],
+        "trtc_099": [
+            "TRTC-R02"
+        ],
+        "trtc_r01": [
+            "TRTC-R01"
+        ],
+        "trtc_048": [
+            "TRTC-O01"
+        ],
+        "trtc_047": [
+            "TRTC-O02",
+            "NTMC-Y11"
+        ],
+        "trtc_046": [
+            "TRTC-O03"
+        ],
+        "trtc_045": [
+            "TRTC-O04"
+        ],
+        "trtc_131": [
+            "TRTC-O09"
+        ],
+        "trtc_130": [
+            "TRTC-O10"
+        ],
+        "trtc_128": [
+            "TRTC-O12"
+        ],
+        "trtc_127": [
+            "TRTC-O13"
+        ],
+        "trtc_126": [
+            "TRTC-O14"
+        ],
+        "trtc_125": [
+            "TRTC-O15"
+        ],
+        "trtc_124": [
+            "TRTC-O16"
+        ],
+        "trtc_123": [
+            "TRTC-O17",
+            "NTMC-Y18"
+        ],
+        "trtc_122": [
+            "TRTC-O18"
+        ],
+        "trtc_121": [
+            "TRTC-O19"
+        ],
+        "trtc_180": [
+            "TRTC-O20"
+        ],
+        "trtc_179": [
+            "TRTC-O21"
+        ],
+        "trtc_178": [
+            "TRTC-O50"
+        ],
+        "trtc_177": [
+            "TRTC-O51"
+        ],
+        "trtc_176": [
+            "TRTC-O52"
+        ],
+        "trtc_175": [
+            "TRTC-O53"
+        ],
+        "trtc_174": [
+            "TRTC-O54"
+        ],
+        "trtc_111": [
+            "TRTC-G19"
+        ],
+        "trtc_110": [
+            "TRTC-G18"
+        ],
+        "trtc_109": [
+            "TRTC-G17"
+        ],
+        "trtc_009": [
+            "TRTC-BR11",
+            "TRTC-G16"
+        ],
+        "trtc_132": [
+            "TRTC-G15",
+            "TRTC-O08"
+        ],
+        "trtc_105": [
+            "TRTC-G13"
+        ],
+        "trtc_043": [
+            "TRTC-G11"
+        ],
+        "trtc_042": [
+            "TRTC-G10",
+            "TRTC-R08"
+        ],
+        "trtc_041": [
+            "TRTC-G09",
+            "TRTC-O05"
+        ],
+        "trtc_040": [
+            "TRTC-G08"
+        ],
+        "trtc_039": [
+            "TRTC-G07"
+        ],
+        "trtc_038": [
+            "TRTC-G06"
+        ],
+        "trtc_037": [
+            "TRTC-G05"
+        ],
+        "trtc_036": [
+            "TRTC-G04",
+            "NTMC-Y07"
+        ],
+        "trtc_035": [
+            "TRTC-G03"
+        ],
+        "trtc_034": [
+            "TRTC-G02"
+        ],
+        "trtc_033": [
+            "TRTC-G01"
+        ],
+        "trtc_y08": [
+            "NTMC-Y08"
+        ],
+        "trtc_y09": [
+            "NTMC-Y09"
+        ],
+        "trtc_y10": [
+            "NTMC-Y10"
+        ],
+        "trtc_y12": [
+            "NTMC-Y12"
+        ],
+        "trtc_y13": [
+            "NTMC-Y13"
+        ],
+        "trtc_y14": [
+            "NTMC-Y14"
+        ],
+        "trtc_y15": [
+            "NTMC-Y15"
+        ],
+        "trtc_y16": [
+            "NTMC-Y16"
+        ],
+        "trtc_y17": [
+            "NTMC-Y17"
+        ],
+        "trtc_y19": [
+            "NTMC-Y19"
+        ],
+        "trtc_y20": [
+            "NTMC-Y20"
+        ],
+        "trtc_lb02": [
+            "NTMC-LB02"
+        ],
+        "trtc_lb03": [
+            "NTMC-LB03"
+        ],
+        "trtc_lb04": [
+            "NTMC-LB04"
+        ],
+        "trtc_lb05": [
+            "NTMC-LB05"
+        ],
+        "trtc_lb06": [
+            "NTMC-LB06"
+        ],
+        "trtc_lb07": [
+            "NTMC-LB07"
+        ],
+        "trtc_lb08": [
+            "NTMC-LB08"
+        ],
+        "trtc_lb09": [
+            "NTMC-LB09"
+        ],
+        "trtc_lb10": [
+            "NTMC-LB10"
+        ],
+        "trtc_lb11": [
+            "NTMC-LB11"
+        ],
+        "trtc_lb12": [
+            "NTMC-LB12"
+        ],
+        "tymetro_a01": [
+            "TYMC-A1"
+        ],
+        "tymetro_a02": [
+            "TYMC-A2"
+        ],
+        "tymetro_a03": [
+            "TYMC-A3"
+        ],
+        "tymetro_a04": [
+            "TYMC-A4"
+        ],
+        "tymetro_a05": [
+            "TYMC-A5"
+        ],
+        "tymetro_a06": [
+            "TYMC-A6"
+        ],
+        "tymetro_a07": [
+            "TYMC-A7"
+        ],
+        "tymetro_a08": [
+            "TYMC-A8"
+        ],
+        "tymetro_a09": [
+            "TYMC-A9"
+        ],
+        "tymetro_a10": [
+            "TYMC-A10"
+        ],
+        "tymetro_a11": [
+            "TYMC-A11"
+        ],
+        "tymetro_a12": [
+            "TYMC-A12"
+        ],
+        "tymetro_a13": [
+            "TYMC-A13"
+        ],
+        "tymetro_a14a": [
+            "TYMC-A14a"
+        ],
+        "tymetro_a15": [
+            "TYMC-A15"
+        ],
+        "tymetro_a16": [
+            "TYMC-A16"
+        ],
+        "tymetro_a17": [
+            "TYMC-A17"
+        ],
+        "tymetro_a18": [
+            "TYMC-A18"
+        ],
+        "tymetro_a19": [
+            "TYMC-A19"
+        ],
+        "tymetro_a20": [
+            "TYMC-A20"
+        ],
+        "tymetro_a21": [
+            "TYMC-A21"
+        ]
+    },
+    "lines": {
+        "tra_xibu": [
+            {
+                "Line": "TRA-WL",
+                "StationRange": [
+                    "TRA-0900",
+                    "TRA-1250"
+                ]
+            }
+        ],
+        "tra_yilan": [
+            {
+                "Line": "TRA-EL",
+                "StationRange": [
+                    "TRA-0920",
+                    "TRA-7130"
+                ]
+            }
+        ],
+        "tra_liujia": [
+            {
+                "Line": "TRA-NW",
+                "StationRange": [
+                    "TRA-1190",
+                    "TRA-1208"
+                ]
+            }
+        ],
+        "tra_shan": [
+            {
+                "Line": "TRA-WL",
+                "StationRange": [
+                    "TRA-1250",
+                    "TRA-3360"
+                ]
+            }
+        ],
+        "tra_hai": [
+            {
+                "Line": "TRA-WL-C",
+                "StationRange": [
+                    "TRA-1250",
+                    "TRA-3360"
+                ]
+            }
+        ],
+        "tra_zhjy": [
+            {
+                "Line": "TRA-WL",
+                "StationRange": [
+                    "TRA-3360",
+                    "TRA-4080"
+                ]
+            }
+        ],
+        "tra_jiji": [
+            {
+                "Line": "TRA-JJ",
+                "StationRange": [
+                    "TRA-3430",
+                    "TRA-3436"
+                ]
+            }
+        ],
+        "tra_jygx": [
+            {
+                "Line": "TRA-WL",
+                "StationRange": [
+                    "TRA-4080",
+                    "TRA-4400"
+                ]
+            }
+        ],
+        "tra_shalun": [
+            {
+                "Line": "TRA-SH",
+                "StationRange": [
+                    "TRA-4270",
+                    "TRA-4272"
+                ]
+            }
+        ],
+        "tra_pingdong": [
+            {
+                "Line": "TRA-SL",
+                "StationRange": [
+                    "TRA-5000",
+                    "TRA-5120"
+                ]
+            }
+        ],
+        "tra_pingxi": [
+            {
+                "Line": "TRA-PX",
+                "StationRange": [
+                    "TRA-7330",
+                    "TRA-7336"
+                ]
+            }
+        ],
+        "tra_beihui": [
+            {
+                "Line": "TRA-EL",
+                "StationRange": [
+                    "TRA-7130",
+                    "TRA-7000"
+                ]
+            }
+        ],
+        "tra_huadong": [
+            {
+                "Line": "TRA-EL",
+                "StationRange": [
+                    "TRA-7000",
+                    "TRA-6000"
+                ]
+            }
+        ],
+        "trtc_1": [
+            {
+                "Line": "TRTC-BR",
+                "StationRange": [
+                    "TRTC-BR01",
+                    "TRTC-BR24"
+                ]
+            }
+        ],
+        "trtc_5": [
+            {
+                "Line": "TRTC-BL",
+                "StationRange": [
+                    "TRTC-BL01",
+                    "TRTC-BL23"
+                ]
+            }
+        ],
+        "trtc_4": [
+            {
+                "Line": "TRTC-O",
+                "StationRange": [
+                    "TRTC-O01",
+                    "TRTC-O54"
+                ]
+            }
+        ],
+        "trtc_3": [
+            {
+                "Line": "TRTC-G",
+                "StationRange": [
+                    "TRTC-G01",
+                    "TRTC-G19"
+                ]
+            }
+        ],
+        "trtc_7": [
+            {
+                "Line": "NTMC-LB",
+                "StationRange": [
+                    "NTMC-LB01",
+                    "NTMC-LB12"
+                ]
+            }
+        ],
+        "trtc_2": [
+            {
+                "Line": "TRTC-R",
+                "StationRange": [
+                    "TRTC-R01",
+                    "TRTC-R28"
+                ]
+            }
+        ],
+        "trtc_6": [
+            {
+                "Line": "NTMC-Y",
+                "StationRange": [
+                    "NTMC-Y07",
+                    "NTMC-Y20"
+                ]
+            }
+        ],
+        "tymetro_1": [
+            {
+                "Line": "TYMC-A",
+                "StationRange": [
+                    "TYMC-A1",
+                    "TYMC-A21"
+                ]
+            }
+        ]
+    },
+    "unmatched": [
+        "tra_5180 古莊"
+    ]
+}

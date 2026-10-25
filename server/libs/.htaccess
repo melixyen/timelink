@@ -1,0 +1,2 @@
+# libs/ 內全部是被 index.php require 的程式與執行期資料，不開放直接以 HTTP 存取
+Require all denied

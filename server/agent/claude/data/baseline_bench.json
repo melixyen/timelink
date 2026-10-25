@@ -1,0 +1,615 @@
+{
+    "DataUpdatedAt": "2026-10-15T07:56:23+00:00",
+    "CreatedAt": "2026-10-25T02:58:36+00:00",
+    "Files": {
+        "libs/txapi/app/routing.php": "15e976eedcbd",
+        "libs/txapi/app/supplement.php": "c3a58a6de09d",
+        "libs/txapi/app/journey.php": "3ba4f882d4ec",
+        "libs/txapi/transfer/data/transfer_route_rules.json": "4d3fa93f1ebd",
+        "libs/txapi/transfer/data/transfer_route_supplements.json": "4f41f1dba47d"
+    },
+    "Set": "bench",
+    "Seconds": 2.2,
+    "cases": {
+        "1|TRA-0950>TRA-1210|480": {
+            "fastest": [
+                498,
+                602,
+                2,
+                104,
+                "TRA-0950.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1030.walk.TRA-1194.TRA.TRA-1210"
+            ],
+            "fewest": [
+                486,
+                607,
+                0,
+                121,
+                "TRA-0950.TRA.TRA-1210"
+            ],
+            "shortest": [
+                560,
+                648,
+                2,
+                88,
+                "TRA-0950.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1030.walk.TRA-1194.TRA.TRA-1210"
+            ],
+            "seconds": 0.189
+        },
+        "1|TRA-1000>TRA-3300|480": {
+            "fastest": [
+                507,
+                581,
+                1,
+                74,
+                "TRA-1000.walk.THSR-1000.THSR.THSR-1040.walk.TRA-3340.TRA.TRA-3300"
+            ],
+            "shortest": [
+                507,
+                581,
+                1,
+                74,
+                "TRA-1000.walk.THSR-1000.THSR.THSR-1040.walk.TRA-3340.TRA.TRA-3300"
+            ],
+            "fewest": [
+                480,
+                589,
+                0,
+                109,
+                "TRA-1000.TRA.TRA-3300"
+            ],
+            "seconds": 0.079
+        },
+        "1|TRA-1000>TRA-6000|480": {
+            "fastest": [
+                507,
+                735,
+                1,
+                228,
+                "TRA-1000.walk.THSR-1000.THSR.THSR-1070.walk.TRA-4340.TRA.TRA-6000"
+            ],
+            "shortest": [
+                507,
+                735,
+                1,
+                228,
+                "TRA-1000.walk.THSR-1000.THSR.THSR-1070.walk.TRA-4340.TRA.TRA-6000"
+            ],
+            "fewest": [
+                523,
+                786,
+                0,
+                263,
+                "TRA-1000.TRA.TRA-6000"
+            ],
+            "seconds": 0.143
+        },
+        "1|KRTC-R10>TRTC-BR22|480": {
+            "fastest": [
+                512,
+                662,
+                3,
+                150,
+                "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+            ],
+            "shortest": [
+                512,
+                662,
+                3,
+                150,
+                "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+            ],
+            "fewest": [
+                512,
+                662,
+                3,
+                150,
+                "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+            ],
+            "seconds": 0.228
+        },
+        "1|TRTC-BL01>TYMC-A13|480": {
+            "fastest": [
+                488,
+                543,
+                2,
+                55,
+                "TRTC-BL01.TRTC-BL.TRTC-BL07.walk.THSR-1010.THSR.THSR-1020.walk.TYMC-A18.TYMC-A.TYMC-A13"
+            ],
+            "fewest": [
+                484,
+                564,
+                1,
+                81,
+                "TRTC-BL01.TRTC-BL.TRTC-BL12.walk.TYMC-A1.TYMC-A.TYMC-A13"
+            ],
+            "shortest": [
+                549,
+                603,
+                2,
+                54,
+                "TRTC-BL01.TRTC-BL.TRTC-BL07.walk.THSR-1010.THSR.THSR-1020.walk.TYMC-A18.TYMC-A.TYMC-A13"
+            ],
+            "seconds": 0.149
+        },
+        "1|TRTC-BL22>TRTC-BL14|480": {
+            "fastest": [
+                481,
+                496,
+                0,
+                15,
+                "TRTC-BL22.TRTC-BL.TRTC-BL14"
+            ],
+            "fewest": [
+                481,
+                496,
+                0,
+                15,
+                "TRTC-BL22.TRTC-BL.TRTC-BL14"
+            ],
+            "shortest": [
+                488,
+                502,
+                0,
+                14,
+                "TRTC-BL22.TRTC-BL.TRTC-BL14"
+            ],
+            "seconds": 0.016
+        },
+        "1|TRTC-BR24>TRTC-R05|480": {
+            "fastest": [
+                481,
+                513,
+                1,
+                32,
+                "TRTC-BR24.walk.TRTC-BL23.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR09.walk.TRTC-R05"
+            ],
+            "fewest": [
+                480,
+                514,
+                0,
+                34,
+                "TRTC-BR24.TRTC-BR.TRTC-BR09.walk.TRTC-R05"
+            ],
+            "shortest": [
+                507,
+                537,
+                1,
+                30,
+                "TRTC-BR24.walk.TRTC-BL23.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR09.walk.TRTC-R05"
+            ],
+            "seconds": 0.059
+        },
+        "1|TRTC-R28>TRTC-G01|480": {
+            "fastest": [
+                481,
+                546,
+                1,
+                65,
+                "TRTC-R28.TRTC-R.TRTC-R08.walk.TRTC-G10.TRTC-G.TRTC-G01"
+            ],
+            "fewest": [
+                481,
+                546,
+                1,
+                65,
+                "TRTC-R28.TRTC-R.TRTC-R08.walk.TRTC-G10.TRTC-G.TRTC-G01"
+            ],
+            "shortest": [
+                507,
+                570,
+                1,
+                63,
+                "TRTC-R28.TRTC-R.TRTC-R08.walk.TRTC-G10.TRTC-G.TRTC-G01"
+            ],
+            "seconds": 0.075
+        },
+        "1|NTMC-Y07>TRTC-BL23|480": {
+            "fastest": [
+                482,
+                525,
+                2,
+                43,
+                "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G09.walk.TRTC-O05.TRTC-O.TRTC-O07.walk.TRTC-BL14.TRTC-BL.TRTC-BL23"
+            ],
+            "fewest": [
+                482,
+                529,
+                1,
+                47,
+                "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G12.walk.TRTC-BL11.TRTC-BL.TRTC-BL23"
+            ],
+            "shortest": [
+                557,
+                597,
+                2,
+                40,
+                "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G09.walk.TRTC-O05.TRTC-O.TRTC-O07.walk.TRTC-BL14.TRTC-BL.TRTC-BL23"
+            ],
+            "seconds": 0.143
+        },
+        "1|TRTC-O54>TRTC-BR01|480": {
+            "fastest": [
+                482,
+                529,
+                2,
+                47,
+                "TRTC-O54.TRTC-O.TRTC-O07.walk.TRTC-BL14.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR01"
+            ],
+            "fewest": [
+                482,
+                529,
+                2,
+                47,
+                "TRTC-O54.TRTC-O.TRTC-O07.walk.TRTC-BL14.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR01"
+            ],
+            "shortest": [
+                538,
+                584,
+                2,
+                46,
+                "TRTC-O54.TRTC-O.TRTC-O07.walk.TRTC-BL14.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR01"
+            ],
+            "seconds": 0.084
+        },
+        "1|NTDLRT-V28>TRTC-R10|480": {
+            "fastest": [
+                496,
+                566,
+                1,
+                70,
+                "NTDLRT-V28.NTDLRT-V.NTDLRT-V01.walk.TRTC-R27.TRTC-R.TRTC-R10"
+            ],
+            "fewest": [
+                496,
+                566,
+                1,
+                70,
+                "NTDLRT-V28.NTDLRT-V.NTDLRT-V01.walk.TRTC-R27.TRTC-R.TRTC-R10"
+            ],
+            "shortest": [
+                568,
+                632,
+                1,
+                64,
+                "NTDLRT-V28.NTDLRT-V.NTDLRT-V01.walk.TRTC-R27.TRTC-R.TRTC-R10"
+            ],
+            "seconds": 0.011
+        },
+        "1|TYMC-A22>TRTC-BL12|480": {
+            "fastest": [
+                483,
+                530,
+                1,
+                47,
+                "TYMC-A22.TYMC-A.TYMC-A18.walk.THSR-1020.THSR.THSR-1000.walk.TRTC-BL12"
+            ],
+            "shortest": [
+                513,
+                559,
+                1,
+                46,
+                "TYMC-A22.TYMC-A.TYMC-A18.walk.THSR-1020.THSR.THSR-1000.walk.TRTC-BL12"
+            ],
+            "fewest": [
+                483,
+                577,
+                0,
+                95,
+                "TYMC-A22.TYMC-A.TYMC-A1.walk.TRTC-BL12"
+            ],
+            "seconds": 0.105
+        },
+        "1|TMRT-G10a>TRA-3300|480": {
+            "fastest": [
+                499,
+                520,
+                1,
+                21,
+                "TMRT-G10a.TMRT-G.TMRT-G13.walk.TRA-3320.TRA.TRA-3300"
+            ],
+            "fewest": [
+                499,
+                520,
+                1,
+                21,
+                "TMRT-G10a.TMRT-G.TMRT-G13.walk.TRA-3320.TRA.TRA-3300"
+            ],
+            "shortest": [
+                511,
+                530,
+                1,
+                19,
+                "TMRT-G10a.TMRT-G.TMRT-G13.walk.TRA-3320.TRA.TRA-3300"
+            ],
+            "seconds": 0.025
+        },
+        "1|KRTC-O1>KRTC-R24|480": {
+            "fastest": [
+                480,
+                521,
+                1,
+                41,
+                "KRTC-O1.KRTC-O.KRTC-O5.walk.KRTC-R10.KRTC-R.KRTC-R24"
+            ],
+            "fewest": [
+                480,
+                521,
+                1,
+                41,
+                "KRTC-O1.KRTC-O.KRTC-O5.walk.KRTC-R10.KRTC-R.KRTC-R24"
+            ],
+            "shortest": [
+                504,
+                544,
+                1,
+                40,
+                "KRTC-O1.KRTC-O.KRTC-O5.walk.KRTC-R10.KRTC-R.KRTC-R24"
+            ],
+            "seconds": 0.074
+        },
+        "1|KLRT-C1>KRTC-R11|480": {
+            "fastest": [
+                480,
+                503,
+                1,
+                23,
+                "KLRT-C1.KLRT-C.KLRT-C3.walk.KRTC-R6.KRTC-R.KRTC-R11"
+            ],
+            "fewest": [
+                480,
+                503,
+                1,
+                23,
+                "KLRT-C1.KLRT-C.KLRT-C3.walk.KRTC-R6.KRTC-R.KRTC-R11"
+            ],
+            "shortest": [
+                525,
+                545,
+                1,
+                20,
+                "KLRT-C1.KLRT-C.KLRT-C3.walk.KRTC-R6.KRTC-R.KRTC-R11"
+            ],
+            "seconds": 0.051
+        },
+        "1|THSR-1000>THSR-1043|480": {
+            "fastest": [
+                481,
+                545,
+                0,
+                64,
+                "THSR-1000.THSR.THSR-1043"
+            ],
+            "shortest": [
+                481,
+                545,
+                0,
+                64,
+                "THSR-1000.THSR.THSR-1043"
+            ],
+            "fewest": [
+                481,
+                545,
+                0,
+                64,
+                "THSR-1000.THSR.THSR-1043"
+            ],
+            "seconds": 0.028
+        },
+        "1|TRA-0900>TRTC-BR22|480": {
+            "fastest": [
+                489,
+                540,
+                2,
+                51,
+                "TRA-0900.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+            ],
+            "fewest": [
+                489,
+                540,
+                2,
+                51,
+                "TRA-0900.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+            ],
+            "shortest": [
+                521,
+                571,
+                2,
+                50,
+                "TRA-0900.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+            ],
+            "seconds": 0.068
+        },
+        "1|TRA-5120>TRA-0900|480": {
+            "fastest": [
+                481,
+                744,
+                3,
+                263,
+                "TRA-5120.TRA.local.TRA-5050.TRA.local.TRA-5000.TRA.local.TRA-4400.TRA.local.TRA-4340.walk.THSR-1070.THSR.THSR-0990.walk.TRA-0980.TRA.TRA-0900"
+            ],
+            "shortest": [
+                532,
+                770,
+                2,
+                238,
+                "TRA-5120.TRA.TRA-5000.TRA.TRA-4340.walk.THSR-1070.THSR.THSR-1000.walk.TRA-1000.TRA.TRA-0900"
+            ],
+            "fewest": [
+                532,
+                770,
+                2,
+                238,
+                "TRA-5120.TRA.TRA-5000.TRA.TRA-4340.walk.THSR-1070.THSR.THSR-1000.walk.TRA-1000.TRA.TRA-0900"
+            ],
+            "seconds": 0.104
+        },
+        "1|NTALRT-K09>TRTC-R28|480": {
+            "fastest": [
+                482,
+                552,
+                2,
+                71,
+                "NTALRT-K09.walk.NTMC-Y08.NTMC-Y.NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+            ],
+            "fewest": [
+                482,
+                552,
+                2,
+                71,
+                "NTALRT-K09.walk.NTMC-Y08.NTMC-Y.NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+            ],
+            "shortest": [
+                521,
+                590,
+                2,
+                70,
+                "NTALRT-K09.walk.NTMC-Y08.NTMC-Y.NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+            ],
+            "seconds": 0.129
+        },
+        "1|TRTC-G19>NTMC-LB12|480": {
+            "fastest": [
+                480,
+                543,
+                1,
+                64,
+                "TRTC-G19.walk.TRA-0990.TRA.TRA-1070.walk.NTMC-LB08.NTMC-LB.NTMC-LB12"
+            ],
+            "fewest": [
+                480,
+                543,
+                1,
+                64,
+                "TRTC-G19.walk.TRA-0990.TRA.TRA-1070.walk.NTMC-LB08.NTMC-LB.NTMC-LB12"
+            ],
+            "shortest": [
+                549,
+                606,
+                1,
+                58,
+                "TRTC-G19.walk.TRA-0990.TRA.TRA-1070.walk.NTMC-LB08.NTMC-LB.NTMC-LB12"
+            ],
+            "seconds": 0.064
+        },
+        "1|TRA-1020>TRA-0980|480": {
+            "fastest": [
+                482,
+                505,
+                0,
+                23,
+                "TRA-1020.TRA.TRA-0980"
+            ],
+            "fewest": [
+                482,
+                505,
+                0,
+                23,
+                "TRA-1020.TRA.TRA-0980"
+            ],
+            "shortest": [
+                554,
+                573,
+                0,
+                19,
+                "TRA-1020.TRA.TRA-0980"
+            ],
+            "seconds": 0.023
+        },
+        "1|TRTC-BL07>TRTC-O01|480": {
+            "fastest": [
+                483,
+                514,
+                1,
+                31,
+                "TRTC-BL07.walk.NTMC-Y16.NTMC-Y.NTMC-Y11.walk.TRTC-O02.TRTC-O.TRTC-O01"
+            ],
+            "fewest": [
+                483,
+                514,
+                1,
+                31,
+                "TRTC-BL07.walk.NTMC-Y16.NTMC-Y.NTMC-Y11.walk.TRTC-O02.TRTC-O.TRTC-O01"
+            ],
+            "shortest": [
+                576,
+                606,
+                1,
+                30,
+                "TRTC-BL07.walk.NTMC-Y16.NTMC-Y.NTMC-Y11.walk.TRTC-O02.TRTC-O.TRTC-O01"
+            ],
+            "seconds": 0.082
+        },
+        "1|TRTC-BR13>TRTC-BL05|480": {
+            "fastest": [
+                483,
+                515,
+                1,
+                32,
+                "TRTC-BR13.TRTC-BR.TRTC-BR10.walk.TRTC-BL15.TRTC-BL.TRTC-BL05"
+            ],
+            "shortest": [
+                483,
+                515,
+                1,
+                32,
+                "TRTC-BR13.TRTC-BR.TRTC-BR10.walk.TRTC-BL15.TRTC-BL.TRTC-BL05"
+            ],
+            "fewest": [
+                483,
+                515,
+                1,
+                32,
+                "TRTC-BR13.TRTC-BR.TRTC-BR10.walk.TRTC-BL15.TRTC-BL.TRTC-BL05"
+            ],
+            "seconds": 0.087
+        },
+        "1|TRA-7000>THSR-1070|480": {
+            "fastest": [
+                502,
+                775,
+                1,
+                273,
+                "TRA-7000.TRA.TRA-6000.TRA.TRA-5000.TRA.TRA-4340.walk.THSR-1070"
+            ],
+            "fewest": [
+                502,
+                775,
+                1,
+                273,
+                "TRA-7000.TRA.TRA-6000.TRA.TRA-5000.TRA.TRA-4340.walk.THSR-1070"
+            ],
+            "shortest": [
+                537,
+                785,
+                1,
+                248,
+                "TRA-7000.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1070"
+            ],
+            "seconds": 0.119
+        },
+        "1|TRTC-R13>TRTC-G08|480": {
+            "fastest": [
+                480,
+                495,
+                1,
+                15,
+                "TRTC-R13.TRTC-R.TRTC-R08.walk.TRTC-G10.TRTC-G.TRTC-G08"
+            ],
+            "fewest": [
+                480,
+                495,
+                1,
+                15,
+                "TRTC-R13.TRTC-R.TRTC-R08.walk.TRTC-G10.TRTC-G.TRTC-G08"
+            ],
+            "shortest": [
+                532,
+                546,
+                1,
+                14,
+                "TRTC-R13.TRTC-R.TRTC-R08.walk.TRTC-G10.TRTC-G.TRTC-G08"
+            ],
+            "seconds": 0.062
+        }
+    }
+}

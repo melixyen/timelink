@@ -1,0 +1,485 @@
+{
+    "Description": "高雄比對起訖（make_pairs.php，種子 7）",
+    "pairs": [
+        {
+            "from": "KRTC-O6",
+            "to": "KRTC-R3"
+        },
+        {
+            "from": "KLRT-C31",
+            "to": "TRA-5130"
+        },
+        {
+            "from": "KRTC-R24",
+            "to": "TRA-4270"
+        },
+        {
+            "from": "KLRT-C3",
+            "to": "TRA-4460"
+        },
+        {
+            "from": "TRA-4350",
+            "to": "KRTC-R15"
+        },
+        {
+            "from": "KLRT-C21A",
+            "to": "KLRT-C3"
+        },
+        {
+            "from": "KRTC-R6",
+            "to": "TRA-4320"
+        },
+        {
+            "from": "TRA-5050",
+            "to": "KRTC-O13"
+        },
+        {
+            "from": "TRA-4330",
+            "to": "KLRT-C17"
+        },
+        {
+            "from": "KRTC-O10",
+            "to": "TRA-4450"
+        },
+        {
+            "from": "KRTC-R3",
+            "to": "KRTC-O7"
+        },
+        {
+            "from": "TRA-5240",
+            "to": "KLRT-C16"
+        },
+        {
+            "from": "KRTC-O2",
+            "to": "KLRT-C1"
+        },
+        {
+            "from": "KRTC-R9",
+            "to": "KRTC-R13"
+        },
+        {
+            "from": "TRA-5190",
+            "to": "KLRT-C15"
+        },
+        {
+            "from": "KLRT-C26",
+            "to": "KRTC-R18"
+        },
+        {
+            "from": "KRTC-O2",
+            "to": "KRTC-R21"
+        },
+        {
+            "from": "KRTC-R4",
+            "to": "KRTC-R14"
+        },
+        {
+            "from": "KLRT-C30",
+            "to": "KRTC-R13"
+        },
+        {
+            "from": "KRTC-R11",
+            "to": "TRA-5070"
+        },
+        {
+            "from": "TRA-5200",
+            "to": "KRTC-R19"
+        },
+        {
+            "from": "KRTC-R22",
+            "to": "KLRT-C6"
+        },
+        {
+            "from": "KRTC-R14",
+            "to": "KRTC-R7"
+        },
+        {
+            "from": "TRA-4200",
+            "to": "KRTC-O1"
+        },
+        {
+            "from": "KLRT-C13",
+            "to": "TRA-5050"
+        },
+        {
+            "from": "KLRT-C18",
+            "to": "TRA-4300"
+        },
+        {
+            "from": "TRA-4420",
+            "to": "KRTC-R24"
+        },
+        {
+            "from": "KRTC-R6",
+            "to": "TRA-4270"
+        },
+        {
+            "from": "KRTC-O7",
+            "to": "KLRT-C10"
+        },
+        {
+            "from": "KRTC-R22",
+            "to": "KLRT-C23"
+        },
+        {
+            "from": "TRA-5130",
+            "to": "KLRT-C37"
+        },
+        {
+            "from": "TRA-4360",
+            "to": "KRTC-O2"
+        },
+        {
+            "from": "TRA-4350",
+            "to": "TRA-5210"
+        },
+        {
+            "from": "KRTC-R5",
+            "to": "KLRT-C3"
+        },
+        {
+            "from": "KLRT-C19",
+            "to": "TRA-5000"
+        },
+        {
+            "from": "KLRT-C7",
+            "to": "KRTC-R22"
+        },
+        {
+            "from": "KRTC-R19",
+            "to": "KLRT-C16"
+        },
+        {
+            "from": "KLRT-C3",
+            "to": "TRA-4350"
+        },
+        {
+            "from": "TRA-5140",
+            "to": "TRA-4390"
+        },
+        {
+            "from": "KLRT-C28",
+            "to": "TRA-4430"
+        },
+        {
+            "from": "KLRT-C7",
+            "to": "TRA-4400"
+        },
+        {
+            "from": "KRTC-R24",
+            "to": "TRA-5200"
+        },
+        {
+            "from": "TRA-4340",
+            "to": "TRA-4400"
+        },
+        {
+            "from": "KLRT-C26",
+            "to": "KLRT-C33"
+        },
+        {
+            "from": "KLRT-C13",
+            "to": "KLRT-C26"
+        },
+        {
+            "from": "KLRT-C5",
+            "to": "TRA-5200"
+        },
+        {
+            "from": "KLRT-C36",
+            "to": "KRTC-R15"
+        },
+        {
+            "from": "TRA-4440",
+            "to": "KRTC-R7"
+        },
+        {
+            "from": "TRA-4360",
+            "to": "TRA-4250"
+        },
+        {
+            "from": "TRA-5240",
+            "to": "KLRT-C37"
+        },
+        {
+            "from": "KLRT-C11",
+            "to": "TRA-4270"
+        },
+        {
+            "from": "KRTC-O9",
+            "to": "KLRT-C25"
+        },
+        {
+            "from": "KLRT-C28",
+            "to": "TRA-5140"
+        },
+        {
+            "from": "KRTC-R24",
+            "to": "KRTC-R9"
+        },
+        {
+            "from": "KRTC-R16",
+            "to": "KRTC-O6"
+        },
+        {
+            "from": "KLRT-C23",
+            "to": "KLRT-C20"
+        },
+        {
+            "from": "TRA-4360",
+            "to": "TRA-5020"
+        },
+        {
+            "from": "TRA-5000",
+            "to": "KLRT-C18"
+        },
+        {
+            "from": "KRTC-RK1",
+            "to": "KRTC-R24"
+        },
+        {
+            "from": "TRA-5050",
+            "to": "KLRT-C21A"
+        },
+        {
+            "from": "TRA-5210",
+            "to": "KLRT-C27"
+        },
+        {
+            "from": "KRTC-R11",
+            "to": "TRA-5210"
+        },
+        {
+            "from": "KLRT-C22",
+            "to": "KRTC-R17"
+        },
+        {
+            "from": "KLRT-C7",
+            "to": "KRTC-O7"
+        },
+        {
+            "from": "KLRT-C13",
+            "to": "KRTC-O14"
+        },
+        {
+            "from": "KRTC-R6",
+            "to": "TRA-4330"
+        },
+        {
+            "from": "TRA-5190",
+            "to": "KRTC-R12"
+        },
+        {
+            "from": "KRTC-O14",
+            "to": "TRA-5060"
+        },
+        {
+            "from": "TRA-4300",
+            "to": "THSR-1070"
+        },
+        {
+            "from": "KRTC-O9",
+            "to": "KRTC-O10"
+        },
+        {
+            "from": "KLRT-C12",
+            "to": "KLRT-C35"
+        },
+        {
+            "from": "KLRT-C20",
+            "to": "KRTC-RK1"
+        },
+        {
+            "from": "TRA-4210",
+            "to": "KLRT-C35"
+        },
+        {
+            "from": "KLRT-C17",
+            "to": "KRTC-R12"
+        },
+        {
+            "from": "KRTC-O1",
+            "to": "TRA-5120"
+        },
+        {
+            "from": "KRTC-R4A",
+            "to": "KLRT-C28"
+        },
+        {
+            "from": "KRTC-O2",
+            "to": "TRA-4340"
+        },
+        {
+            "from": "KLRT-C16",
+            "to": "TRA-4250"
+        },
+        {
+            "from": "TRA-5010",
+            "to": "TRA-5060"
+        },
+        {
+            "from": "KRTC-R4",
+            "to": "TRA-4430"
+        },
+        {
+            "from": "KRTC-R10",
+            "to": "TRA-5000"
+        },
+        {
+            "from": "KRTC-O12",
+            "to": "KLRT-C35"
+        },
+        {
+            "from": "KLRT-C32",
+            "to": "KRTC-R22"
+        },
+        {
+            "from": "TRA-5210",
+            "to": "KRTC-R20"
+        },
+        {
+            "from": "TRA-4290",
+            "to": "TRA-4410"
+        },
+        {
+            "from": "KLRT-C20",
+            "to": "KLRT-C15"
+        },
+        {
+            "from": "TRA-4470",
+            "to": "KLRT-C6"
+        },
+        {
+            "from": "KRTC-R17",
+            "to": "TRA-5010"
+        },
+        {
+            "from": "TRA-5050",
+            "to": "TRA-5110"
+        },
+        {
+            "from": "TRA-5080",
+            "to": "TRA-4360"
+        },
+        {
+            "from": "TRA-4450",
+            "to": "TRA-5010"
+        },
+        {
+            "from": "KLRT-C24",
+            "to": "KLRT-C14"
+        },
+        {
+            "from": "TRA-4210",
+            "to": "KRTC-O8"
+        },
+        {
+            "from": "KRTC-R12",
+            "to": "KRTC-RK1"
+        },
+        {
+            "from": "TRA-5000",
+            "to": "TRA-4470"
+        },
+        {
+            "from": "TRA-4350",
+            "to": "KRTC-R12"
+        },
+        {
+            "from": "KRTC-O6",
+            "to": "KLRT-C9"
+        },
+        {
+            "from": "KRTC-R7",
+            "to": "TRA-4300"
+        },
+        {
+            "from": "KLRT-C28",
+            "to": "KLRT-C13"
+        },
+        {
+            "from": "TRA-4340",
+            "to": "KRTC-RK1"
+        },
+        {
+            "from": "TRA-5000",
+            "to": "KRTC-R9"
+        },
+        {
+            "from": "KLRT-C15",
+            "to": "TRA-5160"
+        },
+        {
+            "from": "TRA-4400",
+            "to": "TRA-4272"
+        },
+        {
+            "from": "TRA-4272",
+            "to": "KLRT-C36"
+        },
+        {
+            "from": "TRA-5020",
+            "to": "TRA-4350"
+        },
+        {
+            "from": "KRTC-R14",
+            "to": "KRTC-OT1"
+        },
+        {
+            "from": "TRA-5140",
+            "to": "KRTC-R13"
+        },
+        {
+            "from": "TRA-5170",
+            "to": "KLRT-C20"
+        },
+        {
+            "from": "KRTC-RK1",
+            "to": "TRA-5040"
+        },
+        {
+            "from": "KLRT-C8",
+            "to": "KRTC-R5"
+        },
+        {
+            "from": "TRA-4272",
+            "to": "KRTC-R16"
+        },
+        {
+            "from": "KRTC-O12",
+            "to": "TRA-4450"
+        },
+        {
+            "from": "KLRT-C22",
+            "to": "KRTC-O14"
+        },
+        {
+            "from": "KRTC-R17",
+            "to": "TRA-4260"
+        },
+        {
+            "from": "KRTC-R21",
+            "to": "KLRT-C34"
+        },
+        {
+            "from": "KLRT-C23",
+            "to": "KLRT-C14"
+        },
+        {
+            "from": "KLRT-C7",
+            "to": "THSR-1070"
+        },
+        {
+            "from": "KLRT-C4",
+            "to": "TRA-5120"
+        },
+        {
+            "from": "TRA-4300",
+            "to": "TRA-4380"
+        },
+        {
+            "from": "KLRT-C5",
+            "to": "KRTC-O4"
+        }
+    ]
+}

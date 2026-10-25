@@ -1,0 +1,564 @@
+{
+ "Version": 1,
+ "Description": "轉乘查詢的加速清單人工輸入（PHP 與 Node.js 共用）。地區（Regions）與走廊（Corridors）是人工定義的輸入；推薦換車站與實際使用的走廊由 func=learn 從離線時刻表跑完整搜尋後算出，寫在 transfer_accel_learned.json，查詢時優先使用；手寫的 TransferHubs 只在還沒算過時備用。參考 railtime 的人工規則（各線 protectStation 轉乘大站、routeSystem 跨線規則、bypassSectReg 繞路排除）。",
+ "Settings": {
+  "LocalMinutes": 40,
+  "RestrictChangeSystems": [
+   "TRA"
+  ],
+  "Notes": {
+   "LocalMinutes": "起站出發、或到迄站，最短行駛時間在這幾分鐘內的車站，不在轉乘大站名單也可以同站換車（railtime 的「找附近大站」）",
+   "RestrictChangeSystems": "只限制這些系統的同站換車；高鐵、捷運的換車站與跨系統步行轉乘不受限"
+  }
+ },
+ "Regions": {
+  "N": {
+   "Name": "北部",
+   "Lines": [
+    {
+     "LineUID": "TRA-WL",
+     "From": "TRA-0900",
+     "To": "TRA-1250"
+    },
+    {
+     "LineUID": "TRA-EL",
+     "From": "TRA-0920",
+     "To": "TRA-7360"
+    },
+    {
+     "LineUID": "TRA-PX"
+    },
+    {
+     "LineUID": "TRA-NW"
+    },
+    {
+     "LineUID": "TRA-LJ"
+    },
+    {
+     "LineUID": "TRA-SA"
+    }
+   ],
+   "Systems": [
+    "TRTC",
+    "NTMC",
+    "TYMC",
+    "NTDLRT",
+    "NTALRT"
+   ],
+   "Stations": [
+    "THSR-0990",
+    "THSR-1000",
+    "THSR-1010",
+    "THSR-1020",
+    "THSR-1030"
+   ]
+  },
+  "NE": {
+   "Name": "宜蘭與北迴",
+   "Lines": [
+    {
+     "LineUID": "TRA-EL",
+     "From": "TRA-7360",
+     "To": "TRA-7000"
+    },
+    {
+     "LineUID": "TRA-SU"
+    }
+   ]
+  },
+  "C": {
+   "Name": "中部",
+   "Lines": [
+    {
+     "LineUID": "TRA-WL",
+     "From": "TRA-1250",
+     "To": "TRA-4080"
+    },
+    {
+     "LineUID": "TRA-WL-C"
+    },
+    {
+     "LineUID": "TRA-JJ"
+    },
+    {
+     "LineUID": "TRA-CZ"
+    }
+   ],
+   "Systems": [
+    "TMRT"
+   ],
+   "Stations": [
+    "THSR-1035",
+    "THSR-1040",
+    "THSR-1043",
+    "THSR-1047"
+   ]
+  },
+  "S": {
+   "Name": "南部",
+   "Lines": [
+    {
+     "LineUID": "TRA-WL",
+     "From": "TRA-4080",
+     "To": "TRA-5000"
+    },
+    {
+     "LineUID": "TRA-SL",
+     "From": "TRA-5000",
+     "To": "TRA-5120"
+    },
+    {
+     "LineUID": "TRA-SH"
+    }
+   ],
+   "Systems": [
+    "KRTC",
+    "KLRT"
+   ],
+   "Stations": [
+    "THSR-1050",
+    "THSR-1060",
+    "THSR-1070"
+   ]
+  },
+  "SL": {
+   "Name": "南迴",
+   "Lines": [
+    {
+     "LineUID": "TRA-SL",
+     "From": "TRA-5120",
+     "To": "TRA-6000"
+    }
+   ]
+  },
+  "E": {
+   "Name": "花東",
+   "Lines": [
+    {
+     "LineUID": "TRA-EL",
+     "From": "TRA-7000",
+     "To": "TRA-6000"
+    }
+   ]
+  }
+ },
+ "RegionNotes": "Lines 的 From／To 依路線站序（finder 資料庫 line_station）取區間，兩端都算；沒寫 From／To 是整條線。地區交界站（竹南、嘉義、枋寮、臺東、花蓮、瑞芳）同時屬於兩個地區。不在任何地區的車站不受地區限制。",
+ "Corridors": [
+  {
+   "Regions": [
+    "N",
+    "N"
+   ],
+   "Allow": [
+    "N"
+   ]
+  },
+  {
+   "Regions": [
+    "NE",
+    "NE"
+   ],
+   "Allow": [
+    "NE"
+   ]
+  },
+  {
+   "Regions": [
+    "C",
+    "C"
+   ],
+   "Allow": [
+    "C"
+   ]
+  },
+  {
+   "Regions": [
+    "S",
+    "S"
+   ],
+   "Allow": [
+    "S"
+   ]
+  },
+  {
+   "Regions": [
+    "SL",
+    "SL"
+   ],
+   "Allow": [
+    "SL"
+   ]
+  },
+  {
+   "Regions": [
+    "E",
+    "E"
+   ],
+   "Allow": [
+    "E"
+   ]
+  },
+  {
+   "Regions": [
+    "N",
+    "NE"
+   ],
+   "Allow": [
+    "N",
+    "NE"
+   ]
+  },
+  {
+   "Regions": [
+    "N",
+    "C"
+   ],
+   "Allow": [
+    "N",
+    "C"
+   ]
+  },
+  {
+   "Regions": [
+    "N",
+    "S"
+   ],
+   "Allow": [
+    "N",
+    "C",
+    "S"
+   ]
+  },
+  {
+   "Regions": [
+    "C",
+    "S"
+   ],
+   "Allow": [
+    "C",
+    "S"
+   ]
+  },
+  {
+   "Regions": [
+    "NE",
+    "C"
+   ],
+   "Allow": [
+    "NE",
+    "N",
+    "C"
+   ]
+  },
+  {
+   "Regions": [
+    "NE",
+    "S"
+   ],
+   "Allow": "*"
+  },
+  {
+   "Regions": [
+    "NE",
+    "E"
+   ],
+   "Allow": [
+    "NE",
+    "E"
+   ]
+  },
+  {
+   "Regions": [
+    "S",
+    "SL"
+   ],
+   "Allow": [
+    "S",
+    "SL"
+   ]
+  },
+  {
+   "Regions": [
+    "C",
+    "SL"
+   ],
+   "Allow": [
+    "C",
+    "S",
+    "SL"
+   ]
+  },
+  {
+   "Regions": [
+    "SL",
+    "E"
+   ],
+   "Allow": [
+    "SL",
+    "E"
+   ]
+  },
+  {
+   "Regions": [
+    "N",
+    "E"
+   ],
+   "Allow": "*"
+  },
+  {
+   "Regions": [
+    "N",
+    "SL"
+   ],
+   "Allow": "*"
+  },
+  {
+   "Regions": [
+    "NE",
+    "SL"
+   ],
+   "Allow": "*"
+  },
+  {
+   "Regions": [
+    "C",
+    "E"
+   ],
+   "Allow": "*"
+  },
+  {
+   "Regions": [
+    "S",
+    "E"
+   ],
+   "Allow": "*"
+  }
+ ],
+ "CorridorNotes": "起訖站所在地區的組合（不分方向）→ 搜尋時只走這些地區的車站，其他地區的車站不展開。\"*\" 表示不限制（例如臺東往臺北，最快可能經南迴到新左營轉高鐵）。沒列出的組合也不限制。 宜蘭南段、北迴往南部也可能經花東、南迴（例如東澳往高雄）。",
+ "TransferHubs": [
+  {
+   "StationUID": "TRA-0900",
+   "Name": "基隆"
+  },
+  {
+   "StationUID": "TRA-0920",
+   "Name": "八堵"
+  },
+  {
+   "StationUID": "TRA-0930",
+   "Name": "七堵"
+  },
+  {
+   "StationUID": "TRA-0980",
+   "Name": "南港"
+  },
+  {
+   "StationUID": "TRA-0990",
+   "Name": "松山"
+  },
+  {
+   "StationUID": "TRA-1000",
+   "Name": "臺北"
+  },
+  {
+   "StationUID": "TRA-1001",
+   "Name": "臺北-環島"
+  },
+  {
+   "StationUID": "TRA-1020",
+   "Name": "板橋"
+  },
+  {
+   "StationUID": "TRA-1040",
+   "Name": "樹林"
+  },
+  {
+   "StationUID": "TRA-1080",
+   "Name": "桃園"
+  },
+  {
+   "StationUID": "TRA-1100",
+   "Name": "中壢"
+  },
+  {
+   "StationUID": "TRA-1210",
+   "Name": "新竹"
+  },
+  {
+   "StationUID": "TRA-1190",
+   "Name": "北新竹"
+  },
+  {
+   "StationUID": "TRA-1193",
+   "Name": "竹中"
+  },
+  {
+   "StationUID": "TRA-7360",
+   "Name": "瑞芳"
+  },
+  {
+   "StationUID": "TRA-7330",
+   "Name": "三貂嶺"
+  },
+  {
+   "StationUID": "TRA-7190",
+   "Name": "宜蘭"
+  },
+  {
+   "StationUID": "TRA-7160",
+   "Name": "羅東"
+  },
+  {
+   "StationUID": "TRA-7130",
+   "Name": "蘇澳新"
+  },
+  {
+   "StationUID": "TRA-7000",
+   "Name": "花蓮"
+  },
+  {
+   "StationUID": "TRA-1250",
+   "Name": "竹南"
+  },
+  {
+   "StationUID": "TRA-3160",
+   "Name": "苗栗"
+  },
+  {
+   "StationUID": "TRA-3230",
+   "Name": "豐原"
+  },
+  {
+   "StationUID": "TRA-3300",
+   "Name": "臺中"
+  },
+  {
+   "StationUID": "TRA-3340",
+   "Name": "新烏日"
+  },
+  {
+   "StationUID": "TRA-3360",
+   "Name": "彰化"
+  },
+  {
+   "StationUID": "TRA-3390",
+   "Name": "員林"
+  },
+  {
+   "StationUID": "TRA-3430",
+   "Name": "二水"
+  },
+  {
+   "StationUID": "TRA-3470",
+   "Name": "斗六"
+  },
+  {
+   "StationUID": "TRA-2260",
+   "Name": "追分"
+  },
+  {
+   "StationUID": "TRA-3350",
+   "Name": "成功"
+  },
+  {
+   "StationUID": "TRA-2200",
+   "Name": "大甲"
+  },
+  {
+   "StationUID": "TRA-2230",
+   "Name": "沙鹿"
+  },
+  {
+   "StationUID": "TRA-4080",
+   "Name": "嘉義"
+  },
+  {
+   "StationUID": "TRA-4120",
+   "Name": "新營"
+  },
+  {
+   "StationUID": "TRA-4220",
+   "Name": "臺南"
+  },
+  {
+   "StationUID": "TRA-4270",
+   "Name": "中洲"
+  },
+  {
+   "StationUID": "TRA-4340",
+   "Name": "新左營"
+  },
+  {
+   "StationUID": "TRA-4400",
+   "Name": "高雄"
+  },
+  {
+   "StationUID": "TRA-4440",
+   "Name": "鳳山"
+  },
+  {
+   "StationUID": "TRA-5000",
+   "Name": "屏東"
+  },
+  {
+   "StationUID": "TRA-5050",
+   "Name": "潮州"
+  },
+  {
+   "StationUID": "TRA-5120",
+   "Name": "枋寮"
+  },
+  {
+   "StationUID": "TRA-6000",
+   "Name": "臺東"
+  },
+  {
+   "StationUID": "TRA-6050",
+   "Name": "關山"
+  },
+  {
+   "StationUID": "TRA-6070",
+   "Name": "池上"
+  },
+  {
+   "StationUID": "TRA-6110",
+   "Name": "玉里"
+  },
+  {
+   "StationUID": "TRA-6130",
+   "Name": "瑞穗"
+  },
+  {
+   "StationUID": "TRA-6160",
+   "Name": "光復"
+  }
+ ],
+ "TransferHubNotes": "手寫備用清單：還沒有 transfer_accel_learned.json 時才用。臺鐵同站換車（例如區間車轉自強號）在加速時只能在這些大站或交會站，另加起訖站附近的車站（Settings.LocalMinutes）。參考 railtime 各線的 protectStation 與 routeSystem 轉乘站。",
+ "Learn": {
+  "Days": [
+   1,
+   5,
+   6,
+   0
+  ],
+  "From": "05:00",
+  "To": "22:00",
+  "StepMinutes": 20,
+  "OriginSystems": [
+   "TRA",
+   "THSR"
+  ],
+  "IncludeTransferGroupStations": true,
+  "MinUses": 1,
+  "ChunkSeconds": 20,
+  "Notes": {
+   "Days": "分析哪幾天的時刻表（0 星期日～6 星期六）；平日、週五、週六、週日班表不同",
+   "From/To/StepMinutes": "每個起站從 From 到 To 每隔 StepMinutes 分鐘出發各搜一次（一對多，不設迄站）",
+   "OriginSystems": "以這些系統的全部車站當起站；IncludeTransferGroupStations 另加所有多站轉乘群組的車站（捷運與臺鐵、高鐵的轉乘站）",
+   "MinUses": "臺鐵車站在最佳方案中被用來同站換車至少幾次，才列為推薦換車站",
+   "ChunkSeconds": "func=learn 每次呼叫最多算幾秒，算不完就存進度，下一次接著算",
+   "CorridorMinShare": "走廊外的地區，被最佳方案用到的比例（占該地區組合全部最佳方案）達到這個值就放寬走廊；低於這個值維持排除，並在結果的 LossShare 記下加速時可能少掉的比例。設 0 表示只要用到就放寬（加速不會少方案，但走廊幾乎沒有排除效果）"
+  },
+  "CorridorMinShare": 0.001
+ }
+}

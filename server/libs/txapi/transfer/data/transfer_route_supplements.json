@@ -1,0 +1,199 @@
+{
+    "Description": "路由補充資料（人工維護、受版控）：自動路由檢索完成後，條件百分之百符合的補充資料各多產生一條路由，補的是資料與路線常理以外、人工搭乘經驗上也會這樣搭的走法",
+    "Notes": {
+        "Operators": "業者陣列（必填），例如 [\"TRA\"]；跨業者寫 [\"TRA\", \"TRTC\"]",
+        "Classes": "會用到的車種等級陣列（local／express，選填）：extra 排除其中任何一種就不套用",
+        "From/To": "搭乘段上車站、下車站條件（選填）：車站代碼陣列，或範圍 [{Line, StationRange?}]，可以混寫",
+        "ViaLines/ViaStations": "搭乘段要經過的路線、車站（選填，任一個即可）",
+        "Logic": "處理函式：TRA.LocalRelay（區間車接力）、TRA.ExpressTransfer（區間車轉對號）、TRA.ChangeAt（指定車站換車）、ClassChange（高鐵、機捷換快慢車）；業者前綴的只看得懂該業者的 Meta",
+        "Meta": "給 Logic 的參數",
+        "Rule": "一條補充資料符合時只多一條路由；一條路由裡所有符合條件的搭乘段一起改寫"
+    },
+    "Supplements": [
+        {
+            "Name": "臺鐵區間車接力",
+            "Operators": [
+                "TRA"
+            ],
+            "Classes": [
+                "local"
+            ],
+            "Logic": "TRA.LocalRelay",
+            "Meta": {
+                "RelayStations": [
+                    "TRA-1000",
+                    "TRA-1210",
+                    "TRA-3360",
+                    "TRA-4080",
+                    "TRA-4400",
+                    "TRA-5050",
+                    "TRA-5120",
+                    "TRA-6000",
+                    "TRA-7000",
+                    "TRA-7130"
+                ],
+                "RelayNames": [
+                    "臺北",
+                    "新竹",
+                    "彰化",
+                    "嘉義",
+                    "高雄",
+                    "潮州",
+                    "枋寮",
+                    "臺東",
+                    "花蓮",
+                    "蘇澳新"
+                ]
+            },
+            "Source": "manual",
+            "Note": "全程搭區間車：沿途在接力站換下一班區間車（沒有接力站時用其他同站換車站）"
+        },
+        {
+            "Name": "臺鐵區間車轉對號（第一個大站上、最後一個大站下）",
+            "Operators": [
+                "TRA"
+            ],
+            "Classes": [
+                "local",
+                "express"
+            ],
+            "Logic": "TRA.ExpressTransfer",
+            "Meta": {
+                "Board": "big",
+                "Alight": "big"
+            },
+            "Source": "manual"
+        },
+        {
+            "Name": "臺鐵區間車轉對號（第一個大站上、最後一個主要站下）",
+            "Operators": [
+                "TRA"
+            ],
+            "Classes": [
+                "local",
+                "express"
+            ],
+            "Logic": "TRA.ExpressTransfer",
+            "Meta": {
+                "Board": "big",
+                "Alight": "major",
+                "MajorRatio": 0.5
+            },
+            "Source": "manual"
+        },
+        {
+            "Name": "臺鐵區間車轉對號（第一個主要站上、最後一個大站下）",
+            "Operators": [
+                "TRA"
+            ],
+            "Classes": [
+                "local",
+                "express"
+            ],
+            "Logic": "TRA.ExpressTransfer",
+            "Meta": {
+                "Board": "major",
+                "Alight": "big",
+                "MajorRatio": 0.5
+            },
+            "Source": "manual"
+        },
+        {
+            "Name": "臺鐵區間車轉對號（第一個主要站上、最後一個主要站下）",
+            "Operators": [
+                "TRA"
+            ],
+            "Classes": [
+                "local",
+                "express"
+            ],
+            "Logic": "TRA.ExpressTransfer",
+            "Meta": {
+                "Board": "major",
+                "Alight": "major",
+                "MajorRatio": 0.5
+            },
+            "Source": "manual"
+        },
+        {
+            "Name": "臺鐵路線交會站換車",
+            "Operators": [
+                "TRA"
+            ],
+            "Logic": "TRA.ChangeAt",
+            "Meta": {
+                "Stations": [
+                    "TRA-0920",
+                    "TRA-1250",
+                    "TRA-3360",
+                    "TRA-3350",
+                    "TRA-2260",
+                    "TRA-3430",
+                    "TRA-1210",
+                    "TRA-1190",
+                    "TRA-5000",
+                    "TRA-6000",
+                    "TRA-7130",
+                    "TRA-7360",
+                    "TRA-7330",
+                    "TRA-4270"
+                ],
+                "StationNames": [
+                    "八堵",
+                    "竹南",
+                    "彰化",
+                    "成功",
+                    "追分",
+                    "二水",
+                    "新竹",
+                    "竹中",
+                    "屏東",
+                    "臺東",
+                    "蘇澳新",
+                    "瑞芳",
+                    "三貂嶺",
+                    "中洲"
+                ],
+                "OnlyLineChange": true
+            },
+            "Source": "manual",
+            "Note": "在路線串換線的交會站（例如西部幹線接宜蘭線的八堵、宜蘭線接臺東線的…）下車換另一班車；同一班車直通時串接會直接續坐"
+        },
+        {
+            "Name": "高鐵台中換車",
+            "Operators": [
+                "THSR"
+            ],
+            "Classes": [
+                "local",
+                "express"
+            ],
+            "Logic": "ClassChange",
+            "Meta": {
+                "Stations": [
+                    "THSR-1040"
+                ]
+            },
+            "Source": "manual",
+            "Note": "起訖一端是直達車不停的車站時，直達車到台中換各站停（或反向）"
+        },
+        {
+            "Name": "機捷長庚醫院換車",
+            "Operators": [
+                "TYMC"
+            ],
+            "Classes": [
+                "local",
+                "express"
+            ],
+            "Logic": "ClassChange",
+            "Meta": {
+                "Stations": [
+                    "TYMC-A8"
+                ]
+            },
+            "Source": "manual",
+            "Note": "起訖一端是直達車不停的車站時，直達車到長庚醫院換普通車（或反向）"
+        }
+    ]
+}

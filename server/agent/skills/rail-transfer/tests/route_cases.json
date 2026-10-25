@@ -1,0 +1,1961 @@
+{
+    "Description": "路由回歸測試：已知最佳化的結果。改路由演算法或找路規則後執行 php agent/skills/rail-transfer/scripts/route_regression.php，結果要與 expect 一致；資料更新後檢查差異，人工確認再用 --update 重寫 expect",
+    "Fields": {
+        "week": "星期（0＝日）",
+        "mode": "depart／arrive／first／last",
+        "start/end": "depart 的出發時段",
+        "arrive": "arrive 的抵達時刻",
+        "extra": "排除位元",
+        "routes_include": "路由清單（routes）一定要有的路由代碼（人工指定）",
+        "routes_exclude": "路由代碼與路線串裡都不能出現的字串（人工指定）",
+        "expect": "--update 寫入的期望值：fastest／shortest／fewest 是 journeys 三個標籤的方案（出發、抵達、轉乘、行車分鐘、路由）",
+        "paths_include": "系統直達段（TRA、THSR）經過的路線串，寫成「站.路線.站.路線.站」，至少一條路由要有（人工指定）"
+    },
+    "cases": [
+        {
+            "id": "xizhi-shulin",
+            "name": "汐止→樹林：只有臺鐵，經南港松山臺北萬華板橋都不轉捷運",
+            "from": "TRA-0960",
+            "to": "TRA-1040",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-0960.TRA.TRA-1040"
+            ],
+            "routes_exclude": [
+                "TRTC-",
+                "THSR-"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:09",
+                    "arr": "08:48",
+                    "transfers": 0,
+                    "minutes": 39,
+                    "route": "TRA-0960.TRA.TRA-1040"
+                },
+                "shortest": {
+                    "dep": "08:56",
+                    "arr": "09:32",
+                    "transfers": 0,
+                    "minutes": 36,
+                    "route": "TRA-0960.TRA.TRA-1040"
+                },
+                "fewest": {
+                    "dep": "08:09",
+                    "arr": "08:48",
+                    "transfers": 0,
+                    "minutes": 39,
+                    "route": "TRA-0960.TRA.TRA-1040"
+                }
+            }
+        },
+        {
+            "id": "xizhi-zhongxiaofuxing",
+            "name": "汐止→忠孝復興：經南港或臺北轉板南線，不經板橋（會重複經過臺北）",
+            "from": "TRA-0960",
+            "to": "TRTC-BL15",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-0960.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL15",
+                "TRA-0960.TRA.TRA-1000.walk.TRTC-BL12.TRTC-BL.TRTC-BL15"
+            ],
+            "routes_exclude": [
+                "TRA-1020.walk.TRTC-BL07"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:09",
+                    "arr": "08:36",
+                    "transfers": 1,
+                    "minutes": 27,
+                    "route": "TRA-0960.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL15"
+                },
+                "shortest": {
+                    "dep": "08:15",
+                    "arr": "08:40",
+                    "transfers": 1,
+                    "minutes": 25,
+                    "route": "TRA-0960.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL15"
+                },
+                "fewest": {
+                    "dep": "08:09",
+                    "arr": "08:36",
+                    "transfers": 1,
+                    "minutes": 27,
+                    "route": "TRA-0960.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL15"
+                }
+            }
+        },
+        {
+            "id": "dapinglin-songshan",
+            "name": "大坪林→松山：松山新店線直達一定列出",
+            "from": "TRTC-G04",
+            "to": "TRTC-G19",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-G04.TRTC-G.TRTC-G19"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "08:34",
+                    "transfers": 0,
+                    "minutes": 34,
+                    "route": "TRTC-G04.TRTC-G.TRTC-G19"
+                },
+                "shortest": {
+                    "dep": "09:13",
+                    "arr": "09:43",
+                    "transfers": 0,
+                    "minutes": 31,
+                    "route": "TRTC-G04.TRTC-G.TRTC-G19"
+                },
+                "fewest": {
+                    "dep": "08:01",
+                    "arr": "08:34",
+                    "transfers": 0,
+                    "minutes": 34,
+                    "route": "TRTC-G04.TRTC-G.TRTC-G19"
+                }
+            }
+        },
+        {
+            "id": "y-dapinglin-songshan",
+            "name": "環狀線大坪林→松山：步行轉松山新店線直達",
+            "from": "NTMC-Y07",
+            "to": "TRTC-G19",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G19"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "08:37",
+                    "transfers": 0,
+                    "minutes": 36,
+                    "route": "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G19"
+                },
+                "shortest": {
+                    "dep": "09:10",
+                    "arr": "09:43",
+                    "transfers": 0,
+                    "minutes": 34,
+                    "route": "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G19"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "08:37",
+                    "transfers": 0,
+                    "minutes": 36,
+                    "route": "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G19"
+                }
+            }
+        },
+        {
+            "id": "nangangexpo-zoo",
+            "name": "南港展覽館→動物園：文湖線直達比轉乘慢仍列出（最少轉乘）",
+            "from": "TRTC-BR24",
+            "to": "TRTC-BR01",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-BR24.TRTC-BR.TRTC-BR01"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "08:43",
+                    "transfers": 1,
+                    "minutes": 42,
+                    "route": "TRTC-BR24.walk.TRTC-BL23.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR01"
+                },
+                "shortest": {
+                    "dep": "08:27",
+                    "arr": "09:07",
+                    "transfers": 1,
+                    "minutes": 40,
+                    "route": "TRTC-BR24.walk.TRTC-BL23.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR01"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:44",
+                    "transfers": 0,
+                    "minutes": 45,
+                    "route": "TRTC-BR24.TRTC-BR.TRTC-BR01"
+                }
+            }
+        },
+        {
+            "id": "hsinchu-chiayi",
+            "name": "新竹→嘉義：經海線的走法保留",
+            "from": "TRA-1210",
+            "to": "TRA-4080",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "06:00",
+            "end": "12:00",
+            "routes_include": [
+                "TRA-1210.TRA.TRA-4080"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "07:04",
+                    "arr": "09:13",
+                    "transfers": 0,
+                    "minutes": 129,
+                    "route": "TRA-1210.TRA.TRA-4080"
+                },
+                "shortest": {
+                    "dep": "08:07",
+                    "arr": "09:56",
+                    "transfers": 0,
+                    "minutes": 109,
+                    "route": "TRA-1210.TRA.TRA-4080"
+                },
+                "fewest": {
+                    "dep": "07:04",
+                    "arr": "09:13",
+                    "transfers": 0,
+                    "minutes": 129,
+                    "route": "TRA-1210.TRA.TRA-4080"
+                }
+            },
+            "paths_include": [
+                "TRA-1210.TRA-WL.TRA-1250.TRA-WL-C.TRA-3360.TRA-WL.TRA-4080"
+            ]
+        },
+        {
+            "id": "taipei-badu",
+            "name": "臺北→八堵：不繞環島",
+            "from": "TRA-1000",
+            "to": "TRA-0920",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-1000.TRA.TRA-0920"
+            ],
+            "routes_exclude": [
+                "TRA-EL",
+                "TRA-SL"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:40",
+                    "transfers": 0,
+                    "minutes": 40,
+                    "route": "TRA-1000.TRA.TRA-0920"
+                },
+                "shortest": {
+                    "dep": "08:49",
+                    "arr": "09:26",
+                    "transfers": 0,
+                    "minutes": 37,
+                    "route": "TRA-1000.TRA.TRA-0920"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:40",
+                    "transfers": 0,
+                    "minutes": 40,
+                    "route": "TRA-1000.TRA.TRA-0920"
+                }
+            }
+        },
+        {
+            "id": "kaohsiung-taitung",
+            "name": "高雄→臺東：不經北部繞",
+            "from": "TRA-4400",
+            "to": "TRA-6000",
+            "week": 4,
+            "mode": "depart",
+            "extra": 2,
+            "start": "06:00",
+            "end": "12:00",
+            "routes_include": [
+                "TRA-4400.TRA.TRA-6000"
+            ],
+            "routes_exclude": [
+                "TRA-0920.TRA-EL"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "07:10",
+                    "arr": "09:19",
+                    "transfers": 0,
+                    "minutes": 129,
+                    "route": "TRA-4400.TRA.TRA-6000"
+                },
+                "shortest": {
+                    "dep": "10:30",
+                    "arr": "12:15",
+                    "transfers": 0,
+                    "minutes": 105,
+                    "route": "TRA-4400.TRA.TRA-6000"
+                },
+                "fewest": {
+                    "dep": "07:10",
+                    "arr": "09:19",
+                    "transfers": 0,
+                    "minutes": 129,
+                    "route": "TRA-4400.TRA.TRA-6000"
+                }
+            },
+            "paths_include": [
+                "TRA-4400.TRA-WL.TRA-5000.TRA-SL.TRA-6000"
+            ]
+        },
+        {
+            "id": "shulin-taitung",
+            "name": "樹林→臺東：北迴、南迴兩條直達都保留",
+            "from": "TRA-1040",
+            "to": "TRA-6000",
+            "week": 4,
+            "mode": "depart",
+            "extra": 2,
+            "start": "06:00",
+            "end": "12:00",
+            "routes_include": [
+                "TRA-1040.TRA.TRA-6000"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "06:10",
+                    "arr": "11:02",
+                    "transfers": 0,
+                    "minutes": 292,
+                    "route": "TRA-1040.TRA.TRA-6000"
+                },
+                "shortest": {
+                    "dep": "06:56",
+                    "arr": "11:10",
+                    "transfers": 0,
+                    "minutes": 254,
+                    "route": "TRA-1040.TRA.TRA-6000"
+                },
+                "fewest": {
+                    "dep": "06:10",
+                    "arr": "11:02",
+                    "transfers": 0,
+                    "minutes": 292,
+                    "route": "TRA-1040.TRA.TRA-6000"
+                }
+            },
+            "paths_include": [
+                "TRA-1040.TRA-WL.TRA-0920.TRA-EL.TRA-6000",
+                "TRA-1040.TRA-WL.TRA-5000.TRA-SL.TRA-6000"
+            ]
+        },
+        {
+            "id": "taitung-taipei",
+            "name": "臺東→臺北：南迴、北迴兩條直達都保留",
+            "from": "TRA-6000",
+            "to": "TRA-1000",
+            "week": 4,
+            "mode": "depart",
+            "extra": 2,
+            "start": "06:00",
+            "end": "12:00",
+            "routes_include": [
+                "TRA-6000.TRA.TRA-1000"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "06:45",
+                    "arr": "11:28",
+                    "transfers": 0,
+                    "minutes": 283,
+                    "route": "TRA-6000.TRA.TRA-1000"
+                },
+                "shortest": {
+                    "dep": "11:04",
+                    "arr": "15:08",
+                    "transfers": 0,
+                    "minutes": 244,
+                    "route": "TRA-6000.TRA.TRA-1000"
+                },
+                "fewest": {
+                    "dep": "06:45",
+                    "arr": "11:28",
+                    "transfers": 0,
+                    "minutes": 283,
+                    "route": "TRA-6000.TRA.TRA-1000"
+                }
+            },
+            "paths_include": [
+                "TRA-6000.TRA-EL.TRA-0920.TRA-WL.TRA-1000",
+                "TRA-6000.TRA-SL.TRA-5000.TRA-WL.TRA-1000"
+            ]
+        },
+        {
+            "id": "hualien-kaohsiung",
+            "name": "花蓮→高雄：南迴、北部兩條直達都保留",
+            "from": "TRA-7000",
+            "to": "TRA-4400",
+            "week": 4,
+            "mode": "depart",
+            "extra": 2,
+            "start": "06:00",
+            "end": "12:00",
+            "routes_include": [
+                "TRA-7000.TRA.TRA-4400"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "06:21",
+                    "arr": "10:50",
+                    "transfers": 0,
+                    "minutes": 269,
+                    "route": "TRA-7000.TRA.TRA-6000.TRA.TRA-5000.TRA.TRA-4400"
+                },
+                "shortest": {
+                    "dep": "08:22",
+                    "arr": "12:40",
+                    "transfers": 1,
+                    "minutes": 258,
+                    "route": "TRA-7000.TRA.TRA-6000.TRA.TRA-5000.TRA.TRA-4400"
+                },
+                "fewest": {
+                    "dep": "06:21",
+                    "arr": "10:50",
+                    "transfers": 0,
+                    "minutes": 269,
+                    "route": "TRA-7000.TRA.TRA-6000.TRA.TRA-5000.TRA.TRA-4400"
+                }
+            },
+            "paths_include": [
+                "TRA-7000.TRA-EL.TRA-6000.TRA-SL.TRA-5000.TRA-WL.TRA-4400",
+                "TRA-7000.TRA-EL.TRA-0920.TRA-WL.TRA-4400"
+            ]
+        },
+        {
+            "id": "luzhou-sanchong",
+            "name": "蘆洲→三重：跨支線在大橋頭換車",
+            "from": "TRTC-O54",
+            "to": "TRTC-O15",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-O54.TRTC-O.TRTC-O12.TRTC-O.TRTC-O15"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "08:25",
+                    "transfers": 1,
+                    "minutes": 23,
+                    "route": "TRTC-O54.TRTC-O.TRTC-O12.TRTC-O.TRTC-O15"
+                },
+                "shortest": {
+                    "dep": "08:12",
+                    "arr": "08:31",
+                    "transfers": 1,
+                    "minutes": 19,
+                    "route": "TRTC-O54.TRTC-O.TRTC-O12.TRTC-O.TRTC-O15"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "08:25",
+                    "transfers": 1,
+                    "minutes": 23,
+                    "route": "TRTC-O54.TRTC-O.TRTC-O12.TRTC-O.TRTC-O15"
+                }
+            }
+        },
+        {
+            "id": "xinbeitou-tamsui",
+            "name": "新北投→淡水：支線在北投換車",
+            "from": "TRTC-R22A",
+            "to": "TRTC-R28",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-R22A.TRTC-R.TRTC-R22.TRTC-R.TRTC-R28"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:23",
+                    "transfers": 1,
+                    "minutes": 24,
+                    "route": "TRTC-R22A.TRTC-R.TRTC-R22.TRTC-R.TRTC-R28"
+                },
+                "shortest": {
+                    "dep": "08:00",
+                    "arr": "08:23",
+                    "transfers": 1,
+                    "minutes": 24,
+                    "route": "TRTC-R22A.TRTC-R.TRTC-R22.TRTC-R.TRTC-R28"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:23",
+                    "transfers": 1,
+                    "minutes": 24,
+                    "route": "TRTC-R22A.TRTC-R.TRTC-R22.TRTC-R.TRTC-R28"
+                }
+            }
+        },
+        {
+            "id": "xiaobitan-songshan",
+            "name": "小碧潭→松山：支線在七張換車",
+            "from": "TRTC-G03A",
+            "to": "TRTC-G19",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-G03A.TRTC-G.TRTC-G03.TRTC-G.TRTC-G19"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "08:46",
+                    "transfers": 1,
+                    "minutes": 45,
+                    "route": "TRTC-G03A.TRTC-G.TRTC-G03.TRTC-G.TRTC-G19"
+                },
+                "shortest": {
+                    "dep": "09:02",
+                    "arr": "09:43",
+                    "transfers": 1,
+                    "minutes": 42,
+                    "route": "TRTC-G03A.TRTC-G.TRTC-G03.TRTC-G.TRTC-G19"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "08:46",
+                    "transfers": 1,
+                    "minutes": 45,
+                    "route": "TRTC-G03A.TRTC-G.TRTC-G03.TRTC-G.TRTC-G19"
+                }
+            }
+        },
+        {
+            "id": "nangangsoftware-nanjingfuxing",
+            "name": "南港軟體園區→南京復興：直達與經板南線的捷徑都列出",
+            "from": "TRTC-BR23",
+            "to": "TRTC-BR11",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-BR23.TRTC-BR.TRTC-BR11",
+                "TRTC-BR23.TRTC-BR.TRTC-BR24.walk.TRTC-BL23.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR11"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "08:24",
+                    "transfers": 0,
+                    "minutes": 24,
+                    "route": "TRTC-BR23.TRTC-BR.TRTC-BR11"
+                },
+                "shortest": {
+                    "dep": "08:01",
+                    "arr": "08:24",
+                    "transfers": 0,
+                    "minutes": 24,
+                    "route": "TRTC-BR23.TRTC-BR.TRTC-BR11"
+                },
+                "fewest": {
+                    "dep": "08:01",
+                    "arr": "08:24",
+                    "transfers": 0,
+                    "minutes": 24,
+                    "route": "TRTC-BR23.TRTC-BR.TRTC-BR11"
+                }
+            }
+        },
+        {
+            "id": "taipeiloop-qidu",
+            "name": "臺北-環島→七堵：別名站直接當臺北",
+            "from": "TRA-1001",
+            "to": "TRA-0930",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-1000.TRA.TRA-0930"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:35",
+                    "transfers": 0,
+                    "minutes": 35,
+                    "route": "TRA-1000.TRA.TRA-0930"
+                },
+                "shortest": {
+                    "dep": "08:43",
+                    "arr": "09:03",
+                    "transfers": 0,
+                    "minutes": 20,
+                    "route": "TRA-1000.TRA.TRA-0930"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:35",
+                    "transfers": 0,
+                    "minutes": 35,
+                    "route": "TRA-1000.TRA.TRA-0930"
+                }
+            }
+        },
+        {
+            "id": "wudu-hsinchu",
+            "name": "五堵→新竹：區間、對號、轉高鐵",
+            "from": "TRA-0950",
+            "to": "TRA-1210",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:06",
+                    "arr": "09:36",
+                    "transfers": 2,
+                    "minutes": 90,
+                    "route": "TRA-0950.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1030.walk.TRA-1194.TRA.TRA-1210"
+                },
+                "shortest": {
+                    "dep": "09:20",
+                    "arr": "10:48",
+                    "transfers": 2,
+                    "minutes": 88,
+                    "route": "TRA-0950.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1030.walk.TRA-1194.TRA.TRA-1210"
+                },
+                "fewest": {
+                    "dep": "08:06",
+                    "arr": "10:07",
+                    "transfers": 0,
+                    "minutes": 121,
+                    "route": "TRA-0950.TRA.TRA-1210"
+                }
+            }
+        },
+        {
+            "id": "formosaboulevard-donghu",
+            "name": "美麗島→東湖：高捷轉高鐵轉北捷",
+            "from": "KRTC-R10",
+            "to": "TRTC-BR22",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "07:00",
+            "end": "09:00",
+            "expect": {
+                "fastest": {
+                    "dep": "07:32",
+                    "arr": "09:59",
+                    "transfers": 3,
+                    "minutes": 147,
+                    "route": "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+                },
+                "shortest": {
+                    "dep": "07:32",
+                    "arr": "09:59",
+                    "transfers": 3,
+                    "minutes": 147,
+                    "route": "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+                },
+                "fewest": {
+                    "dep": "07:32",
+                    "arr": "09:59",
+                    "transfers": 3,
+                    "minutes": 147,
+                    "route": "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+                }
+            }
+        },
+        {
+            "id": "banqiao-hsinchu",
+            "name": "板橋→新竹",
+            "from": "TRA-1020",
+            "to": "TRA-1210",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:25",
+                    "arr": "09:21",
+                    "transfers": 1,
+                    "minutes": 56,
+                    "route": "TRA-1020.walk.THSR-1010.THSR.THSR-1030.walk.TRA-1194.TRA.TRA-1210"
+                },
+                "shortest": {
+                    "dep": "08:42",
+                    "arr": "09:36",
+                    "transfers": 1,
+                    "minutes": 54,
+                    "route": "TRA-1020.walk.THSR-1010.THSR.THSR-1030.walk.TRA-1194.TRA.TRA-1210"
+                },
+                "fewest": {
+                    "dep": "08:23",
+                    "arr": "09:23",
+                    "transfers": 0,
+                    "minutes": 60,
+                    "route": "TRA-1020.TRA.TRA-1210"
+                }
+            }
+        },
+        {
+            "id": "tymc-a1-a13",
+            "name": "機捷台北→機場第二航廈",
+            "from": "TYMC-A1",
+            "to": "TYMC-A13",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TYMC-A1.TYMC-A.TYMC-A13"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:39",
+                    "transfers": 0,
+                    "minutes": 39,
+                    "route": "TYMC-A1.TYMC-A.TYMC-A13"
+                },
+                "shortest": {
+                    "dep": "08:00",
+                    "arr": "08:39",
+                    "transfers": 0,
+                    "minutes": 39,
+                    "route": "TYMC-A1.TYMC-A.TYMC-A13"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:39",
+                    "transfers": 0,
+                    "minutes": 39,
+                    "route": "TYMC-A1.TYMC-A.TYMC-A13"
+                }
+            }
+        },
+        {
+            "id": "tymc-a1-a10",
+            "name": "機捷台北→山鼻：直達車到長庚醫院換普通車",
+            "from": "TYMC-A1",
+            "to": "TYMC-A10",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:35",
+                    "transfers": 1,
+                    "minutes": 35,
+                    "route": "TYMC-A1.TYMC-A.express.TYMC-A8.TYMC-A.local.TYMC-A10"
+                },
+                "shortest": {
+                    "dep": "08:00",
+                    "arr": "08:35",
+                    "transfers": 1,
+                    "minutes": 35,
+                    "route": "TYMC-A1.TYMC-A.express.TYMC-A8.TYMC-A.local.TYMC-A10"
+                },
+                "fewest": {
+                    "dep": "08:08",
+                    "arr": "08:50",
+                    "transfers": 0,
+                    "minutes": 42,
+                    "route": "TYMC-A1.TYMC-A.TYMC-A10"
+                }
+            }
+        },
+        {
+            "id": "thsr-taipei-changhua",
+            "name": "高鐵台北→彰化：直達車到台中換各站停",
+            "from": "THSR-1000",
+            "to": "THSR-1043",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "09:05",
+                    "transfers": 0,
+                    "minutes": 64,
+                    "route": "THSR-1000.THSR.THSR-1043"
+                },
+                "shortest": {
+                    "dep": "08:01",
+                    "arr": "09:05",
+                    "transfers": 0,
+                    "minutes": 64,
+                    "route": "THSR-1000.THSR.THSR-1043"
+                },
+                "fewest": {
+                    "dep": "08:01",
+                    "arr": "09:05",
+                    "transfers": 0,
+                    "minutes": 64,
+                    "route": "THSR-1000.THSR.THSR-1043"
+                }
+            }
+        },
+        {
+            "id": "thsr-taipei-zuoying",
+            "name": "高鐵台北→左營",
+            "from": "THSR-1000",
+            "to": "THSR-1070",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "THSR-1000.THSR.THSR-1070"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "10:00",
+                    "transfers": 0,
+                    "minutes": 119,
+                    "route": "THSR-1000.THSR.THSR-1070"
+                },
+                "shortest": {
+                    "dep": "09:31",
+                    "arr": "11:05",
+                    "transfers": 0,
+                    "minutes": 94,
+                    "route": "THSR-1000.THSR.THSR-1070"
+                },
+                "fewest": {
+                    "dep": "08:01",
+                    "arr": "10:00",
+                    "transfers": 0,
+                    "minutes": 119,
+                    "route": "THSR-1000.THSR.THSR-1070"
+                }
+            }
+        },
+        {
+            "id": "klrt-c1-c30",
+            "name": "輕軌籬仔內→科工館：走短的一邊",
+            "from": "KLRT-C1",
+            "to": "KLRT-C30",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "KLRT-C1.KLRT-C.KLRT-C30"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:17",
+                    "transfers": 0,
+                    "minutes": 17,
+                    "route": "KLRT-C1.KLRT-C.KLRT-C30"
+                },
+                "shortest": {
+                    "dep": "08:00",
+                    "arr": "08:17",
+                    "transfers": 0,
+                    "minutes": 17,
+                    "route": "KLRT-C1.KLRT-C.KLRT-C30"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:17",
+                    "transfers": 0,
+                    "minutes": 17,
+                    "route": "KLRT-C1.KLRT-C.KLRT-C30"
+                }
+            }
+        },
+        {
+            "id": "klrt-c2-c33",
+            "name": "輕軌凱旋瑞田→衛生局：早上短的一邊沒車時轉高捷比較快（不能用規則擋）",
+            "from": "KLRT-C2",
+            "to": "KLRT-C33",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "07:00",
+            "end": "09:00",
+            "routes_include": [
+                "KLRT-C2.KLRT-C.KLRT-C33"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "07:12",
+                    "arr": "08:07",
+                    "transfers": 2,
+                    "minutes": 55,
+                    "route": "KLRT-C2.KLRT-C.KLRT-C3.walk.KRTC-R6.KRTC-R.KRTC-R13.walk.KLRT-C24.KLRT-C.KLRT-C33"
+                },
+                "shortest": {
+                    "dep": "07:12",
+                    "arr": "08:07",
+                    "transfers": 2,
+                    "minutes": 55,
+                    "route": "KLRT-C2.KLRT-C.KLRT-C3.walk.KRTC-R6.KRTC-R.KRTC-R13.walk.KLRT-C24.KLRT-C.KLRT-C33"
+                },
+                "fewest": {
+                    "dep": "07:02",
+                    "arr": "08:17",
+                    "transfers": 0,
+                    "minutes": 75,
+                    "route": "KLRT-C2.KLRT-C.KLRT-C33"
+                }
+            }
+        },
+        {
+            "id": "krtc-o1-ot1",
+            "name": "高捷西子灣→大寮：橘線直達",
+            "from": "KRTC-O1",
+            "to": "KRTC-OT1",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "KRTC-O1.KRTC-O.KRTC-OT1"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:23",
+                    "transfers": 0,
+                    "minutes": 23,
+                    "route": "KRTC-O1.KRTC-O.KRTC-OT1"
+                },
+                "shortest": {
+                    "dep": "08:00",
+                    "arr": "08:23",
+                    "transfers": 0,
+                    "minutes": 23,
+                    "route": "KRTC-O1.KRTC-O.KRTC-OT1"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:23",
+                    "transfers": 0,
+                    "minutes": 23,
+                    "route": "KRTC-O1.KRTC-O.KRTC-OT1"
+                }
+            }
+        },
+        {
+            "id": "bl-dingpu-nangangexpo",
+            "name": "頂埔→南港展覽館：板南線全程",
+            "from": "TRTC-BL01",
+            "to": "TRTC-BL23",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-BL01.TRTC-BL.TRTC-BL23"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:49",
+                    "transfers": 0,
+                    "minutes": 49,
+                    "route": "TRTC-BL01.TRTC-BL.TRTC-BL23"
+                },
+                "shortest": {
+                    "dep": "08:04",
+                    "arr": "08:51",
+                    "transfers": 0,
+                    "minutes": 47,
+                    "route": "TRTC-BL01.TRTC-BL.TRTC-BL23"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:49",
+                    "transfers": 0,
+                    "minutes": 49,
+                    "route": "TRTC-BL01.TRTC-BL.TRTC-BL23"
+                }
+            }
+        },
+        {
+            "id": "r-tamsui-xiangshan",
+            "name": "淡水→象山：淡水信義線全程",
+            "from": "TRTC-R28",
+            "to": "TRTC-R02",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-R28.TRTC-R.TRTC-R02"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "08:58",
+                    "transfers": 0,
+                    "minutes": 57,
+                    "route": "TRTC-R28.TRTC-R.TRTC-R02"
+                },
+                "shortest": {
+                    "dep": "08:59",
+                    "arr": "09:54",
+                    "transfers": 0,
+                    "minutes": 55,
+                    "route": "TRTC-R28.TRTC-R.TRTC-R02"
+                },
+                "fewest": {
+                    "dep": "08:01",
+                    "arr": "08:58",
+                    "transfers": 0,
+                    "minutes": 57,
+                    "route": "TRTC-R28.TRTC-R.TRTC-R02"
+                }
+            }
+        },
+        {
+            "id": "o-luzhou-nanshijiao",
+            "name": "蘆洲→南勢角：蘆洲支線直達",
+            "from": "TRTC-O54",
+            "to": "TRTC-O01",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-O54.TRTC-O.TRTC-O01"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "08:39",
+                    "transfers": 0,
+                    "minutes": 37,
+                    "route": "TRTC-O54.TRTC-O.TRTC-O01"
+                },
+                "shortest": {
+                    "dep": "08:34",
+                    "arr": "09:10",
+                    "transfers": 0,
+                    "minutes": 36,
+                    "route": "TRTC-O54.TRTC-O.TRTC-O01"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "08:39",
+                    "transfers": 0,
+                    "minutes": 37,
+                    "route": "TRTC-O54.TRTC-O.TRTC-O01"
+                }
+            }
+        },
+        {
+            "id": "o-huilong-luzhou",
+            "name": "迴龍→蘆洲：大橋頭換支線",
+            "from": "TRTC-O21",
+            "to": "TRTC-O54",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-O21.TRTC-O.TRTC-O12.TRTC-O.TRTC-O54"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "08:33",
+                    "transfers": 1,
+                    "minutes": 33,
+                    "route": "TRTC-O21.TRTC-O.TRTC-O12.TRTC-O.TRTC-O54"
+                },
+                "shortest": {
+                    "dep": "08:46",
+                    "arr": "09:18",
+                    "transfers": 1,
+                    "minutes": 32,
+                    "route": "TRTC-O21.TRTC-O.TRTC-O12.TRTC-O.TRTC-O54"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "08:33",
+                    "transfers": 1,
+                    "minutes": 33,
+                    "route": "TRTC-O21.TRTC-O.TRTC-O12.TRTC-O.TRTC-O54"
+                }
+            }
+        },
+        {
+            "id": "xindian-tamsui",
+            "name": "新店→淡水",
+            "from": "TRTC-G01",
+            "to": "TRTC-R28",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:00",
+                    "arr": "09:06",
+                    "transfers": 1,
+                    "minutes": 67,
+                    "route": "TRTC-G01.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+                },
+                "shortest": {
+                    "dep": "08:42",
+                    "arr": "09:44",
+                    "transfers": 1,
+                    "minutes": 63,
+                    "route": "TRTC-G01.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+                },
+                "fewest": {
+                    "dep": "08:00",
+                    "arr": "09:06",
+                    "transfers": 1,
+                    "minutes": 67,
+                    "route": "TRTC-G01.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+                }
+            }
+        },
+        {
+            "id": "tmrt-beitun-thsr",
+            "name": "中捷北屯總站→高鐵臺中站",
+            "from": "TMRT-G0",
+            "to": "TMRT-G17",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TMRT-G0.TMRT-G.TMRT-G17"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:03",
+                    "arr": "08:38",
+                    "transfers": 0,
+                    "minutes": 35,
+                    "route": "TMRT-G0.TMRT-G.TMRT-G17"
+                },
+                "shortest": {
+                    "dep": "08:03",
+                    "arr": "08:38",
+                    "transfers": 0,
+                    "minutes": 35,
+                    "route": "TMRT-G0.TMRT-G.TMRT-G17"
+                },
+                "fewest": {
+                    "dep": "08:03",
+                    "arr": "08:38",
+                    "transfers": 0,
+                    "minutes": 35,
+                    "route": "TMRT-G0.TMRT-G.TMRT-G17"
+                }
+            }
+        },
+        {
+            "id": "wudu-taichung",
+            "name": "五堵→臺中",
+            "from": "TRA-0950",
+            "to": "TRA-3300",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:06",
+                    "arr": "09:41",
+                    "transfers": 2,
+                    "minutes": 95,
+                    "route": "TRA-0950.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1040.walk.TRA-3340.TRA.TRA-3300"
+                },
+                "shortest": {
+                    "dep": "08:06",
+                    "arr": "09:41",
+                    "transfers": 2,
+                    "minutes": 95,
+                    "route": "TRA-0950.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1040.walk.TRA-3340.TRA.TRA-3300"
+                },
+                "fewest": {
+                    "dep": "09:20",
+                    "arr": "13:15",
+                    "transfers": 0,
+                    "minutes": 235,
+                    "route": "TRA-0950.TRA.TRA-3300"
+                }
+            }
+        },
+        {
+            "id": "taipei-hualien",
+            "name": "臺北→花蓮",
+            "from": "TRA-1000",
+            "to": "TRA-7000",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "06:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "06:05",
+                    "arr": "08:19",
+                    "transfers": 0,
+                    "minutes": 134,
+                    "route": "TRA-1000.TRA.TRA-7000"
+                },
+                "shortest": {
+                    "dep": "06:05",
+                    "arr": "08:19",
+                    "transfers": 0,
+                    "minutes": 134,
+                    "route": "TRA-1000.TRA.TRA-7000"
+                },
+                "fewest": {
+                    "dep": "06:05",
+                    "arr": "08:19",
+                    "transfers": 0,
+                    "minutes": 134,
+                    "route": "TRA-1000.TRA.TRA-7000"
+                }
+            }
+        },
+        {
+            "id": "keelung-taitung",
+            "name": "基隆→臺東",
+            "from": "TRA-0900",
+            "to": "TRA-6000",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "06:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-0900.TRA.TRA-6000"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "06:37",
+                    "arr": "11:32",
+                    "transfers": 2,
+                    "minutes": 295,
+                    "route": "TRA-0900.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1070.walk.TRA-4340.TRA.TRA-6000"
+                },
+                "shortest": {
+                    "dep": "07:45",
+                    "arr": "12:15",
+                    "transfers": 2,
+                    "minutes": 270,
+                    "route": "TRA-0900.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1070.walk.TRA-4340.TRA.TRA-6000"
+                },
+                "fewest": {
+                    "dep": "09:58",
+                    "arr": "15:05",
+                    "transfers": 1,
+                    "minutes": 307,
+                    "route": "TRA-0900.TRA.TRA-0920.TRA.TRA-6000"
+                }
+            },
+            "paths_include": [
+                "TRA-0900.TRA-WL.TRA-0920.TRA-EL.TRA-6000"
+            ]
+        },
+        {
+            "id": "hsinchu-changhua",
+            "name": "新竹→彰化：山線、海線直達",
+            "from": "TRA-1210",
+            "to": "TRA-3360",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-1210.TRA.TRA-3360"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:07",
+                    "arr": "09:08",
+                    "transfers": 0,
+                    "minutes": 61,
+                    "route": "TRA-1210.TRA.TRA-3360"
+                },
+                "shortest": {
+                    "dep": "08:07",
+                    "arr": "09:08",
+                    "transfers": 0,
+                    "minutes": 61,
+                    "route": "TRA-1210.TRA.TRA-3360"
+                },
+                "fewest": {
+                    "dep": "08:07",
+                    "arr": "09:08",
+                    "transfers": 0,
+                    "minutes": 61,
+                    "route": "TRA-1210.TRA.TRA-3360"
+                }
+            },
+            "paths_include": [
+                "TRA-1210.TRA-WL.TRA-1250.TRA-WL-C.TRA-3360"
+            ]
+        },
+        {
+            "id": "taipei-kaohsiung-noexpress",
+            "name": "臺北→高雄（不搭臺鐵對號）",
+            "from": "TRA-1000",
+            "to": "TRA-4400",
+            "week": 4,
+            "mode": "depart",
+            "extra": 1,
+            "start": "06:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "06:26",
+                    "arr": "08:38",
+                    "transfers": 1,
+                    "minutes": 132,
+                    "route": "TRA-1000.walk.THSR-1000.THSR.THSR-1070.walk.KRTC-R16.KRTC-R.KRTC-R11.walk.TRA-4400"
+                },
+                "shortest": {
+                    "dep": "07:27",
+                    "arr": "09:27",
+                    "transfers": 1,
+                    "minutes": 120,
+                    "route": "TRA-1000.walk.THSR-1000.THSR.THSR-1070.walk.KRTC-R16.KRTC-R.KRTC-R11.walk.TRA-4400"
+                },
+                "fewest": {
+                    "dep": "06:26",
+                    "arr": "08:38",
+                    "transfers": 1,
+                    "minutes": 132,
+                    "route": "TRA-1000.walk.THSR-1000.THSR.THSR-1070.walk.KRTC-R16.KRTC-R.KRTC-R11.walk.TRA-4400"
+                }
+            }
+        },
+        {
+            "id": "taipei-kaohsiung-nothsr",
+            "name": "臺北→高雄（不搭高鐵）：不經東部",
+            "from": "TRA-1000",
+            "to": "TRA-4400",
+            "week": 4,
+            "mode": "depart",
+            "extra": 2,
+            "start": "06:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-1000.TRA.TRA-4400"
+            ],
+            "routes_exclude": [
+                "TRA-EL",
+                "TRA-SL"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "07:15",
+                    "arr": "11:01",
+                    "transfers": 0,
+                    "minutes": 226,
+                    "route": "TRA-1000.TRA.TRA-4400"
+                },
+                "shortest": {
+                    "dep": "07:15",
+                    "arr": "11:01",
+                    "transfers": 0,
+                    "minutes": 226,
+                    "route": "TRA-1000.TRA.TRA-4400"
+                },
+                "fewest": {
+                    "dep": "07:15",
+                    "arr": "11:01",
+                    "transfers": 0,
+                    "minutes": 226,
+                    "route": "TRA-1000.TRA.TRA-4400"
+                }
+            }
+        },
+        {
+            "id": "taipei-tainan-arrive",
+            "name": "臺北→臺南：12:00 前抵達",
+            "from": "TRA-1000",
+            "to": "TRA-4220",
+            "week": 4,
+            "mode": "arrive",
+            "extra": 0,
+            "arrive": "12:00",
+            "expect": {
+                "fastest": {
+                    "dep": "07:47",
+                    "arr": "10:12",
+                    "transfers": 1,
+                    "minutes": 145,
+                    "route": "TRA-1000.walk.THSR-1000.THSR.THSR-1060.walk.TRA-4272.TRA.TRA-4220"
+                },
+                "shortest": {
+                    "dep": "09:27",
+                    "arr": "11:43",
+                    "transfers": 1,
+                    "minutes": 136,
+                    "route": "TRA-1000.walk.THSR-1000.THSR.THSR-1070.walk.TRA-4340.TRA.TRA-4220"
+                },
+                "fewest": {
+                    "dep": "07:15",
+                    "arr": "10:31",
+                    "transfers": 0,
+                    "minutes": 196,
+                    "route": "TRA-1000.TRA.TRA-4220"
+                }
+            }
+        },
+        {
+            "id": "banqiao-taipei-first",
+            "name": "板橋→臺北：首班",
+            "from": "TRA-1020",
+            "to": "TRA-1000",
+            "week": 4,
+            "mode": "first",
+            "extra": 0,
+            "expect": {
+                "fastest": {
+                    "dep": "05:14",
+                    "arr": "05:24",
+                    "transfers": 0,
+                    "minutes": 10,
+                    "route": "TRA-1020.TRA.TRA-1000"
+                },
+                "shortest": {
+                    "dep": "05:54",
+                    "arr": "06:02",
+                    "transfers": 0,
+                    "minutes": 8,
+                    "route": "TRA-1020.TRA.TRA-1000"
+                },
+                "fewest": {
+                    "dep": "05:14",
+                    "arr": "05:24",
+                    "transfers": 0,
+                    "minutes": 10,
+                    "route": "TRA-1020.TRA.TRA-1000"
+                }
+            }
+        },
+        {
+            "id": "formosaboulevard-donghu-last",
+            "name": "美麗島→東湖：末班",
+            "from": "KRTC-R10",
+            "to": "TRTC-BR22",
+            "week": 4,
+            "mode": "last",
+            "extra": 0,
+            "expect": {
+                "fastest": {
+                    "dep": "05:58",
+                    "arr": "08:36",
+                    "transfers": 3,
+                    "minutes": 158,
+                    "route": "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+                },
+                "shortest": {
+                    "dep": "14:36",
+                    "arr": "16:59",
+                    "transfers": 3,
+                    "minutes": 143,
+                    "route": "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+                },
+                "fewest": {
+                    "dep": "05:58",
+                    "arr": "08:36",
+                    "transfers": 3,
+                    "minutes": 158,
+                    "route": "KRTC-R10.KRTC-R.KRTC-R16.walk.THSR-1070.THSR.THSR-0990.walk.TRTC-BL22.TRTC-BL.TRTC-BL23.walk.TRTC-BR24.TRTC-BR.TRTC-BR22"
+                }
+            }
+        },
+        {
+            "id": "ntdlrt-taipeimain",
+            "name": "淡海輕軌 V28→台北車站",
+            "from": "NTDLRT-V28",
+            "to": "TRTC-R10",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:16",
+                    "arr": "09:26",
+                    "transfers": 1,
+                    "minutes": 70,
+                    "route": "NTDLRT-V28.NTDLRT-V.NTDLRT-V01.walk.TRTC-R27.TRTC-R.TRTC-R10"
+                },
+                "shortest": {
+                    "dep": "09:28",
+                    "arr": "10:32",
+                    "transfers": 1,
+                    "minutes": 64,
+                    "route": "NTDLRT-V28.NTDLRT-V.NTDLRT-V01.walk.TRTC-R27.TRTC-R.TRTC-R10"
+                },
+                "fewest": {
+                    "dep": "08:16",
+                    "arr": "09:26",
+                    "transfers": 1,
+                    "minutes": 70,
+                    "route": "NTDLRT-V28.NTDLRT-V.NTDLRT-V01.walk.TRTC-R27.TRTC-R.TRTC-R10"
+                }
+            }
+        },
+        {
+            "id": "ntalrt-tamsui",
+            "name": "安坑輕軌 K09→淡水",
+            "from": "NTALRT-K09",
+            "to": "TRTC-R28",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "09:12",
+                    "transfers": 2,
+                    "minutes": 71,
+                    "route": "NTALRT-K09.walk.NTMC-Y08.NTMC-Y.NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+                },
+                "shortest": {
+                    "dep": "08:41",
+                    "arr": "09:50",
+                    "transfers": 2,
+                    "minutes": 70,
+                    "route": "NTALRT-K09.walk.NTMC-Y08.NTMC-Y.NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "09:12",
+                    "transfers": 2,
+                    "minutes": 71,
+                    "route": "NTALRT-K09.walk.NTMC-Y08.NTMC-Y.NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R28"
+                }
+            }
+        },
+        {
+            "id": "bl-nangang-zhongxiaoxinsheng",
+            "name": "南港→忠孝新生：板南線直達（不繞文湖線）",
+            "from": "TRTC-BL22",
+            "to": "TRTC-BL14",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-BL22.TRTC-BL.TRTC-BL14"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "08:16",
+                    "transfers": 0,
+                    "minutes": 15,
+                    "route": "TRTC-BL22.TRTC-BL.TRTC-BL14"
+                },
+                "shortest": {
+                    "dep": "08:08",
+                    "arr": "08:22",
+                    "transfers": 0,
+                    "minutes": 14,
+                    "route": "TRTC-BL22.TRTC-BL.TRTC-BL14"
+                },
+                "fewest": {
+                    "dep": "08:01",
+                    "arr": "08:16",
+                    "transfers": 0,
+                    "minutes": 15,
+                    "route": "TRTC-BL22.TRTC-BL.TRTC-BL14"
+                }
+            }
+        },
+        {
+            "id": "br-songshanairport-kunyang",
+            "name": "松山機場→昆陽",
+            "from": "TRTC-BR13",
+            "to": "TRTC-BL05",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:03",
+                    "arr": "08:35",
+                    "transfers": 1,
+                    "minutes": 32,
+                    "route": "TRTC-BR13.TRTC-BR.TRTC-BR10.walk.TRTC-BL15.TRTC-BL.TRTC-BL05"
+                },
+                "shortest": {
+                    "dep": "08:03",
+                    "arr": "08:35",
+                    "transfers": 1,
+                    "minutes": 32,
+                    "route": "TRTC-BR13.TRTC-BR.TRTC-BR10.walk.TRTC-BL15.TRTC-BL.TRTC-BL05"
+                },
+                "fewest": {
+                    "dep": "08:03",
+                    "arr": "08:35",
+                    "transfers": 1,
+                    "minutes": 32,
+                    "route": "TRTC-BR13.TRTC-BR.TRTC-BR10.walk.TRTC-BL15.TRTC-BL.TRTC-BL05"
+                }
+            }
+        },
+        {
+            "id": "hualien-zuoying",
+            "name": "花蓮→高鐵左營",
+            "from": "TRA-7000",
+            "to": "THSR-1070",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "06:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "06:36",
+                    "arr": "11:00",
+                    "transfers": 1,
+                    "minutes": 264,
+                    "route": "TRA-7000.TRA.TRA-1000.walk.THSR-1000.THSR.THSR-1070"
+                },
+                "shortest": {
+                    "dep": "08:57",
+                    "arr": "13:05",
+                    "transfers": 1,
+                    "minutes": 248,
+                    "route": "TRA-7000.TRA.TRA-0980.walk.THSR-0990.THSR.THSR-1070"
+                },
+                "fewest": {
+                    "dep": "06:21",
+                    "arr": "11:05",
+                    "transfers": 0,
+                    "minutes": 284,
+                    "route": "TRA-7000.TRA.TRA-6000.TRA.TRA-5000.TRA.TRA-4340.walk.THSR-1070"
+                }
+            }
+        },
+        {
+            "id": "fangliao-taipei",
+            "name": "枋寮→臺北",
+            "from": "TRA-5120",
+            "to": "TRA-1000",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "06:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "06:25",
+                    "arr": "09:33",
+                    "transfers": 1,
+                    "minutes": 188,
+                    "route": "TRA-5120.TRA.TRA-5000.TRA.TRA-4340.walk.THSR-1070.THSR.THSR-1000.walk.TRA-1000"
+                },
+                "shortest": {
+                    "dep": "06:25",
+                    "arr": "09:33",
+                    "transfers": 1,
+                    "minutes": 188,
+                    "route": "TRA-5120.TRA.TRA-5000.TRA.TRA-4340.walk.THSR-1070.THSR.THSR-1000.walk.TRA-1000"
+                },
+                "fewest": {
+                    "dep": "07:05",
+                    "arr": "11:59",
+                    "transfers": 0,
+                    "minutes": 294,
+                    "route": "TRA-5120.TRA.TRA-5000.TRA.TRA-1000"
+                }
+            }
+        },
+        {
+            "id": "banqiao-nangang",
+            "name": "板橋→南港：臺鐵直達",
+            "from": "TRA-1020",
+            "to": "TRA-0980",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-1020.TRA.TRA-0980"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "08:25",
+                    "transfers": 0,
+                    "minutes": 23,
+                    "route": "TRA-1020.TRA.TRA-0980"
+                },
+                "shortest": {
+                    "dep": "08:47",
+                    "arr": "09:09",
+                    "transfers": 0,
+                    "minutes": 22,
+                    "route": "TRA-1020.TRA.TRA-0980"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "08:25",
+                    "transfers": 0,
+                    "minutes": 23,
+                    "route": "TRA-1020.TRA.TRA-0980"
+                }
+            }
+        },
+        {
+            "id": "tmrt-taichung",
+            "name": "中捷 G10a→臺中",
+            "from": "TMRT-G10a",
+            "to": "TRA-3300",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:19",
+                    "arr": "08:40",
+                    "transfers": 1,
+                    "minutes": 21,
+                    "route": "TMRT-G10a.TMRT-G.TMRT-G13.walk.TRA-3320.TRA.TRA-3300"
+                },
+                "shortest": {
+                    "dep": "08:31",
+                    "arr": "08:50",
+                    "transfers": 1,
+                    "minutes": 19,
+                    "route": "TMRT-G10a.TMRT-G.TMRT-G13.walk.TRA-3320.TRA.TRA-3300"
+                },
+                "fewest": {
+                    "dep": "08:19",
+                    "arr": "08:40",
+                    "transfers": 1,
+                    "minutes": 21,
+                    "route": "TMRT-G10a.TMRT-G.TMRT-G13.walk.TRA-3320.TRA.TRA-3300"
+                }
+            }
+        },
+        {
+            "id": "y-dapinglin-nangangexpo",
+            "name": "環狀線大坪林→南港展覽館",
+            "from": "NTMC-Y07",
+            "to": "TRTC-BL23",
+            "week": 4,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "08:45",
+                    "transfers": 2,
+                    "minutes": 43,
+                    "route": "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G09.walk.TRTC-O05.TRTC-O.TRTC-O07.walk.TRTC-BL14.TRTC-BL.TRTC-BL23"
+                },
+                "shortest": {
+                    "dep": "09:17",
+                    "arr": "09:57",
+                    "transfers": 2,
+                    "minutes": 40,
+                    "route": "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G09.walk.TRTC-O05.TRTC-O.TRTC-O07.walk.TRTC-BL14.TRTC-BL.TRTC-BL23"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "08:49",
+                    "transfers": 1,
+                    "minutes": 47,
+                    "route": "NTMC-Y07.walk.TRTC-G04.TRTC-G.TRTC-G12.walk.TRTC-BL11.TRTC-BL.TRTC-BL23"
+                }
+            }
+        },
+        {
+            "id": "rt-qizhang-keelung",
+            "name": "七張→樹林：松山換臺鐵是最少轉乘（railtime 松山規則停用的例子）",
+            "from": "TRTC-G02",
+            "to": "TRA-1040",
+            "week": 1,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-G02.TRTC-G.TRTC-G19.walk.TRA-0990.TRA.TRA-1040"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:02",
+                    "arr": "08:48",
+                    "transfers": 2,
+                    "minutes": 46,
+                    "route": "TRTC-G02.TRTC-G.TRTC-G04.walk.NTMC-Y07.NTMC-Y.NTMC-Y16.walk.TRA-1020.TRA.TRA-1040"
+                },
+                "shortest": {
+                    "dep": "08:58",
+                    "arr": "09:38",
+                    "transfers": 2,
+                    "minutes": 40,
+                    "route": "TRTC-G02.TRTC-G.TRTC-G10.walk.TRTC-R08.TRTC-R.TRTC-R10.walk.TRA-1000.TRA.TRA-1040"
+                },
+                "fewest": {
+                    "dep": "08:02",
+                    "arr": "09:11",
+                    "transfers": 1,
+                    "minutes": 69,
+                    "route": "TRTC-G02.TRTC-G.TRTC-G19.walk.TRA-0990.TRA.TRA-1040"
+                }
+            }
+        },
+        {
+            "id": "rt-wudu-muzha",
+            "name": "汐止→木柵：臺鐵松山轉松山新店線到南京復興換文湖線最快（railtime 規則停用的例子）",
+            "from": "TRA-0960",
+            "to": "TRTC-BR03",
+            "week": 1,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRA-0960.TRA.TRA-0990.walk.TRTC-G19.TRTC-G.TRTC-G16.walk.TRTC-BR11.TRTC-BR.TRTC-BR03"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:04",
+                    "arr": "08:49",
+                    "transfers": 2,
+                    "minutes": 46,
+                    "route": "TRA-0960.TRA.TRA-0990.walk.TRTC-G19.TRTC-G.TRTC-G16.walk.TRTC-BR11.TRTC-BR.TRTC-BR03"
+                },
+                "shortest": {
+                    "dep": "08:15",
+                    "arr": "08:58",
+                    "transfers": 2,
+                    "minutes": 44,
+                    "route": "TRA-0960.TRA.TRA-0980.walk.TRTC-BL22.TRTC-BL.TRTC-BL15.walk.TRTC-BR10.TRTC-BR.TRTC-BR03"
+                },
+                "fewest": {
+                    "dep": "08:04",
+                    "arr": "08:49",
+                    "transfers": 2,
+                    "minutes": 46,
+                    "route": "TRA-0960.TRA.TRA-0990.walk.TRTC-G19.TRTC-G.TRTC-G16.walk.TRTC-BR11.TRTC-BR.TRTC-BR03"
+                }
+            }
+        },
+        {
+            "id": "rt-shuanglian-ximen-o",
+            "name": "雙連→忠孝新生：民權西路換中和新蘆線最快（railtime 規則停用的例子）",
+            "from": "TRTC-R12",
+            "to": "TRTC-O07",
+            "week": 1,
+            "mode": "depart",
+            "extra": 0,
+            "start": "08:00",
+            "end": "10:00",
+            "routes_include": [
+                "TRTC-R12.TRTC-R.TRTC-R13.walk.TRTC-O11.TRTC-O.TRTC-O07"
+            ],
+            "expect": {
+                "fastest": {
+                    "dep": "08:01",
+                    "arr": "08:13",
+                    "transfers": 1,
+                    "minutes": 12,
+                    "route": "TRTC-R12.TRTC-R.TRTC-R13.walk.TRTC-O11.TRTC-O.TRTC-O07"
+                },
+                "shortest": {
+                    "dep": "08:01",
+                    "arr": "08:13",
+                    "transfers": 1,
+                    "minutes": 12,
+                    "route": "TRTC-R12.TRTC-R.TRTC-R13.walk.TRTC-O11.TRTC-O.TRTC-O07"
+                },
+                "fewest": {
+                    "dep": "08:01",
+                    "arr": "08:13",
+                    "transfers": 1,
+                    "minutes": 12,
+                    "route": "TRTC-R12.TRTC-R.TRTC-R13.walk.TRTC-O11.TRTC-O.TRTC-O07"
+                }
+            }
+        }
+    ],
+    "DataUpdatedAt": "2026-10-15T07:56:23+00:00",
+    "UpdatedAt": "2026-10-25 02:58:29"
+}
