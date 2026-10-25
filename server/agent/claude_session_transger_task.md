@@ -29,7 +29,7 @@
    - B（GitHub Actions＋FTP 同步）：workflow 先呼叫主機工具備份；同步要排除 `custom/`、`download/`、`sqlite/`、`backup/` 與主機工具，不能開會刪除遠端檔案的選項
    - C（GitHub Actions 打包＋主機端解壓）：新增 `admin_deploy` 路由（只有這個權限的後臺 PAT 能用），先備份、解壓覆蓋 `libs/`、`agent/`，健康檢查失敗自動還原
    - 兩種都改不到根目錄的 `index.php`、`.htaccess`，那兩個檔案有變動時要給 Melix 下載、用 FTP 上傳
-2. **會員系統**（暫停，Melix 開工時再說）：會員 token 格式、各等級上限（`APP_TIERS`）
+2. **會員系統**（暫停，Melix 開工時再說）：會員 token 的格式與簽發方式（先保留 `tlm_` 前綴）、各等級上限（`APP_TIERS`）；開工前所有人都是 Guest、不另設限制
 3. **未來功能**：票價（只用 TDX 或官方公式）、路由用離線資料找出後每班車的時刻改用 TDX 線上最新資料。兩者都經由 `X-TDX-Authorization`，`railCacheFetchData()` 已經可以共用快取取資料
 4. `client/` 查詢網站
 
