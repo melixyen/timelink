@@ -21,3 +21,9 @@ server/agent/claude/data/run_*.json
 Thumbs.db
 *.tmp
 *.swp
+
+# 前端專案（client/ 層次往下）：相依套件、建置結果與本機設定
+client/node_modules/
+client/dist/
+client/.vite/
+client/*.local

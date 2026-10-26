@@ -1,0 +1,22 @@
+{
+  "name": "timelink-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "接軌時刻前端：TDX Proxy / txapi 查詢介面（Vue 3 + Pinia + Vite + Vue Router）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pinia": "^3.0.3",
+    "vue": "^3.5.13",
+    "vue-i18n": "^11.4.16",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.0.7"
+  }
+}

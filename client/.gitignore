@@ -1,0 +1,12 @@
+# 相依套件與建置結果（client/ 層次往下）
+node_modules/
+dist/
+.vite/
+*.local
+*.tsbuildinfo
+
+# 編輯器與系統暫存
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
