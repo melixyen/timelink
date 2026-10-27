@@ -695,11 +695,24 @@ input[type='text'] {
   color: var(--muted);
 }
 
+/* 時刻與車站欄為垂直排版，欄寬固定縮小、內容置中 */
+.journey-table th.time,
+.journey-table td.time,
+.journey-table th.station,
+.journey-table td.station {
+  width: 96px;
+  text-align: center;
+}
+
+/* 時刻欄位：上（出發）／中（行駛時間）／下（到達）的垂直排版，水平置中 */
 .time-box {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 2px;
   white-space: nowrap;
+  min-width: 64px;
 }
 
 .time-box .value {
@@ -709,23 +722,23 @@ input[type='text'] {
 
 .time-box .deep {
   position: relative;
-  padding: 0 6px;
+  padding: 2px 0;
   text-align: center;
 }
 
 .time-box .deep::before {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  border-top: 1px dashed var(--border);
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px dashed var(--border);
 }
 
 .time-box .minute {
   position: relative;
   background: #fff;
-  padding: 0 4px;
+  padding: 0 6px;
   font-size: 12px;
   color: var(--muted);
 }
@@ -737,28 +750,40 @@ input[type='text'] {
   border-radius: 999px;
 }
 
+/* 車站欄位：上（出發站）／中（路線色條）／下（到達站）的垂直排版，水平置中 */
 .station-box {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 2px;
   white-space: nowrap;
+  min-width: 64px;
+}
+
+.station-box .value {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .station-box .line-color {
-  width: 34px;
-  height: 8px;
-  border-radius: 999px;
+  width: 8px;
+  height: 24px;
+  border-radius: 0px;
   position: relative;
 }
 
-.station-box .line-color .bd {
+/* 鐵路（台鐵、高鐵）：線條中央加一段白色缺口，模仿地圖圖例的黑白相間軌道 */
+.station-box .line-color.rail::after {
+  content: '';
   position: absolute;
-  right: -3px;
-  top: -3px;
-  width: 8px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
   height: 8px;
-  border-radius: 50%;
-  background: inherit;
+  background: #fff;
 }
 
 .info-box {

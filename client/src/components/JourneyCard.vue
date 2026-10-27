@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { formatMinute2HM, isLatinLocale, nameOf, buildRouteText } from '@/utils/format'
+import TimeBox from '@/components/TimeBox.vue'
+import StationBox from '@/components/StationBox.vue'
 
 const props = defineProps({
   journey: { type: Object, required: true },
@@ -29,6 +31,13 @@ function formatDuration(minutes) {
 function legColor(leg) {
   if (leg.Type !== 'ride') return '#999999'
   return lineStore.lineColor(leg.LineUID)
+}
+
+/** 鐵路系統（台鐵、高鐵）：線條中央加白色缺口，模仿地圖圖例的黑白相間軌道 */
+function isRail(leg) {
+  if (leg.Type !== 'ride') return false
+  const sys = leg.System || String(leg.LineUID || '').split('-')[0]
+  return sys === 'TRA' || sys === 'THSR'
 }
 
 function legLineName(leg) {
@@ -110,24 +119,27 @@ const routeText = computed(() =>
             <td class="sect">{{ i + 1 }}</td>
 
             <td class="time">
-              <div v-if="leg.Type === 'ride'" class="time-box">
-                <div class="value start">{{ leg.DepartureTime }}</div>
-                <div class="deep"><div class="minute">{{ formatDuration(leg.TravelMinutes) }}</div></div>
-                <div class="value end">{{ leg.ArrivalTime }}</div>
-              </div>
-              <div v-else class="time-box walk">
-                <div class="minute">{{ t('journey.walkShort', { min: leg.Minutes }) }}</div>
-              </div>
+              <TimeBox
+                v-if="leg.Type === 'ride'"
+                type="ride"
+                :departure-time="leg.DepartureTime"
+                :arrival-time="leg.ArrivalTime"
+                :duration="formatDuration(leg.TravelMinutes)"
+              />
+              <TimeBox
+                v-else
+                type="walk"
+                :walk-text="t('journey.walkShort', { min: leg.Minutes })"
+              />
             </td>
 
             <td class="station">
-              <div class="station-box">
-                <div class="value from">{{ nameOf(leg.From?.StationName) }}</div>
-                <div class="deep">
-                  <div class="line-color" :style="{ background: legColor(leg) }"><div class="bd"></div></div>
-                </div>
-                <div class="value to">{{ nameOf(leg.To?.StationName) }}</div>
-              </div>
+              <StationBox
+                :from-name="nameOf(leg.From?.StationName)"
+                :to-name="nameOf(leg.To?.StationName)"
+                :color="legColor(leg)"
+                :rail="isRail(leg)"
+              />
             </td>
 
             <td class="info">
