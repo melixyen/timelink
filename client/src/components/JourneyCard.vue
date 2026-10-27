@@ -53,11 +53,42 @@ function trainLabel(leg) {
   return ''
 }
 
+/**
+ * 車種名稱（例如「自強」）。
+ * 後端的 TrainType.Name.Zh_tw 會帶很長的括號補充說明
+ * （例如「自強(推拉式自強號且無自行車車廂)」），顯示時只取前半，完整內容放在 title。
+ */
+function trainTypeText(leg) {
+  if (leg.Type !== 'ride') return ''
+  const name = leg.TrainType ? nameOf(leg.TrainType.Name) : ''
+  if (!name) return ''
+  return name.replace(/[（(].*$/, '').trim() || name
+}
+
+/** 車種的完整名稱（含括號說明），給 title 提示用 */
+function trainTypeFull(leg) {
+  if (leg.Type !== 'ride') return ''
+  return leg.TrainType ? nameOf(leg.TrainType.Name) : ''
+}
+
+/**
+ * 列車等級（區間車／對號列車／各站停／直達車）：後端依車種代碼或停靠站分類後給的固定名稱。
+ * 英文、日文語系沒有中文等級名，所以那兩種語系只顯示車種名稱。
+ */
 function classLabel(leg) {
   if (leg.Type !== 'ride') return ''
-  const typeName = leg.TrainType ? nameOf(leg.TrainType.Name) || leg.TrainType.Code : ''
-  if (isLatinLocale()) return typeName || leg.ClassLabel || ''
-  return leg.ClassLabel || typeName
+  if (isLatinLocale()) return ''
+  return leg.ClassLabel || ''
+}
+
+/** 車種欄位要顯示的文字：車種名稱為主，等級名稱不同時以括號補充 */
+function trainClassText(leg) {
+  const type = trainTypeText(leg)
+  const cls = classLabel(leg)
+  if (!type) return cls
+  if (!cls || cls === type) return type
+  if (cls.includes(type)) return cls
+  return `${type}（${cls}）`
 }
 
 function headSign(leg) {
@@ -145,7 +176,9 @@ const routeText = computed(() =>
             <td class="info">
               <div v-if="leg.Type === 'ride'" class="info-box">
                 <div v-if="trainLabel(leg)">{{ t('journey.trainNo') }}: {{ trainLabel(leg) }}</div>
-                <div v-if="classLabel(leg)">{{ t('journey.trainClass') }}: {{ classLabel(leg) }}</div>
+                <div v-if="trainClassText(leg)" :title="trainTypeFull(leg)">
+                  {{ t('journey.trainClass') }}: {{ trainClassText(leg) }}
+                </div>
                 <div v-if="headSign(leg)">{{ headSign(leg) }}</div>
                 <div v-if="typeof leg.Stops === 'number'">{{ t('journey.stops') }}: {{ leg.Stops }}</div>
                 <div v-if="leg.DataTier && leg.DataTier !== 'real'" class="derived">
