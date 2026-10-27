@@ -129,14 +129,11 @@ export const usePublicLineStore = defineStore('publicLine', () => {
       loading.value = true
       error.value = ''
       try {
-        // 逐一取得各系統的路線，避免瞬間打出太多請求
-        const merged = []
-        for (const sys of ['TRA', 'THSR', 'TRTC', 'NTMC', 'NTDLRT', 'NTALRT', 'KRTC', 'KLRT', 'TYMC', 'TMRT']) {
-          const res = await api.lines(sys).catch(() => null)
-          ;(res?.data?.lines || []).forEach((l) => merged.push(l))
-        }
-        if (merged.length) {
-          lines.value = merged
+        // public_line/list 不帶 system 時一次回傳所有營運單位的路線
+        const res = await api.lines()
+        const all = res?.data?.lines || []
+        if (all.length) {
+          lines.value = all
           loaded.value = true
         } else {
           error.value = t('common.loadFailed', { msg: 'lines' })
