@@ -28,10 +28,27 @@ API 說明在網站的 `/txapi/readme`（內容由 `server/libs/txapi/docs.php` 
 
 1. 把 `server/` 的內容放到網站根目錄
 2. 建立 `custom/libs/config.json`，只寫要覆蓋預設值的項目（完整清單與說明在 `libs/config.json`），至少要有 `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`、`APP_SECRET_KEY`、`SITE_HOST`、`ALLOWED_ORIGINS`
-3. 第一次執行時會自動建立 `custom/`、`download/`、`sqlite/`；後臺的第一個管理者帳號在首次執行後限定時間內建立（細節見 `/txapi/readme` 的「後臺」一節）
+3. 第一次執行時會自動建立 `custom/`、`download/`、`sqlite/`（預設在網站根目錄，要放到別處見下面「資料目錄的位置」）；後臺的第一個管理者帳號在首次執行後限定時間內建立（細節見 `/txapi/readme` 的「後臺」一節）
 4. 下載離線資料、建立資料庫與轉乘加速清單：見 `server/agent/skills/data-pipeline/SKILL.md`
 
 更新程式時只換 `libs/`、`agent/`、`index.php`、`.htaccess`；設定、資料庫、離線資料與產生檔都在其他目錄，不會被覆蓋。
+
+### 資料目錄的位置（env_path.php）
+
+`custom/`、`download/`（含快取 `download/tdx_proxy_files/`）、`sqlite/` 都放在「資料根目錄」底下，路徑一律由 `libs/env_path.php` 的 `appEnvPath('sqlite')` 這類寫法組出來（資料根目錄本身是常數 `APP_ENV_PATH`）。資料根目錄預設是 `libs/` 的上一層 `../`，也就是網站根目錄。
+
+要把資料庫與設定放到別處（例如網站根目錄以外，或開發環境的 home 底下），在網站根目錄（`server/`，`libs/` 的上一層）建立 `env_path.php`，回傳資料根目錄：
+
+```php
+<?php
+return '/home/me/timelink-data';      // 絕對路徑
+// return '../../timelink-data';      // 相對路徑：和預設值 ../ 一樣，相對於 libs/
+```
+
+- 只 `return` 路徑字串，不要輸出任何內容（網站根目錄的 `.php` 可以直接從網址執行）；回傳的不是非空字串時忽略、改用預設值
+- `server/env_path.php` 不進版控（`.gitignore` 有列），每個環境自己建立
+- 搬家時把 `custom/`、`download/`、`sqlite/` 整個搬過去，並保留檔案的修改時間（例如 `cp -a`），否則離線資料會被當成比資料庫新而重建；目錄不存在時第一次執行會自動建立
+- 後臺首次設定用的 `admin-setup.txt` 是證明能改網站的觸發檔，仍放在網站根目錄
 
 ## 資料來源與授權
 

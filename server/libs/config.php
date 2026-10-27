@@ -7,7 +7,7 @@
  *   libs/config.php（本檔）   共用的讀取程式：讀兩份 JSON，custom 有的名稱用 custom 的值，沒有用預設值，
  *                             每一項 define 成同名常數，其他程式照常用 QUERY_RATE_LIMIT_PER_MINUTE 這樣的名稱讀取
  *
- * 程式、通用資料、私密資料分開存放：
+ * 程式、通用資料、私密資料分開存放（custom/、download/ 在資料根目錄底下，預設＝網站根目錄，見 libs/env_path.php）：
  *   libs/                 程式與人工維護的通用資料（進版控）
  *   custom/               主機上「不進版控、要備份」的唯一位置，禁止網址存取
  *     libs/               相對 libs/ 的動態與自訂資料起點（只放資料與設定，不放程式）
@@ -25,9 +25,11 @@
  * 進版控的只有預設值：佔位字串、提示字串或本機網域。私人資訊（金鑰、開放網域、站名）一律只寫在 custom。
  */
 
-const APP_ROOT_DIR           = __DIR__ . '/..';
+require_once __DIR__ . '/env_path.php';   // 資料根目錄 APP_ENV_PATH、appEnvPath()（預設＝網站根目錄）
+
+const APP_ROOT_DIR           = __DIR__ . '/..';   // 網站根目錄（程式）；資料一律用 appEnvPath()
 const APP_CONFIG_DEFAULTS    = __DIR__ . '/config.json';
-const APP_CUSTOM_DIR         = APP_ROOT_DIR . '/custom';
+define('APP_CUSTOM_DIR', appEnvPath('custom'));
 const APP_CUSTOM_LIBS        = APP_CUSTOM_DIR . '/libs';
 const APP_CUSTOM_AGENT       = APP_CUSTOM_DIR . '/agent';
 const APP_CUSTOM_CONFIG      = APP_CUSTOM_LIBS . '/config.json';
@@ -35,7 +37,7 @@ const APP_CUSTOM_CONFIG_PHP  = APP_CUSTOM_LIBS . '/config.php';   // 舊格式�
 const APP_CUSTOM_CONFIG_OLD  = APP_CUSTOM_DIR . '/config.php';    // 更舊的位置
 const APP_CONFIG_HISTORY_DIR = APP_CUSTOM_LIBS . '/config_history';
 const APP_CONFIG_HISTORY_KEEP = 10;
-const APP_TEMP_DIR           = APP_ROOT_DIR . '/download/tdx_proxy_files';
+define('APP_TEMP_DIR', appEnvPath('download/tdx_proxy_files'));
 
 /** 記錄或讀取設定檔的讀取錯誤 */
 function configCustomError($set = null)

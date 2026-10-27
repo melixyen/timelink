@@ -8,6 +8,8 @@ server/data/
 server/self/
 server/t/
 server/admin-setup.txt
+# 資料根目錄的位置（libs/env_path.php 的說明）：每個環境自己建立，可能指向 home 等其他目錄
+server/env_path.php
 
 # 網站根目錄只有 index.php 進版控（其他 PHP，例如主機維護工具，不進）
 server/*.php

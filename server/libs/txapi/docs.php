@@ -504,7 +504,7 @@ TDX 少數大型整包資料（例如不帶起訖站的 `/v3/Rail/TRA/ODFare`）
 ## 設定（custom/libs/config.json）
 
 程式、通用資料、私密資料分開存放：`libs/` 只有程式、預設值與人工維護的資料（隨程式佈署）；
-所有設定項目、預設值與說明在 `libs/config.json`（隨程式佈署）；這個站自己的設定與私密值寫在網站根目錄的
+所有設定項目、預設值與說明在 `libs/config.json`（隨程式佈署）；這個站自己的設定與私密值寫在資料根目錄（預設＝網站根目錄，網站根目錄的 `env_path.php` 可以改到別處）的
 `custom/libs/config.json`：一個 JSON 物件，只放要覆蓋的項目（例如 `{"QUERY_RATE_LIMIT_PER_MINUTE": 30}`），
 有的名稱就用它的值，沒有才用預設值；底線開頭的名稱是註記。不存在時自動建立（只有一組隨機的 `APP_SECRET_KEY`）。
 後臺「設定管理」只改這個檔裡被編輯的項目，舊版存在 `custom/libs/config_history/`；舊格式 `custom/libs/config.php` 會自動轉成 JSON。

@@ -51,5 +51,6 @@ Claude 自己的比對工具、基準資料與重建指引（railtime 比對、�
 | `download/tdx/`、`sqlite/` | TDX 下載檔、finder 資料庫與快取 | 否 |
 | `download/tdx_proxy_files/` | 快取類暫存（token、TDX 快取、查詢次數、分析進度），丟了會自己重建 | 否 |
 
-`custom/`、`download/`、`sqlite/` 都禁止網址存取。重新佈署程式只換 `libs/`、`.htaccess`、`index.php`（與 `agent/`），其他都不動；
+`custom/`、`download/`、`sqlite/` 都在「資料根目錄」底下，預設＝網站根目錄；網站根目錄放 `env_path.php`（不進版控）可以改到別處，程式一律用 `libs/env_path.php` 的 `appEnvPath()` 組路徑，不要再寫死 `__DIR__ . '/../sqlite'` 這類路徑（用法見 repo 根目錄 `README.md`「資料目錄的位置」）。
+放在網站根目錄時都禁止網址存取。重新佈署程式只換 `libs/`、`.htaccess`、`index.php`（與 `agent/`），其他都不動；
 產生檔在 `custom/`，佈署不會覆蓋。

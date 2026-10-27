@@ -12,14 +12,15 @@
  */
 
 const TRANSFER_DATA_DIR = __DIR__ . '/data';   // 人工維護的輸入（隨程式佈署，受版控）
-define('TRANSFER_GEN_DIR', (defined('APP_CUSTOM_LIBS') ? APP_CUSTOM_LIBS : __DIR__ . '/../../../custom/libs') . '/txapi/transfer/data');
+require_once __DIR__ . '/../../env_path.php';   // 單獨載入（沒有 config.php）時也能用 appEnvPath()
+define('TRANSFER_GEN_DIR', (defined('APP_CUSTOM_LIBS') ? APP_CUSTOM_LIBS : appEnvPath('custom/libs')) . '/txapi/transfer/data');
 // 舊位置 custom/libs/transfer/（txapi 整理前）→ 搬到 custom/libs/txapi/transfer/（只搬一次）
 if (!is_dir(dirname(TRANSFER_GEN_DIR)) && is_dir(dirname(TRANSFER_GEN_DIR, 3) . '/transfer')) {
     @mkdir(dirname(TRANSFER_GEN_DIR, 2), 0755, true);
     @rename(dirname(TRANSFER_GEN_DIR, 3) . '/transfer', dirname(TRANSFER_GEN_DIR));
 }   // 產生檔（相對 libs/txapi/transfer/data）
 const TRANSFER_HISTORY_DIR = TRANSFER_GEN_DIR . '/history';
-define('TRANSFER_TEMP_DIR', (defined('APP_TEMP_DIR') ? APP_TEMP_DIR : __DIR__ . '/../../../download/tdx_proxy_files') . '/transfer');   // 暫存（不進版控，重新佈署不會掉）
+define('TRANSFER_TEMP_DIR', (defined('APP_TEMP_DIR') ? APP_TEMP_DIR : appEnvPath('download/tdx_proxy_files')) . '/transfer');   // 暫存（不進版控，重新佈署不會掉）
 const TRANSFER_SETTINGS_FILE = TRANSFER_DATA_DIR . '/transfer_settings.json';
 
 /** 讀 transfer_settings.json；$path 用點分隔，例如 'Router.MaxTrips' */

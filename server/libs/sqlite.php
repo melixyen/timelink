@@ -27,7 +27,8 @@
  * 錯誤一律丟出 SqliteDaoException（包住 PDOException），呼叫端自行決定回應。
  */
 
-const SQLITE_DIR = __DIR__ . '/../sqlite';
+require_once __DIR__ . '/env_path.php';
+define('SQLITE_DIR', appEnvPath('sqlite'));   // 資料根目錄的 sqlite/（預設＝網站根目錄，見 libs/env_path.php）
 // SQLITE_BUSY_TIMEOUT_MS（其他連線寫入時等待的上限）：設定項目（libs/config.json）
 
 class SqliteDaoException extends RuntimeException

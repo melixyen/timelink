@@ -20,7 +20,7 @@
  * 不含阿里山林鐵、貓空纜車、業者資料。能由其他項目推導的 API 不下載，推導方式寫在 func=help「省略的 API 與推導方式」。
  */
 
-const DOWNLOAD_DIR = APP_ROOT_DIR . '/download';   // 網站根目錄的 download/
+define('DOWNLOAD_DIR', appEnvPath('download'));   // 資料根目錄的 download/（預設＝網站根目錄，見 libs/env_path.php）
 
 // 靜態資料超過幾秒視為過期，func=sync 會重新取得
 // DOWNLOAD_MAX_AGE：設定項目（libs/config.json）
