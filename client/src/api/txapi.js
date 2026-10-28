@@ -119,6 +119,7 @@ export const api = {
   // 時刻與轉乘
   journeys: (params) => request('/txapi/app_trip/journeys', params),
   routes: (params) => request('/txapi/app_trip/routes', params),
+  routeTrains: (params) => request('/txapi/app_trip/route_trains', params),
   direct: (params) => request('/txapi/app_trip/direct', params),
   stationTimetable: (params) => request('/txapi/app_station/timetable', params),
   departures: (params) => request('/txapi/app_station/departures', params),

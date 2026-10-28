@@ -23,18 +23,18 @@ function formatDuration(minutes) {
     <div class="route-filter-head">
       <span class="title">{{ t('route.title') }}</span>
       <div class="quick">
-        <button type="button" class="quick-btn" @click="emit('fastest', 1)">1</button>
-        <button type="button" class="quick-btn" @click="emit('fastest', 2)">2</button>
-        <button type="button" class="quick-btn" @click="emit('fastest', 3)">3</button>
+        <train-button-group>
+          <train-button v-for="n in 3" :key="n" size="small" @click="emit('fastest', n)">{{ n }}</train-button>
+        </train-button-group>
         <span class="quick-hint">{{ t('route.quickHint') }}</span>
       </div>
+      <slot name="extra" />
     </div>
     <ul class="route-list">
       <li v-for="g in groups" :key="g.key" class="route-item" :class="{ hidden: hidden.has(g.key) }">
-        <label>
-          <input type="checkbox" :checked="!hidden.has(g.key)" @change="emit('toggle', g.key)" />
+        <train-checkbox :model-value="!hidden.has(g.key)" class="route-check" @update:model-value="emit('toggle', g.key)">
           <span class="route-text">{{ g.text || g.RouteText }}</span>
-        </label>
+        </train-checkbox>
         <span class="route-meta">
           {{ t('route.meta', { count: g.minTransferCount, time: formatDuration(g.minTravelMinutes) }) }}
         </span>

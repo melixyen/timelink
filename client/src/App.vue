@@ -36,11 +36,11 @@ onMounted(() => {
           {{ config.appName }} <span class="sub">{{ config.appSubtitle }}</span>
         </router-link>
       </div>
-      <nav class="app-nav">
-        <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="nav-link">
+      <train-menu class="app-nav">
+        <train-menu-item v-for="item in navItems" :key="item.to" :to="item.to">
           {{ t(item.labelKey) }}
-        </router-link>
-      </nav>
+        </train-menu-item>
+      </train-menu>
       <div class="header-right">
         <LocaleSwitcher />
       </div>
@@ -53,20 +53,20 @@ onMounted(() => {
     <footer class="app-footer">
       <i18n-t keypath="footer.notice" tag="p">
         <template #tdx>
-          <a :href="config.dataSourceUrl" target="_blank" rel="noopener">{{ config.dataSourceName }}</a>
+          <train-link :href="config.dataSourceUrl" target="_blank">{{ config.dataSourceName }}</train-link>
         </template>
         <template #license>
-          <a :href="config.licenseUrl" target="_blank" rel="noopener">{{ config.licenseName }}</a>
+          <train-link :href="config.licenseUrl" target="_blank">{{ config.licenseName }}</train-link>
         </template>
       </i18n-t>
       <p class="meta">
-        <a v-if="config.homepageUrl" :href="config.homepageUrl" target="_blank" rel="noopener">{{ config.appName }}</a>
+        <train-link v-if="config.homepageUrl" :href="config.homepageUrl" target="_blank">{{ config.appName }}</train-link>
         <span v-else>{{ config.appName }}</span>
         <span v-if="config.orgName">・{{ config.orgName }}</span>
         <span>・{{ config.appSubtitle }}</span>
         <span>・v{{ config.appVersion }}</span>
         <span v-if="config.contactEmail">
-          ・<a :href="`mailto:${config.contactEmail}`">{{ config.contactEmail }}</a>
+          ・<train-link :href="`mailto:${config.contactEmail}`">{{ config.contactEmail }}</train-link>
         </span>
       </p>
     </footer>

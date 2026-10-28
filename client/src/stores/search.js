@@ -56,6 +56,13 @@ export const useSearchStore = defineStore('search', () => {
   const error = ref('')
   const searched = ref(false)
   const hiddenRoutes = ref(new Set())
+  /** 指定路由查詢：目前結果是只用這幾條路由查出來的（空陣列＝一般查詢） */
+  const pickedRoutes = ref([])
+  /** 路由清單快取：routeKey() → app_trip/routes 的 routes */
+  const routeOptionCache = new Map()
+  /** pickedRoutes 是在哪一組起訖站與 extra 下選的 */
+  let pickedFor = ''
+  const routeKey = () => `${form.from}|${form.to}|${form.extra}`
 
   const canSearch = computed(() => !!form.from && !!form.to)
 
@@ -130,6 +137,52 @@ export const useSearchStore = defineStore('search', () => {
     error.value = ''
     searched.value = false
     hiddenRoutes.value = new Set()
+    pickedRoutes.value = []
+  }
+
+  /**
+   * 起訖站間所有路由（不看時刻，供「選擇路由」視窗勾選）。同一組起訖站與 extra 只查一次
+   */
+  async function loadRouteOptions() {
+    const key = routeKey()
+    if (routeOptionCache.has(key)) return routeOptionCache.get(key)
+    const res = await api.routes({ from: form.from, to: form.to, extra: form.extra, limit: config.routeListLimit })
+    const list = res.data?.routes || []
+    routeOptionCache.set(key, list)
+    return list
+  }
+
+  /** 與後端 journeys 相同的排序 */
+  const journeyCompare = {
+    arrival: (a, b) =>
+      a.ArrivalMinute - b.ArrivalMinute || a.TransferCount - b.TransferCount || b.DepartureMinute - a.DepartureMinute,
+    transfers: (a, b) => a.TransferCount - b.TransferCount || a.ArrivalMinute - b.ArrivalMinute,
+    duration: (a, b) =>
+      a.TravelMinutes - b.TravelMinutes || a.TransferCount - b.TransferCount || a.DepartureMinute - b.DepartureMinute,
+  }
+
+  /**
+   * 後端還不支援 journeys 的 routes 參數時（meta 沒有 fixed）：每條路由各查 route_trains 再合併排序
+   */
+  async function fetchByRouteTrains(params) {
+    const list = await Promise.all(
+      pickedRoutes.value.map((route) =>
+        api.routeTrains({
+          route,
+          week: params.week,
+          start: params.start,
+          end: params.end,
+          by: params.by,
+          extra: params.extra,
+        }),
+      ),
+    )
+    const merged = list.flatMap((res) => res.data?.journeys || [])
+    merged.sort(journeyCompare[params.sort] || journeyCompare.arrival)
+    return {
+      data: { journeys: merged.slice(0, params.limit).map((j) => ({ ...j, Tags: [] })), picks: {}, tags: {} },
+      meta: { ...(list[0]?.meta || {}), fixed: true },
+    }
   }
 
   async function run() {
@@ -137,21 +190,27 @@ export const useSearchStore = defineStore('search', () => {
       error.value = t('search.error.noStation')
       return null
     }
+    // 起訖站或不搭的列車改了，原本指定的路由就不適用，回到一般查詢
+    if (pickedRoutes.value.length && pickedFor !== routeKey()) pickedRoutes.value = []
     loading.value = true
     error.value = ''
     hiddenRoutes.value = new Set()
+    const routed = pickedRoutes.value.length > 0
+    const params = {
+      from: form.from,
+      to: form.to,
+      week: form.week,
+      start: form.start,
+      end: form.end,
+      by: form.by,
+      sort: form.sort,
+      extra: form.extra,
+      limit: routed ? config.pickedResultLimit : form.limit,
+      routes: routed ? pickedRoutes.value.join(',') : undefined,
+    }
     try {
-      const res = await api.journeys({
-        from: form.from,
-        to: form.to,
-        week: form.week,
-        start: form.start,
-        end: form.end,
-        by: form.by,
-        sort: form.sort,
-        extra: form.extra,
-        limit: form.limit,
-      })
+      let res = await api.journeys(params)
+      if (routed && !res.meta?.fixed) res = await fetchByRouteTrains(params)
       journeys.value = res.data?.journeys || []
       picks.value = res.data?.picks || {}
       tags.value = res.data?.tags || {}
@@ -168,6 +227,13 @@ export const useSearchStore = defineStore('search', () => {
     }
   }
 
+  /** 以指定的路由重新查詢（時段、星期、起訖站、不搭的列車沿用目前條件）；空陣列＝回到一般查詢 */
+  function searchWithRoutes(codes) {
+    pickedRoutes.value = [...codes]
+    pickedFor = routeKey()
+    return run()
+  }
+
   return {
     form,
     journeys,
@@ -178,6 +244,7 @@ export const useSearchStore = defineStore('search', () => {
     error,
     searched,
     hiddenRoutes,
+    pickedRoutes,
     canSearch,
     routeGroups,
     visibleJourneys,
@@ -185,5 +252,7 @@ export const useSearchStore = defineStore('search', () => {
     toggleRoute,
     reset,
     run,
+    loadRouteOptions,
+    searchWithRoutes,
   }
 })

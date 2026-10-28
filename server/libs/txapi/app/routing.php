@@ -1245,6 +1245,156 @@ function appRouteVia(array $m, array $legs, $via)
     return false;
 }
 
+/** 營運業者保底時，主幹再依車種等級分開保底的系統（臺鐵：對號、非對號各要一條） */
+const APP_ROUTE_COVER_CLASS_SYSTEMS = ['TRA'];
+
+/**
+ * 路由的營運業者鍵（保底用）：
+ *   op:<系統>      每個搭乘段的系統（TRTC、NTMC、TRA、THSR…）
+ *   main:<系統>    主幹：行駛分鐘加總最多的系統（跨縣市時是臺鐵或高鐵）
+ *   main:TRA.express／main:TRA.local  主幹是臺鐵時：可搭對號（有對號段，或不限車種的直達段：長途直達車就是對號列車）／
+ *                  全程非對號（區間車接力）
+ */
+function appRouteCoverKeys(array $legs)
+{
+    $keys = [];
+    $mins = [];
+    $classes = [];
+    foreach ($legs as $l) {
+        if ($l['Type'] !== 'ride') {
+            continue;
+        }
+        $sys = $l['System'] ?? strtok($l['LineUID'], '-');
+        $keys['op:' . $sys] = true;
+        $mins[$sys] = ($mins[$sys] ?? 0) + (float) ($l['EstimatedMinutes'] ?? 0);
+        $classes[$sys][] = $l['Class'] ?? null;
+    }
+    if ($mins) {
+        arsort($mins);
+        $main = array_key_first($mins);
+        $keys['main:' . $main] = true;
+        if (in_array($main, APP_ROUTE_COVER_CLASS_SYSTEMS, true)) {
+            $allLocal = array_unique($classes[$main]) === [APP_CLASS_LOCAL];
+            $keys['main:' . $main . '.' . ($allLocal ? APP_CLASS_LOCAL : APP_CLASS_EXPRESS)] = true;
+        }
+    }
+    return array_keys($keys);
+}
+
+/**
+ * 可以拿來保底的路由：捷運、輕軌不能夾在兩段臺鐵／高鐵中間（例如臺鐵到臺中、換臺中捷運再搭高鐵南下），
+ * 這種刻意下車換捷運再上車的走法不拿來補，它的業者也不算「應該要有」
+ */
+function appRouteCoverEligible(array $legs)
+{
+    $seenTrain = false;
+    $metroAfterTrain = false;
+    foreach ($legs as $l) {
+        if ($l['Type'] !== 'ride') {
+            continue;
+        }
+        $train = in_array($l['System'] ?? strtok($l['LineUID'], '-'), FINDER_TRAIN_SYSTEMS, true);
+        if ($train && $metroAfterTrain) {
+            return false;
+        }
+        if ($train) {
+            $seenTrain = true;
+        } elseif ($seenTrain) {
+            $metroAfterTrain = true;
+        }
+    }
+    return true;
+}
+
+/**
+ * 營運業者保底：$items 是排好序的候選，先取前 $limit 個；所有可保底的候選（appRouteCoverEligible）出現過、
+ * 前 $limit 個裡卻沒有的業者鍵（appRouteCoverKeys），各補一條該鍵最好的路由（$better 比較，小的好），
+ * 擠掉清單最後一個「拿掉也不會讓任何鍵消失」的路由；重複到每個鍵都有為止。
+ * $limit 為 null 時取全部已選的、只補不擠（展開前的挑選用，$picked 是已選的索引）。
+ * $legsOf 從候選取出段落。回傳選中的索引（依原本順序）
+ */
+function appRouteCoverPick(array $items, $limit, callable $legsOf, callable $better, array $picked = null)
+{
+    $keys = [];
+    $ok = [];
+    foreach ($items as $i => $it) {
+        $keys[$i] = appRouteCoverKeys($legsOf($it));
+        $ok[$i] = appRouteCoverEligible($legsOf($it));
+    }
+    $need = [];
+    foreach ($items as $i => $it) {
+        if ($ok[$i]) {
+            foreach ($keys[$i] as $k) {
+                $need[$k] = true;
+            }
+        }
+    }
+    $sel = $picked ?? array_slice(array_keys($items), 0, $limit);
+    $sel = array_fill_keys($sel, true);
+    $count = function () use (&$sel, $keys) {
+        $c = [];
+        foreach (array_keys($sel) as $i) {
+            foreach ($keys[$i] as $k) {
+                $c[$k] = ($c[$k] ?? 0) + 1;
+            }
+        }
+        return $c;
+    };
+    $fixed = [];   // 補進來的不再被擠掉
+    for ($guard = count($need); $guard > 0; $guard--) {
+        $have = $count();
+        $missing = array_values(array_diff(array_keys($need), array_keys($have)));
+        if (!$missing) {
+            break;
+        }
+        sort($missing);
+        $best = null;
+        foreach ($items as $i => $it) {
+            if (!$ok[$i] || isset($sel[$i]) || !in_array($missing[0], $keys[$i], true)) {
+                continue;
+            }
+            if ($best === null || $better($it, $items[$best]) < 0) {
+                $best = $i;
+            }
+        }
+        if ($best === null) {
+            unset($need[$missing[0]]);
+            continue;
+        }
+        if ($limit !== null && count($sel) >= $limit) {
+            // 從後面找一個拿掉後每個鍵都還有的（補進來的那條會補上它缺的鍵，所以先算進去）
+            foreach (array_reverse(array_keys($sel)) as $i) {
+                if (isset($fixed[$i])) {
+                    continue;
+                }
+                $after = $have;
+                foreach ($keys[$i] as $k) {
+                    $after[$k]--;
+                }
+                foreach ($keys[$best] as $k) {
+                    $after[$k] = ($after[$k] ?? 0) + 1;
+                }
+                $lost = false;
+                foreach ($keys[$i] as $k) {
+                    if (isset($need[$k]) && $after[$k] < 1) {
+                        $lost = true;
+                        break;
+                    }
+                }
+                if (!$lost) {
+                    unset($sel[$i]);
+                    break;
+                }
+            }
+        }
+        $sel[$best] = true;
+        $fixed[$best] = true;
+    }
+    $out = array_keys($sel);
+    sort($out);
+    return $out;
+}
+
 /**
  * 核心 A。$opt：extra、max_transfers（null 不限）、via（StationUID）、limit。
  * 回傳路由清單：[['legs' => 段落, 'route' => 代碼, 'TransferCount', 'EstimatedMinutes'], ...]，依轉乘次數、估計分鐘排序
@@ -1310,12 +1460,20 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     // 展開前的篩選用「估計分鐘＋每次轉乘 10 分」，避免轉乘少但繞遠的走法擠掉快的走法
     usort($scored, function ($a, $b) { return $a[1] + 10 * $a[0] <=> $b[1] + 10 * $b[0]; });
     $out = [];
-    // 取前 NetworkLimit 個展開；不轉乘的（同一路線或同一鐵路系統直通）一律保留：最少轉乘的選項永遠要有
-    $pick = array_slice($scored, 0, $cfg['NetworkLimit']);
-    foreach (array_slice($scored, $cfg['NetworkLimit']) as $x) {
-        if ($x[0] === 0) {
-            $pick[] = $x;
+    // 取前 NetworkLimit 個展開；不轉乘的（同一路線或同一鐵路系統直通）一律保留：最少轉乘的選項永遠要有。
+    // 營運業者保底：前 NetworkLimit 個沒有、但其他基本路由有的業者（例如高鐵走法擠掉了臺鐵南下），各補最好的一條
+    $pickIdx = [];
+    foreach ($scored as $i => $x) {
+        if ($i < $cfg['NetworkLimit'] || $x[0] === 0) {
+            $pickIdx[] = $i;
         }
+    }
+    $pickIdx = appRouteCoverPick($scored, null, function ($x) { return $x[2]; }, function ($a, $b) {
+        return [$a[0], $a[1]] <=> [$b[0], $b[1]];
+    }, $pickIdx);
+    $pick = [];
+    foreach ($pickIdx as $i) {
+        $pick[] = $scored[$i];
     }
     foreach ($noEst as $legs) {
         if (appRouteTransfers($legs) === 0) {
@@ -1372,19 +1530,27 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     }
     unset($r);
     $limit = $opt['limit'] ?? $cfg['DefaultLimit'];
+    // 取前 limit 條時做營運業者保底（appRouteCoverPick）：每個業者、主幹（臺鐵對號／非對號、高鐵）至少一條，擠掉排在最後的
+    $legsOf = function ($r) { return $r['legs']; };
+    $better = function ($a, $b) {
+        return [$a['TransferCount'], $a['EstimatedMinutes']] <=> [$b['TransferCount'], $b['EstimatedMinutes']];
+    };
     if (empty($opt['variants'])) {
-        return array_slice($out, 0, $limit);
+        $sel = [];
+        foreach (appRouteCoverPick($out, $limit, $legsOf, $better) as $i) {
+            $sel[] = $out[$i];
+        }
+        return $sel;
     }
-    // journeys 用：取前 limit 條基本路由，它們的補充路由一律帶上（補充路由轉乘段數多，照排序會被擠出去）
+    // journeys 用：取前 limit 條基本路由（同樣做業者保底），它們的補充路由一律帶上（補充路由轉乘段數多，照排序會被擠出去）
+    $baseList = array_values(array_filter($out, function ($r) { return $r['Supplement'] === null; }));
     $bases = [];
     $present = [];
-    foreach ($out as $r) {
-        if ($r['Supplement'] === null) {
-            $present[$r['route']] = true;
-            if (count($bases) < $limit) {
-                $bases[$r['route']] = true;
-            }
-        }
+    foreach ($baseList as $r) {
+        $present[$r['route']] = true;
+    }
+    foreach (appRouteCoverPick($baseList, $limit, $legsOf, $better) as $i) {
+        $bases[$baseList[$i]['route']] = true;
     }
     // 本身串不出班次的直達路由（不在 $out）：它的補充路由一律帶上，跟「直達一律保留」一致
     foreach ($out as $r) {

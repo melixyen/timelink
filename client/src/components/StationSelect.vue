@@ -1,11 +1,11 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePublicStationStore } from '@/stores/publicStation'
 import { usePublicInfoStore } from '@/stores/publicInfo'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { config, groupByOperator } from '@/config'
-import { nameOf } from '@/utils/format'
+import { nameOf, textOn } from '@/utils/format'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -22,7 +22,6 @@ const infoStore = usePublicInfoStore()
 const lineStore = usePublicLineStore()
 const open = ref(false)
 const keyword = ref('')
-const root = ref(null)
 const selectedLine = ref('')
 
 const selected = computed(() => (props.modelValue ? stationStore.stationName(props.modelValue) : ''))
@@ -157,10 +156,6 @@ watch(keyword, (val) => {
   }, 350)
 })
 
-function onDocClick(e) {
-  if (root.value && !root.value.contains(e.target)) open.value = false
-}
-
 function choose(station) {
   emit('update:modelValue', station.StationUID)
   open.value = false
@@ -171,113 +166,116 @@ function clear() {
   emit('update:modelValue', '')
 }
 
-onMounted(() => document.addEventListener('click', onDocClick))
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocClick)
-  clearTimeout(timer)
-})
+onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <div ref="root" class="station-select">
+  <div class="station-select">
     <div v-if="fieldLabel" class="field-label">{{ fieldLabel }}</div>
-    <button type="button" class="trigger" @click="open = !open">
-      <span :class="{ placeholder: !selected }">{{ selected || t(placeholderKey) }}</span>
-      <span v-if="selected" class="uid">{{ modelValue }}</span>
-      <span class="caret">{{ open ? '▲' : '▼' }}</span>
-    </button>
+    <train-dropdown v-model="open">
+      <template #trigger="{ toggle }">
+        <button type="button" class="trigger" :class="{ open }" @click="toggle">
+          <span :class="{ placeholder: !selected }">{{ selected || t(placeholderKey) }}</span>
+          <span v-if="selected" class="uid">{{ modelValue }}</span>
+          <train-icon :name="open ? 'caret-up' : 'caret-down'" class="caret" />
+        </button>
+      </template>
 
-    <div v-if="open" class="panel">
-      <input
-        v-model="keyword"
-        class="search"
-        type="search"
-        :placeholder="t('station.search', { count: stationStore.stations.length })"
-      />
+      <div class="station-panel">
+        <train-input
+          v-model="keyword"
+          class="search"
+          type="search"
+          prefix-icon="search"
+          clearable
+          :placeholder="t('station.search', { count: stationStore.stations.length })"
+        />
 
-      <!-- 路線切換器：全部 / 指定路線 -->
-      <div class="line-switch">
-        <div class="line-switch-head">
-          <span class="line-switch-title">{{ t('station.byLine') }}</span>
-          <button
-            type="button"
-            class="line-chip all"
-            :class="{ active: !selectedLine }"
-            @click="selectedLine = ''"
-          >
-            {{ t('station.allLines') }}
-          </button>
-        </div>
-        <div class="line-switch-body">
-          <div v-for="group in lineGroups" :key="group.id" class="line-switch-group">
-            <div class="line-switch-label">{{ group.name }}</div>
-            <div class="line-switch-chips">
-              <button
-                v-for="line in group.lines"
-                :key="line.uid"
-                type="button"
-                class="line-chip"
-                :class="{ active: selectedLine === line.uid }"
-                :style="selectedLine === line.uid ? { background: line.color, borderColor: line.color } : {}"
-                @click="selectedLine = selectedLine === line.uid ? '' : line.uid"
-              >
-                <span class="bar" :style="{ background: line.color }"></span>
-                {{ line.name }}
-              </button>
+        <!-- 路線切換器：全部 / 指定路線 -->
+        <div class="line-switch">
+          <div class="line-switch-head">
+            <span class="line-switch-title">{{ t('station.byLine') }}</span>
+            <train-button
+              size="small"
+              round
+              :type="selectedLine ? 'default' : 'primary'"
+              @click="selectedLine = ''"
+            >
+              {{ t('station.allLines') }}
+            </train-button>
+          </div>
+          <div class="line-switch-body">
+            <div v-for="group in lineGroups" :key="group.id" class="line-switch-group">
+              <div class="line-switch-label">{{ group.name }}</div>
+              <div class="line-switch-chips">
+                <train-button
+                  v-for="line in group.lines"
+                  :key="line.uid"
+                  size="small"
+                  round
+                  class="line-chip"
+                  :class="{ active: selectedLine === line.uid }"
+                  :style="selectedLine === line.uid ? { '--tb-bg': line.color, '--tb-border': line.color, '--tb-hover-bg': line.color, '--tb-hover-border': line.color, '--tb-color': textOn(line.color), '--tb-hover-color': textOn(line.color) } : null"
+                  @click="selectedLine = selectedLine === line.uid ? '' : line.uid"
+                >
+                  <span class="bar" :style="{ background: line.color }"></span>
+                  {{ line.name }}
+                </train-button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div v-if="stationStore.loading" class="hint">{{ t('station.loading') }}</div>
-      <div v-else-if="totalCount === 0" class="hint">{{ t('station.notFound') }}</div>
+        <train-spinner v-if="stationStore.loading" :text="t('station.loading')" />
+        <div v-else-if="totalCount === 0" class="hint">{{ t('station.notFound') }}</div>
 
-      <div v-else class="option-list">
-        <div v-if="view.mode === 'line'" class="group-title">
-          <span class="badge" :style="{ background: lineStore.lineColor(view.line), color: '#fff' }">
-            {{ currentLine ? nameOf(currentLine.LineName) : view.line }}
-          </span>
-          <span class="count">{{ totalCount }}</span>
-          <button type="button" class="link" @click="selectedLine = ''">{{ t('station.backToAll') }}</button>
-        </div>
-        <div v-else-if="view.searching" class="group-title">
-          <span class="badge">{{ t('station.searchResult') }}</span>
-          <span class="count">{{ totalCount }}</span>
-        </div>
-
-        <div v-for="group in view.groups" :key="group.id" class="option-group">
-          <div v-if="view.mode !== 'line'" class="group-title">
-            <span class="badge">{{ group.name }}</span>
-            <span class="count">{{ group.items.length }}</span>
+        <div v-else class="option-list">
+          <div v-if="view.mode === 'line'" class="group-title">
+            <train-tag :color="lineStore.lineColor(view.line)">
+              {{ currentLine ? nameOf(currentLine.LineName) : view.line }}
+            </train-tag>
+            <span class="count">{{ totalCount }}</span>
+            <train-link @click="selectedLine = ''">{{ t('station.backToAll') }}</train-link>
           </div>
-          <button
-            v-for="s in group.items"
-            :key="s.StationUID"
-            type="button"
-            class="option"
-            :class="{ active: s.StationUID === modelValue }"
-            @click="choose(s)"
-          >
-            <span v-if="view.mode === 'line'" class="seq">{{ s.Sequence }}</span>
-            <span class="name">{{ nameOf(s.StationName) || s.StationUID }}</span>
-            <span v-if="s.StationName?.En" class="en">{{ s.StationName.En }}</span>
-            <span class="uid">{{ s.StationUID }}</span>
-            <span
-              v-for="line in s.TransferLines || []"
-              :key="line"
-              class="line-badge"
-              :style="{ background: lineStore.lineColor(line) }"
+          <div v-else-if="view.searching" class="group-title">
+            <train-tag>{{ t('station.searchResult') }}</train-tag>
+            <span class="count">{{ totalCount }}</span>
+          </div>
+
+          <div v-for="group in view.groups" :key="group.id" class="option-group">
+            <div v-if="view.mode !== 'line'" class="group-title">
+              <train-tag>{{ group.name }}</train-tag>
+              <span class="count">{{ group.items.length }}</span>
+            </div>
+            <button
+              v-for="s in group.items"
+              :key="s.StationUID"
+              type="button"
+              class="option"
+              :class="{ active: s.StationUID === modelValue }"
+              @click="choose(s)"
             >
-              {{ lineStore.lineName(line) }}
-            </span>
-          </button>
+              <span v-if="view.mode === 'line'" class="seq">{{ s.Sequence }}</span>
+              <span class="name">{{ nameOf(s.StationName) || s.StationUID }}</span>
+              <span v-if="s.StationName?.En" class="en">{{ s.StationName.En }}</span>
+              <span class="uid">{{ s.StationUID }}</span>
+              <train-tag
+                v-for="line in s.TransferLines || []"
+                :key="line"
+                :color="lineStore.lineColor(line)"
+                size="small"
+              >
+                {{ lineStore.lineName(line) }}
+              </train-tag>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-foot">
+          <train-link @click="clear">{{ t('station.clear') }}</train-link>
+          <train-link to="/stations" @click="open = false">{{ t('station.all') }}</train-link>
         </div>
       </div>
-
-      <div class="panel-foot">
-        <button type="button" class="link" @click="clear">{{ t('station.clear') }}</button>
-        <router-link class="link" to="/stations" @click="open = false">{{ t('station.all') }}</router-link>
-      </div>
-    </div>
+    </train-dropdown>
   </div>
 </template>

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import StationSelect from '@/components/StationSelect.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
 import RouteFilter from '@/components/RouteFilter.vue'
+import RoutePicker from '@/components/RoutePicker.vue'
 import { usePublicStationStore } from '@/stores/publicStation'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { byOptions, sortOptions, useSearchStore, weekNames } from '@/stores/search'
@@ -17,14 +18,7 @@ const lineStore = usePublicLineStore()
 const search = useSearchStore()
 
 const form = search.form
-
-const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
-const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
-
-const startHour = ref(form.start.slice(0, 2))
-const startMinute = ref(form.start.slice(3, 5))
-const endHour = ref(form.end.slice(0, 2))
-const endMinute = ref(form.end.slice(3, 5))
+const pickerOpen = ref(false)
 
 const isNoExpress = computed({
   get: () => (form.extra & 1) === 1,
@@ -40,22 +34,14 @@ const isNoHighSpeed = computed({
   },
 })
 
-function syncTime() {
-  form.start = `${startHour.value}:${startMinute.value}`
-  form.end = `${endHour.value}:${endMinute.value}`
-}
-
 function setNow() {
   const now = new Date()
   const h = now.getHours()
   const m = Math.min(55, Math.ceil(now.getMinutes() / 5) * 5)
-  const h2 = (h + 2) % 24
-  startHour.value = String(h).padStart(2, '0')
-  startMinute.value = String(m).padStart(2, '0')
-  endHour.value = String(h2).padStart(2, '0')
-  endMinute.value = String(m).padStart(2, '0')
+  const pad = (n) => String(n).padStart(2, '0')
+  form.start = `${pad(h)}:${pad(m)}`
+  form.end = `${pad((h + 2) % 24)}:${pad(m)}`
   form.week = now.getDay()
-  syncTime()
 }
 
 function exchange() {
@@ -64,9 +50,7 @@ function exchange() {
   form.to = tmp
 }
 
-async function doSearch() {
-  syncTime()
-  await search.run()
+function syncUrl() {
   router.replace({
     path: '/search',
     query: {
@@ -75,14 +59,42 @@ async function doSearch() {
       w: String(form.week),
       startTime: form.start,
       endTime: form.end,
+      r: search.pickedRoutes.length ? search.pickedRoutes.join(',') : undefined,
     },
   })
 }
 
+async function doSearch() {
+  await search.run()
+  syncUrl()
+}
+
+/** 以「選擇路由」視窗勾選的路由重新查詢（空陣列＝回到全部路由） */
+async function searchRoutes(codes) {
+  await search.searchWithRoutes(codes)
+  syncUrl()
+}
+
 const resultCount = computed(() => search.visibleJourneys.length)
 const weekList = computed(() => weekNames())
+const weekOptions = computed(() => weekList.value.map((label, value) => ({ label, value })))
 const byList = computed(() => byOptions())
 const sortList = computed(() => sortOptions())
+const resultRoutes = computed(() => search.routeGroups.map((g) => g.key))
+
+/** 視窗上方的條件摘要：讓使用者知道重新查詢會沿用哪些條件 */
+const pickerCond = computed(() => {
+  const extras = [isNoExpress.value && t('search.extra.noExpress'), isNoHighSpeed.value && t('search.extra.noHighSpeed')]
+  return t('picker.cond', {
+    from: stationStore.stationName(form.from) || form.from,
+    to: stationStore.stationName(form.to) || form.to,
+    week: weekList.value[form.week],
+    start: form.start,
+    end: form.end,
+    by: form.by === 'dep' ? t('search.result.byDep') : t('search.result.byArr'),
+    extra: extras.filter(Boolean).join('、') || t('picker.noExtra'),
+  })
+})
 
 onMounted(async () => {
   // 公共資料只載入一次，之後切路由不再重新請求
@@ -95,128 +107,94 @@ onMounted(async () => {
   const week = q.w !== undefined ? Number(q.w) : null
   const start = q.startTime ? String(q.startTime) : ''
   const end = q.endTime ? String(q.endTime) : ''
+  const routes = q.r ? String(q.r).split(',').filter(Boolean) : []
 
   // 條件有變才重設表單；條件相同時沿用既有結果，不重複查詢
   const same =
-    form.from === from && form.to === to && form.week === week && form.start === start && form.end === end
-  if (from && to) {
-    if (!same) {
-      form.from = from
-      form.to = to
-      if (week !== null) form.week = week
-      if (start) {
-        form.start = start
-        startHour.value = start.slice(0, 2)
-        startMinute.value = start.slice(3, 5)
-      }
-      if (end) {
-        form.end = end
-        endHour.value = end.slice(0, 2)
-        endMinute.value = end.slice(3, 5)
-      }
-      doSearch()
-    } else if (!search.journeys.length) {
-      doSearch()
-    }
-  }
+    form.from === from &&
+    form.to === to &&
+    form.week === week &&
+    form.start === start &&
+    form.end === end &&
+    search.pickedRoutes.join(',') === routes.join(',')
+  if (!from || !to) return
+  if (same && search.journeys.length) return
+  form.from = from
+  form.to = to
+  if (week !== null) form.week = week
+  if (start) form.start = start
+  if (end) form.end = end
+  if (routes.length) searchRoutes(routes)
+  else doSearch()
 })
 </script>
 
 <template>
   <div class="page search-page">
-    <section class="panel control">
-      <h2 class="panel-title">{{ t('search.title') }}</h2>
-
+    <train-card :title="t('search.title')" class="control">
       <div class="control-grid">
         <StationSelect v-model="form.from" label-key="search.from" />
         <StationSelect v-model="form.to" label-key="search.to" />
       </div>
 
       <div class="control-row">
-        <button type="button" class="btn ghost" @click="exchange">{{ t('search.exchange') }}</button>
+        <train-button round icon="swap" @click="exchange">{{ t('search.exchange') }}</train-button>
       </div>
 
       <div class="control-grid time-grid">
-        <div class="field">
-          <div class="field-label">{{ t('search.startFrom') }}</div>
-          <div class="time-row">
-            <select v-model="startHour"><option v-for="h in hours" :key="h" :value="h">{{ h }}</option></select>
-            <span>:</span>
-            <select v-model="startMinute"><option v-for="m in minutes" :key="m" :value="m">{{ m }}</option></select>
-            <button type="button" class="btn ghost small" @click="setNow">{{ t('search.setNow') }}</button>
-          </div>
-        </div>
+        <train-form-item :label="t('search.startFrom')">
+          <train-time-select v-model="form.start" />
+          <train-button size="small" round icon="clock" @click="setNow">{{ t('search.setNow') }}</train-button>
+        </train-form-item>
 
-        <div class="field">
-          <div class="field-label">{{ t('search.endAt') }}</div>
-          <div class="time-row">
-            <select v-model="endHour"><option v-for="h in hours" :key="h" :value="h">{{ h }}</option></select>
-            <span>:</span>
-            <select v-model="endMinute"><option v-for="m in minutes" :key="m" :value="m">{{ m }}</option></select>
-          </div>
-        </div>
+        <train-form-item :label="t('search.endAt')">
+          <train-time-select v-model="form.end" />
+        </train-form-item>
 
-        <div class="field">
-          <div class="field-label">{{ t('search.week') }}</div>
-          <div class="time-row">
-            <select v-model.number="form.week">
-              <option v-for="(name, i) in weekList" :key="i" :value="i">{{ name }}</option>
-            </select>
-          </div>
-        </div>
+        <train-form-item :label="t('search.week')">
+          <train-select v-model="form.week" :options="weekOptions" />
+        </train-form-item>
 
-        <div class="field">
-          <div class="field-label">{{ t('search.by') }}</div>
-          <div class="time-row radio-row">
-            <label v-for="opt in byList" :key="opt.value" class="radio">
-              <input v-model="form.by" type="radio" :value="opt.value" />
-              <span>{{ opt.label }}</span>
-            </label>
-          </div>
-        </div>
+        <train-form-item :label="t('search.by')">
+          <train-radio-group v-model="form.by" :options="byList" />
+        </train-form-item>
 
-        <div class="field">
-          <div class="field-label">{{ t('search.sort') }}</div>
-          <div class="time-row">
-            <select v-model="form.sort">
-              <option v-for="opt in sortList" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
-          </div>
-        </div>
+        <train-form-item :label="t('search.sort')">
+          <train-select v-model="form.sort" :options="sortList" />
+        </train-form-item>
 
-        <div class="field">
-          <div class="field-label">{{ t('search.extra') }}</div>
-          <div class="time-row checkbox-row">
-            <label class="checkbox">
-              <input v-model="isNoExpress" type="checkbox" />
-              <span>{{ t('search.extra.noExpress') }}</span>
-            </label>
-            <label class="checkbox">
-              <input v-model="isNoHighSpeed" type="checkbox" />
-              <span>{{ t('search.extra.noHighSpeed') }}</span>
-            </label>
-          </div>
-        </div>
+        <train-form-item :label="t('search.extra')">
+          <train-checkbox v-model="isNoExpress">{{ t('search.extra.noExpress') }}</train-checkbox>
+          <train-checkbox v-model="isNoHighSpeed">{{ t('search.extra.noHighSpeed') }}</train-checkbox>
+        </train-form-item>
       </div>
 
       <div class="control-row">
-        <button
-          type="button"
-          class="btn primary"
-          :disabled="search.loading || !search.canSearch"
+        <train-button
+          type="primary"
+          size="large"
+          round
+          icon="search"
+          :loading="search.loading"
+          :disabled="!search.canSearch"
           @click="doSearch"
         >
           {{ search.loading ? t('search.loading') : t('search.button') }}
-        </button>
-        <span v-if="search.error" class="error-text">{{ search.error }}</span>
+        </train-button>
+        <train-alert v-if="search.error" type="error" simple>{{ search.error }}</train-alert>
       </div>
-    </section>
+    </train-card>
 
-    <section v-if="search.searched" class="panel result">
-      <h2 class="panel-title">
+    <train-card v-if="search.searched" class="result">
+      <template #header>
         {{ t('search.result.title') }}
         <span class="result-count">{{ t('search.result.count', { count: resultCount }) }}</span>
-      </h2>
+      </template>
+      <template #extra>
+        <train-button type="primary" plain round icon="route" :disabled="search.loading" @click="pickerOpen = true">
+          {{ t('picker.open') }}
+        </train-button>
+      </template>
 
       <p v-if="search.meta" class="meta-line">
         {{
@@ -230,6 +208,18 @@ onMounted(async () => {
         }}
       </p>
 
+      <train-alert v-if="search.pickedRoutes.length" type="info" class="picked-banner">
+        <span>{{ t('search.picked.banner', { count: search.pickedRoutes.length }) }}</span>
+        <span class="picked-actions">
+          <train-button size="small" type="primary" plain @click="pickerOpen = true">
+            {{ t('search.picked.change') }}
+          </train-button>
+          <train-button size="small" :disabled="search.loading" @click="searchRoutes([])">
+            {{ t('picker.showAll') }}
+          </train-button>
+        </span>
+      </train-alert>
+
       <RouteFilter
         v-if="search.routeGroups.length"
         :groups="search.routeGroups"
@@ -238,9 +228,12 @@ onMounted(async () => {
         @fastest="search.showFastestRoutes"
       />
 
-      <div v-if="!search.loading && search.visibleJourneys.length === 0" class="empty">
-        {{ t('search.result.empty') }}
-      </div>
+      <train-spinner v-if="search.loading" block :text="t('search.loading')" />
+      <train-empty
+        v-else-if="search.visibleJourneys.length === 0"
+        icon="clock"
+        :description="t('search.result.empty')"
+      />
 
       <JourneyCard
         v-for="(journey, i) in search.visibleJourneys"
@@ -248,6 +241,15 @@ onMounted(async () => {
         :journey="journey"
         :index="i"
       />
-    </section>
+    </train-card>
+
+    <RoutePicker
+      v-model="pickerOpen"
+      :picked="search.pickedRoutes"
+      :result-routes="resultRoutes"
+      :cond="pickerCond"
+      @confirm="searchRoutes"
+      @clear="searchRoutes([])"
+    />
   </div>
 </template>

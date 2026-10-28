@@ -1,0 +1,1383 @@
+/*
+ * Train UI Frame 基礎樣式（藍白色系，Element UI 風格）。
+ *
+ * 所有可調整的值都是 --train-ui- 開頭的 CSS 變數，網站在自己的 CSS 覆蓋即可：
+ *   :root { --train-ui-color-primary: #0a59ae; --train-ui-radius-scale: 0; }
+ * 單一區塊也可以只在那個容器上覆蓋（變數會往下繼承）。
+ * 手機版斷點固定為 768px（CSS 變數不能用在 @media）。
+ */
+
+:root {
+  /* 色彩：主色（藍）與其深淺 */
+  --train-ui-color-primary: #1767d1;
+  --train-ui-color-primary-hover: #3a82e0;
+  --train-ui-color-primary-active: #0f52ad;
+  --train-ui-color-primary-light-3: #74a7e8;
+  --train-ui-color-primary-light-5: #a9c8f1;
+  --train-ui-color-primary-light-8: #dbe8fa;
+  --train-ui-color-primary-light-9: #edf4fd;
+
+  /* 色彩：狀態 */
+  --train-ui-color-success: #1f9d6b;
+  --train-ui-color-success-light: #e6f6ef;
+  --train-ui-color-warning: #d48806;
+  --train-ui-color-warning-light: #fdf4e3;
+  --train-ui-color-danger: #d64545;
+  --train-ui-color-danger-light: #fcecec;
+  --train-ui-color-info: #6b7a90;
+  --train-ui-color-info-light: #eef1f5;
+  --train-ui-color-white: #ffffff;
+
+  /* 文字 */
+  --train-ui-text-color-primary: #1f2a3d;
+  --train-ui-text-color-regular: #3c4a5e;
+  --train-ui-text-color-secondary: #6b7a90;
+  --train-ui-text-color-placeholder: #a1adbd;
+  --train-ui-text-color-disabled: #b6c0cd;
+
+  /* 邊框與底色 */
+  --train-ui-border-color: #d5deea;
+  --train-ui-border-color-light: #e3e9f1;
+  --train-ui-border-color-lighter: #eef2f7;
+  --train-ui-fill-color: #f2f6fb;
+  --train-ui-fill-color-light: #f7f9fc;
+  --train-ui-bg-color: #ffffff;
+  --train-ui-bg-color-page: #f3f6fa;
+  --train-ui-bg-color-overlay: rgba(14, 28, 52, 0.48);
+
+  /* 字體 */
+  --train-ui-font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, -apple-system, sans-serif;
+  --train-ui-font-family-mono: ui-monospace, Menlo, Consolas, monospace;
+  --train-ui-font-size-xs: 12px;
+  --train-ui-font-size-sm: 13px;
+  --train-ui-font-size-base: 14px;
+  --train-ui-font-size-md: 15px;
+  --train-ui-font-size-lg: 16px;
+  --train-ui-font-size-xl: 18px;
+  --train-ui-font-weight-bold: 600;
+  --train-ui-line-height: 1.6;
+
+  /* 圓角：--train-ui-radius-scale 設 0 即全部直角、設 1.5 更圓 */
+  --train-ui-radius-scale: 1;
+  --train-ui-radius-small: calc(4px * var(--train-ui-radius-scale));
+  --train-ui-radius-base: calc(6px * var(--train-ui-radius-scale));
+  --train-ui-radius-large: calc(10px * var(--train-ui-radius-scale));
+  --train-ui-radius-round: calc(999px * var(--train-ui-radius-scale));
+
+  /* 元件高度與間距 */
+  --train-ui-height-small: 28px;
+  --train-ui-height-default: 34px;
+  --train-ui-height-large: 40px;
+  --train-ui-padding-x: 12px;
+  --train-ui-gap: 8px;
+
+  /* 陰影、動畫、層級 */
+  --train-ui-shadow-light: 0 1px 3px rgba(16, 36, 70, 0.08), 0 1px 2px rgba(16, 36, 70, 0.04);
+  --train-ui-shadow: 0 6px 18px rgba(16, 36, 70, 0.12);
+  --train-ui-shadow-dark: 0 16px 48px rgba(16, 36, 70, 0.24);
+  --train-ui-focus-ring: 0 0 0 3px rgba(23, 103, 209, 0.2);
+  --train-ui-transition-duration: 0.2s;
+  --train-ui-transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --train-ui-z-index-dropdown: 2000;
+  --train-ui-z-index-modal: 3000;
+
+  /* modal：桌面版離四邊的距離、手機版（≤ 768px）距離、展開動畫時間 */
+  --train-ui-modal-inset: 10%;
+  --train-ui-modal-inset-mobile: 0;
+  --train-ui-modal-duration: 0.34s;
+}
+
+/* ───────────── 共用 ───────────── */
+
+.train-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: -0.125em;
+}
+
+.train-icon.is-spin {
+  animation: train-spin 0.9s linear infinite;
+}
+
+@keyframes train-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.train-fade-down-enter-active,
+.train-fade-down-leave-active {
+  transition:
+    opacity var(--train-ui-transition-duration) var(--train-ui-transition-ease),
+    transform var(--train-ui-transition-duration) var(--train-ui-transition-ease);
+}
+
+.train-fade-down-enter-from,
+.train-fade-down-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ───────────── 按鈕 train-button ───────────── */
+
+.train-button {
+  --tb-color: var(--train-ui-text-color-regular);
+  --tb-bg: var(--train-ui-bg-color);
+  --tb-border: var(--train-ui-border-color);
+  --tb-hover-color: var(--train-ui-color-primary);
+  --tb-hover-bg: var(--train-ui-color-primary-light-9);
+  --tb-hover-border: var(--train-ui-color-primary-light-5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: var(--train-ui-height-default);
+  padding: 0 15px;
+  font-family: inherit;
+  font-size: var(--train-ui-font-size-base);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--tb-color);
+  background: var(--tb-bg);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--train-ui-radius-base);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color var(--train-ui-transition-duration),
+    background-color var(--train-ui-transition-duration),
+    border-color var(--train-ui-transition-duration),
+    box-shadow var(--train-ui-transition-duration);
+}
+
+.train-button:hover,
+.train-button.is-active {
+  color: var(--tb-hover-color);
+  background: var(--tb-hover-bg);
+  border-color: var(--tb-hover-border);
+}
+
+.train-button:focus-visible {
+  outline: none;
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.train-button:active {
+  filter: brightness(0.96);
+}
+
+.train-button--primary,
+.train-button--success,
+.train-button--warning,
+.train-button--danger,
+.train-button--info {
+  --tb-color: var(--train-ui-color-white);
+  --tb-hover-color: var(--train-ui-color-white);
+}
+
+.train-button--primary {
+  --tb-bg: var(--train-ui-color-primary);
+  --tb-border: var(--train-ui-color-primary);
+  --tb-hover-bg: var(--train-ui-color-primary-hover);
+  --tb-hover-border: var(--train-ui-color-primary-hover);
+}
+
+.train-button--success {
+  --tb-bg: var(--train-ui-color-success);
+  --tb-border: var(--train-ui-color-success);
+  --tb-hover-bg: var(--train-ui-color-success);
+  --tb-hover-border: var(--train-ui-color-success);
+}
+
+.train-button--warning {
+  --tb-bg: var(--train-ui-color-warning);
+  --tb-border: var(--train-ui-color-warning);
+  --tb-hover-bg: var(--train-ui-color-warning);
+  --tb-hover-border: var(--train-ui-color-warning);
+}
+
+.train-button--danger {
+  --tb-bg: var(--train-ui-color-danger);
+  --tb-border: var(--train-ui-color-danger);
+  --tb-hover-bg: var(--train-ui-color-danger);
+  --tb-hover-border: var(--train-ui-color-danger);
+}
+
+.train-button--info {
+  --tb-bg: var(--train-ui-color-info);
+  --tb-border: var(--train-ui-color-info);
+  --tb-hover-bg: var(--train-ui-color-info);
+  --tb-hover-border: var(--train-ui-color-info);
+}
+
+.train-button--success:hover,
+.train-button--warning:hover,
+.train-button--danger:hover,
+.train-button--info:hover {
+  filter: brightness(1.08);
+}
+
+.train-button--primary.is-plain {
+  --tb-color: var(--train-ui-color-primary);
+  --tb-bg: var(--train-ui-color-primary-light-9);
+  --tb-border: var(--train-ui-color-primary-light-5);
+}
+
+.train-button--danger.is-plain {
+  --tb-color: var(--train-ui-color-danger);
+  --tb-bg: var(--train-ui-color-danger-light);
+}
+
+.train-button--success.is-plain {
+  --tb-color: var(--train-ui-color-success);
+  --tb-bg: var(--train-ui-color-success-light);
+}
+
+.train-button--warning.is-plain {
+  --tb-color: var(--train-ui-color-warning);
+  --tb-bg: var(--train-ui-color-warning-light);
+}
+
+.train-button--info.is-plain {
+  --tb-color: var(--train-ui-color-info);
+  --tb-bg: var(--train-ui-color-info-light);
+}
+
+.train-button--text {
+  --tb-color: var(--train-ui-color-primary);
+  --tb-bg: transparent;
+  --tb-border: transparent;
+  --tb-hover-color: var(--train-ui-color-primary-hover);
+  --tb-hover-bg: var(--train-ui-color-primary-light-9);
+  --tb-hover-border: transparent;
+  padding: 0 8px;
+}
+
+.train-button--small {
+  height: var(--train-ui-height-small);
+  padding: 0 11px;
+  font-size: var(--train-ui-font-size-sm);
+}
+
+.train-button--large {
+  height: var(--train-ui-height-large);
+  padding: 0 20px;
+  font-size: var(--train-ui-font-size-md);
+}
+
+.train-button.is-round {
+  border-radius: var(--train-ui-radius-round);
+}
+
+.train-button.is-circle {
+  width: var(--train-ui-height-default);
+  padding: 0;
+  border-radius: 50%;
+}
+
+.train-button--small.is-circle {
+  width: var(--train-ui-height-small);
+}
+
+.train-button.is-block {
+  display: flex;
+  width: 100%;
+}
+
+.train-button.is-disabled,
+.train-button.is-disabled:hover {
+  color: var(--tb-color);
+  background: var(--tb-bg);
+  border-color: var(--tb-border);
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.train-button.is-loading {
+  cursor: progress;
+}
+
+.train-button-group {
+  display: inline-flex;
+}
+
+.train-button-group > .train-button:not(:first-child) {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.train-button-group > .train-button:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.train-button-group > .train-button:hover,
+.train-button-group > .train-button.is-active {
+  position: relative;
+  z-index: 1;
+}
+
+/* ───────────── 輸入框 train-input ───────────── */
+
+.train-input,
+.train-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--train-ui-height-default);
+  min-width: 0;
+  background: var(--train-ui-bg-color);
+  border: 1px solid var(--train-ui-border-color);
+  border-radius: var(--train-ui-radius-base);
+  color: var(--train-ui-text-color-primary);
+  font-size: var(--train-ui-font-size-base);
+  transition:
+    border-color var(--train-ui-transition-duration),
+    box-shadow var(--train-ui-transition-duration);
+}
+
+.train-input:hover,
+.train-select:hover {
+  border-color: var(--train-ui-color-primary-light-3);
+}
+
+.train-input:focus-within,
+.train-select:focus-within {
+  border-color: var(--train-ui-color-primary);
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.train-input {
+  gap: 6px;
+  padding: 0 var(--train-ui-padding-x);
+}
+
+.train-input__inner {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.train-input__inner::placeholder {
+  color: var(--train-ui-text-color-placeholder);
+}
+
+.train-input__inner::-webkit-search-cancel-button {
+  display: none;
+}
+
+.train-input__prefix,
+.train-input__suffix {
+  display: inline-flex;
+  color: var(--train-ui-text-color-placeholder);
+}
+
+.train-input__clear {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--train-ui-text-color-placeholder);
+  cursor: pointer;
+}
+
+.train-input__clear:hover {
+  color: var(--train-ui-text-color-secondary);
+  background: var(--train-ui-fill-color);
+}
+
+.train-input--small,
+.train-select--small {
+  height: var(--train-ui-height-small);
+  font-size: var(--train-ui-font-size-sm);
+}
+
+.train-input--large,
+.train-select--large {
+  height: var(--train-ui-height-large);
+  font-size: var(--train-ui-font-size-md);
+}
+
+.train-input.is-disabled,
+.train-select.is-disabled {
+  background: var(--train-ui-fill-color-light);
+  color: var(--train-ui-text-color-disabled);
+  cursor: not-allowed;
+}
+
+/* ───────────── 下拉選擇 train-select、時刻 train-time-select ───────────── */
+
+.train-select__inner {
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  padding: 0 30px 0 var(--train-ui-padding-x);
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.train-select__inner:disabled {
+  cursor: not-allowed;
+}
+
+.train-select__caret {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+  color: var(--train-ui-text-color-placeholder);
+}
+
+.train-time-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.train-time-select__sep {
+  color: var(--train-ui-text-color-secondary);
+}
+
+/* ───────────── 核取方塊 train-checkbox ───────────── */
+
+.train-checkbox,
+.train-radio {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--train-ui-font-size-base);
+  color: var(--train-ui-text-color-regular);
+  line-height: 1.4;
+  cursor: pointer;
+  user-select: none;
+}
+
+.train-checkbox__original,
+.train-radio__original {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.train-checkbox__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--train-ui-border-color);
+  border-radius: var(--train-ui-radius-small);
+  background: var(--train-ui-bg-color);
+  color: var(--train-ui-color-white);
+  font-size: 13px;
+  transition:
+    background-color var(--train-ui-transition-duration),
+    border-color var(--train-ui-transition-duration);
+}
+
+.train-checkbox:hover .train-checkbox__box {
+  border-color: var(--train-ui-color-primary);
+}
+
+.train-checkbox__original:focus-visible + .train-checkbox__box,
+.train-radio__original:focus-visible + .train-radio__dot {
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.train-checkbox.is-checked .train-checkbox__box,
+.train-checkbox.is-indeterminate .train-checkbox__box {
+  background: var(--train-ui-color-primary);
+  border-color: var(--train-ui-color-primary);
+}
+
+.train-checkbox.is-checked .train-checkbox__label {
+  color: var(--train-ui-text-color-primary);
+}
+
+.train-checkbox.is-bordered,
+.train-radio-button {
+  padding: 0 12px;
+  height: var(--train-ui-height-default);
+  border: 1px solid var(--train-ui-border-color);
+  border-radius: var(--train-ui-radius-base);
+  box-sizing: border-box;
+}
+
+.train-checkbox.is-bordered.is-checked {
+  border-color: var(--train-ui-color-primary);
+  background: var(--train-ui-color-primary-light-9);
+}
+
+.train-checkbox--small {
+  font-size: var(--train-ui-font-size-sm);
+}
+
+.train-checkbox.is-disabled,
+.train-radio.is-disabled,
+.train-radio-button.is-disabled {
+  color: var(--train-ui-text-color-disabled);
+  cursor: not-allowed;
+}
+
+.train-checkbox.is-disabled .train-checkbox__box {
+  background: var(--train-ui-fill-color);
+  border-color: var(--train-ui-border-color-light);
+}
+
+.train-checkbox.is-disabled.is-checked .train-checkbox__box {
+  background: var(--train-ui-color-primary-light-5);
+  border-color: var(--train-ui-color-primary-light-5);
+}
+
+.train-checkbox-group,
+.train-radio-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.train-checkbox-group.is-vertical {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* ───────────── 單選 train-radio ───────────── */
+
+.train-radio__dot {
+  position: relative;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--train-ui-border-color);
+  border-radius: 50%;
+  background: var(--train-ui-bg-color);
+  transition: border-color var(--train-ui-transition-duration);
+}
+
+.train-radio:hover .train-radio__dot {
+  border-color: var(--train-ui-color-primary);
+}
+
+.train-radio.is-checked .train-radio__dot {
+  border: 5px solid var(--train-ui-color-primary);
+}
+
+.train-radio.is-checked .train-radio__label {
+  color: var(--train-ui-text-color-primary);
+}
+
+.train-radio-group.is-button {
+  gap: 0;
+  flex-wrap: nowrap;
+}
+
+.train-radio-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--train-ui-font-size-base);
+  color: var(--train-ui-text-color-regular);
+  background: var(--train-ui-bg-color);
+  border-radius: 0;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    color var(--train-ui-transition-duration),
+    background-color var(--train-ui-transition-duration),
+    border-color var(--train-ui-transition-duration);
+}
+
+.train-radio-button:not(:first-child) {
+  margin-left: -1px;
+}
+
+.train-radio-button:first-child {
+  border-radius: var(--train-ui-radius-base) 0 0 var(--train-ui-radius-base);
+}
+
+.train-radio-button:last-child {
+  border-radius: 0 var(--train-ui-radius-base) var(--train-ui-radius-base) 0;
+}
+
+.train-radio-button:only-child {
+  border-radius: var(--train-ui-radius-base);
+}
+
+.train-radio-button:hover {
+  color: var(--train-ui-color-primary);
+}
+
+.train-radio-button.is-checked {
+  z-index: 1;
+  color: var(--train-ui-color-white);
+  background: var(--train-ui-color-primary);
+  border-color: var(--train-ui-color-primary);
+}
+
+.train-radio-button:focus-within {
+  z-index: 2;
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.train-radio-button--small {
+  height: var(--train-ui-height-small);
+  padding: 0 10px;
+  font-size: var(--train-ui-font-size-sm);
+}
+
+/* ───────────── 開關 train-switch ───────────── */
+
+.train-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--train-ui-font-size-base);
+  color: var(--train-ui-text-color-regular);
+  cursor: pointer;
+}
+
+.train-switch__core {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--train-ui-radius-round);
+  background: var(--train-ui-border-color);
+  transition: background-color var(--train-ui-transition-duration);
+}
+
+.train-switch__action {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--train-ui-radius-round);
+  background: var(--train-ui-color-white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform var(--train-ui-transition-duration) var(--train-ui-transition-ease);
+}
+
+.train-switch.is-checked .train-switch__core {
+  background: var(--train-ui-color-primary);
+}
+
+.train-switch.is-checked .train-switch__action {
+  transform: translateX(18px);
+}
+
+.train-switch:focus-visible {
+  outline: none;
+}
+
+.train-switch:focus-visible .train-switch__core {
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.train-switch.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ───────────── 標籤 train-tag ───────────── */
+
+.train-tag {
+  --tt-color: var(--train-ui-color-primary);
+  --tt-light: var(--train-ui-color-primary-light-9);
+  --tt-border: var(--train-ui-color-primary-light-8);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  height: 22px;
+  padding: 0 9px;
+  font-family: inherit;
+  font-size: var(--train-ui-font-size-xs);
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  border: 1px solid var(--tt-border);
+  border-radius: var(--train-ui-radius-small);
+  color: var(--tt-color);
+  background: var(--tt-light);
+}
+
+.train-tag.is-round {
+  border-radius: var(--train-ui-radius-round);
+}
+
+.train-tag--success {
+  --tt-color: var(--train-ui-color-success);
+  --tt-light: var(--train-ui-color-success-light);
+  --tt-border: var(--train-ui-color-success-light);
+}
+
+.train-tag--warning {
+  --tt-color: var(--train-ui-color-warning);
+  --tt-light: var(--train-ui-color-warning-light);
+  --tt-border: var(--train-ui-color-warning-light);
+}
+
+.train-tag--danger {
+  --tt-color: var(--train-ui-color-danger);
+  --tt-light: var(--train-ui-color-danger-light);
+  --tt-border: var(--train-ui-color-danger-light);
+}
+
+.train-tag--info {
+  --tt-color: var(--train-ui-color-info);
+  --tt-light: var(--train-ui-color-info-light);
+  --tt-border: var(--train-ui-border-color-light);
+}
+
+.train-tag--dark {
+  color: var(--train-ui-color-white);
+  background: var(--tt-color);
+  border-color: var(--tt-color);
+}
+
+.train-tag--plain {
+  background: var(--train-ui-bg-color);
+  border-color: var(--tt-color);
+}
+
+.train-tag--small {
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.train-tag--large {
+  height: 28px;
+  padding: 0 12px;
+  font-size: var(--train-ui-font-size-sm);
+}
+
+.train-tag.is-clickable {
+  cursor: pointer;
+}
+
+.train-tag.is-clickable:hover {
+  filter: brightness(0.96);
+}
+
+.train-tag__close {
+  display: inline-flex;
+  padding: 1px;
+  margin-right: -4px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.train-tag__close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* ───────────── 卡片 train-card ───────────── */
+
+.train-card {
+  background: var(--train-ui-bg-color);
+  border: 1px solid var(--train-ui-border-color-light);
+  border-radius: var(--train-ui-radius-large);
+  color: var(--train-ui-text-color-primary);
+  overflow: visible;
+  transition: box-shadow var(--train-ui-transition-duration);
+}
+
+.train-card.is-shadow-always,
+.train-card.is-shadow-hover:hover {
+  box-shadow: var(--train-ui-shadow-light);
+}
+
+.train-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--train-ui-border-color-lighter);
+}
+
+.train-card__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: var(--train-ui-font-size-xl);
+  font-weight: var(--train-ui-font-weight-bold);
+}
+
+.train-card__extra {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.train-card__body {
+  padding: 18px 20px 20px;
+}
+
+.train-card__footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--train-ui-border-color-lighter);
+}
+
+/* ───────────── 表單欄位 train-form-item ───────────── */
+
+.train-form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.train-form-item__label {
+  font-size: var(--train-ui-font-size-sm);
+  color: var(--train-ui-text-color-secondary);
+}
+
+.train-form-item__content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--train-ui-gap);
+  min-width: 0;
+}
+
+.train-form-item.is-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.train-form-item__error {
+  flex: 1 0 100%;
+  font-size: var(--train-ui-font-size-xs);
+  color: var(--train-ui-color-danger);
+}
+
+.train-form-item.is-error .train-input,
+.train-form-item.is-error .train-select {
+  border-color: var(--train-ui-color-danger);
+}
+
+/* ───────────── 連結 train-link ───────────── */
+
+.train-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--train-ui-color-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.train-link--default {
+  color: var(--train-ui-text-color-regular);
+}
+
+.train-link--danger {
+  color: var(--train-ui-color-danger);
+}
+
+.train-link:hover {
+  color: var(--train-ui-color-primary-hover);
+}
+
+.train-link.is-underline:hover {
+  text-decoration: underline;
+}
+
+.train-link.is-disabled {
+  color: var(--train-ui-text-color-disabled);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* ───────────── 提示 train-alert ───────────── */
+
+.train-alert {
+  --ta-color: var(--train-ui-color-info);
+  --ta-bg: var(--train-ui-color-info-light);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: var(--train-ui-radius-base);
+  background: var(--ta-bg);
+  color: var(--ta-color);
+  font-size: var(--train-ui-font-size-base);
+}
+
+.train-alert--success {
+  --ta-color: var(--train-ui-color-success);
+  --ta-bg: var(--train-ui-color-success-light);
+}
+
+.train-alert--warning {
+  --ta-color: var(--train-ui-color-warning);
+  --ta-bg: var(--train-ui-color-warning-light);
+}
+
+.train-alert--error {
+  --ta-color: var(--train-ui-color-danger);
+  --ta-bg: var(--train-ui-color-danger-light);
+}
+
+.train-alert.is-simple {
+  display: inline-flex;
+  padding: 0;
+  background: none;
+}
+
+.train-alert__icon {
+  margin-top: 0.2em;
+}
+
+.train-alert__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.train-alert__title {
+  font-weight: var(--train-ui-font-weight-bold);
+}
+
+.train-alert__close {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.train-alert__close:hover {
+  opacity: 1;
+}
+
+/* ───────────── 空狀態 train-empty、載入中 train-spinner ───────────── */
+
+.train-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--train-ui-text-color-secondary);
+}
+
+.train-empty__image {
+  color: var(--train-ui-color-primary-light-5);
+}
+
+.train-empty__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.train-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--train-ui-color-primary);
+  font-size: var(--train-ui-font-size-sm);
+}
+
+.train-spinner__text {
+  color: var(--train-ui-text-color-secondary);
+}
+
+.train-spinner.is-block {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+/* ───────────── 彈出面板 train-dropdown ───────────── */
+
+.train-dropdown {
+  position: relative;
+}
+
+.train-dropdown__panel {
+  position: absolute;
+  z-index: var(--train-ui-z-index-dropdown);
+  top: calc(100% + 6px);
+  box-sizing: border-box;
+  max-width: calc(100vw - 20px);
+  background: var(--train-ui-bg-color);
+  border: 1px solid var(--train-ui-border-color-light);
+  border-radius: var(--train-ui-radius-large);
+  box-shadow: var(--train-ui-shadow);
+}
+
+.train-dropdown__panel.is-bottom-start {
+  left: 0;
+}
+
+.train-dropdown__panel.is-bottom-end {
+  right: 0;
+}
+
+/* ───────────── 選單 train-menu ───────────── */
+
+.train-menu {
+  display: flex;
+  gap: 4px;
+}
+
+.train-menu--horizontal {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.train-menu--vertical {
+  flex-direction: column;
+}
+
+.train-menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--train-ui-radius-round);
+  background: none;
+  font: inherit;
+  font-size: var(--train-ui-font-size-md);
+  color: var(--train-ui-text-color-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color var(--train-ui-transition-duration),
+    background-color var(--train-ui-transition-duration);
+}
+
+.train-menu--vertical .train-menu-item {
+  border-radius: var(--train-ui-radius-base);
+}
+
+.train-menu-item:hover {
+  color: var(--train-ui-color-primary);
+  background: var(--train-ui-color-primary-light-9);
+}
+
+.train-menu-item.is-active {
+  color: var(--train-ui-color-white);
+  background: var(--train-ui-color-primary);
+}
+
+.train-menu-item:focus-visible {
+  outline: none;
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.train-menu-item.is-disabled {
+  color: var(--train-ui-text-color-disabled);
+  background: none;
+  cursor: not-allowed;
+}
+
+/* ───────────── 表格 train-table ───────────── */
+
+.train-table-wrap {
+  overflow-x: auto;
+}
+
+.train-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--train-ui-font-size-base);
+  color: var(--train-ui-text-color-regular);
+}
+
+.train-table th,
+.train-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--train-ui-border-color-light);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.train-table th {
+  background: var(--train-ui-fill-color-light);
+  font-size: var(--train-ui-font-size-sm);
+  font-weight: var(--train-ui-font-weight-bold);
+  color: var(--train-ui-text-color-secondary);
+  white-space: nowrap;
+}
+
+.train-table tbody tr:hover > td {
+  background: var(--train-ui-color-primary-light-9);
+}
+
+.train-table.is-stripe tbody tr:nth-child(even) > td {
+  background: var(--train-ui-fill-color-light);
+}
+
+.train-table.is-border th,
+.train-table.is-border td {
+  border: 1px solid var(--train-ui-border-color-light);
+}
+
+.train-table .is-center {
+  text-align: center;
+}
+
+.train-table .is-right {
+  text-align: right;
+}
+
+.train-table__empty td {
+  padding: 28px 10px;
+  text-align: center;
+  color: var(--train-ui-text-color-secondary);
+}
+
+/* ───────────── 頁籤 train-tabs ───────────── */
+
+.train-tabs__nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.train-tabs--line .train-tabs__nav {
+  border-bottom: 1px solid var(--train-ui-border-color-light);
+}
+
+.train-tabs__item {
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--train-ui-font-size-base);
+  color: var(--train-ui-text-color-regular);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.train-tabs__item:hover {
+  color: var(--train-ui-color-primary);
+}
+
+.train-tabs--line .train-tabs__item {
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+}
+
+.train-tabs--line .train-tabs__item.is-active {
+  color: var(--train-ui-color-primary);
+  border-bottom-color: var(--train-ui-color-primary);
+}
+
+.train-tabs--card .train-tabs__item {
+  border-radius: var(--train-ui-radius-round);
+}
+
+.train-tabs--card .train-tabs__item.is-active {
+  color: var(--train-ui-color-white);
+  background: var(--train-ui-color-primary);
+}
+
+.train-tabs__item.is-disabled {
+  color: var(--train-ui-text-color-disabled);
+  cursor: not-allowed;
+}
+
+.train-tabs__content {
+  padding-top: 12px;
+}
+
+/* ───────────── 對話視窗 train-modal ───────────── */
+
+.train-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--train-ui-z-index-modal);
+  background: var(--train-ui-bg-color-overlay);
+}
+
+.train-modal__panel {
+  position: absolute;
+  inset: var(--train-ui-modal-inset);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: var(--train-ui-bg-color);
+  border-radius: var(--train-ui-radius-large);
+  box-shadow: var(--train-ui-shadow-dark);
+  color: var(--train-ui-text-color-primary);
+  overflow: hidden;
+  outline: none;
+  clip-path: inset(0 0 0 0 round var(--train-ui-radius-large));
+}
+
+.train-modal__panel.is-fullscreen {
+  inset: 0;
+  border-radius: 0;
+  clip-path: inset(0 0 0 0 round 0);
+}
+
+.train-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 14px 16px 14px 20px;
+  border-bottom: 1px solid var(--train-ui-border-color-lighter);
+}
+
+.train-modal__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--train-ui-font-size-xl);
+  font-weight: var(--train-ui-font-weight-bold);
+}
+
+.train-modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--train-ui-radius-round);
+  background: none;
+  color: var(--train-ui-text-color-secondary);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.train-modal__close:hover {
+  color: var(--train-ui-color-primary);
+  background: var(--train-ui-color-primary-light-9);
+}
+
+.train-modal__close:focus-visible {
+  outline: none;
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.train-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px;
+  overscroll-behavior: contain;
+}
+
+.train-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  border-top: 1px solid var(--train-ui-border-color-lighter);
+  background: var(--train-ui-fill-color-light);
+}
+
+/* 展開動畫：遮罩淡入，面板的可見範圍從中央一點往四邊撐開 */
+.train-modal-enter-active,
+.train-modal-leave-active {
+  transition: background-color var(--train-ui-modal-duration) ease;
+}
+
+.train-modal-enter-from,
+.train-modal-leave-to {
+  background-color: transparent;
+}
+
+.train-modal-enter-active .train-modal__panel,
+.train-modal-leave-active .train-modal__panel {
+  transition:
+    clip-path var(--train-ui-modal-duration) var(--train-ui-transition-ease),
+    opacity var(--train-ui-modal-duration) ease;
+}
+
+.train-modal-enter-from .train-modal__panel,
+.train-modal-leave-to .train-modal__panel {
+  opacity: 0;
+  clip-path: inset(50% 50% 50% 50% round var(--train-ui-radius-large));
+}
+
+@media (max-width: 768px) {
+  .train-modal__panel {
+    inset: var(--train-ui-modal-inset-mobile);
+    border-radius: 0;
+    clip-path: inset(0 0 0 0 round 0);
+  }
+
+  .train-modal-enter-from .train-modal__panel,
+  .train-modal-leave-to .train-modal__panel {
+    clip-path: inset(50% 50% 50% 50% round 0);
+  }
+
+  .train-modal__header {
+    padding: 10px 10px 10px 16px;
+  }
+
+  .train-modal__body {
+    padding: 14px 16px;
+  }
+
+  .train-modal__footer {
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .train-modal-enter-active .train-modal__panel,
+  .train-modal-leave-active .train-modal__panel {
+    transition: opacity 0.15s ease;
+  }
+
+  .train-modal-enter-from .train-modal__panel,
+  .train-modal-leave-to .train-modal__panel {
+    clip-path: inset(0 0 0 0 round 0);
+  }
+}

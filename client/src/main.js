@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
 import { config } from './config'
+import TrainUI from './train_ui_frame'
 import './assets/main.css'
 
 // 選用的流量分析（VITE_GA_ID 有設定才載入）
@@ -22,6 +23,7 @@ if (config.gaId && typeof document !== 'undefined') {
 
 const app = createApp(App)
 app.use(createPinia())
+app.use(TrainUI)
 app.use(i18n)
 app.use(router)
 app.mount('#app')

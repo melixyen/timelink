@@ -26,6 +26,16 @@ const remoteExtra = computed(() => {
 
 const rows = computed(() => [...local.value, ...remoteExtra.value])
 
+const columns = computed(() => [
+  { key: 'name', label: t('stations.col.name'), class: 'strong' },
+  { key: 'en', label: t('stations.col.en'), class: 'muted' },
+  { key: 'system', label: t('stations.col.system') },
+  { key: 'code', label: t('stations.col.code'), class: 'mono' },
+  { key: 'lines', label: t('stations.col.lines') },
+])
+
+const lineUid = (line) => (typeof line === 'string' ? line : line.LineUID)
+
 let timer = null
 watch(keyword, (val) => {
   clearTimeout(timer)
@@ -48,47 +58,40 @@ onMounted(() => {
 
 <template>
   <div class="page">
-    <section class="panel">
-      <h2 class="panel-title">
+    <train-card>
+      <template #header>
         {{ t('stations.title') }}
         <span class="result-count">{{ t('stations.count', { count: rows.length }) }}</span>
-      </h2>
+      </template>
 
-      <div class="control-row">
-        <input v-model="keyword" class="search-input" type="search" :placeholder="t('stations.search')" />
-        <span v-if="stationStore.loading" class="hint">{{ t('common.loading') }}</span>
-        <span v-else-if="stationStore.error" class="error-text">{{ stationStore.error }}</span>
+      <div class="control-row first">
+        <train-input
+          v-model="keyword"
+          class="search-input"
+          type="search"
+          prefix-icon="search"
+          clearable
+          :placeholder="t('stations.search')"
+        />
+        <train-spinner v-if="stationStore.loading" :text="t('common.loading')" />
+        <train-alert v-else-if="stationStore.error" type="error" simple>{{ stationStore.error }}</train-alert>
       </div>
 
-      <div class="table-scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ t('stations.col.name') }}</th>
-              <th>{{ t('stations.col.en') }}</th>
-              <th>{{ t('stations.col.system') }}</th>
-              <th>{{ t('stations.col.code') }}</th>
-              <th>{{ t('stations.col.lines') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="s in rows" :key="s.StationUID">
-              <td class="strong">{{ nameOf(s.StationName) }}</td>              <td class="muted">{{ s.StationName?.En }}</td>
-              <td><span class="badge">{{ infoStore.systemName(s.System) }}</span></td>
-              <td class="mono">{{ s.StationID }}</td>
-              <td>
-                <span
-                  v-for="line in s.Lines || []"
-                  :key="typeof line === 'string' ? line : line.LineUID"
-                  class="line-badge"
-                  :style="{ background: lineStore.lineColor(typeof line === 'string' ? line : line.LineUID) }"
-                  >{{ lineStore.lineName(typeof line === 'string' ? line : line.LineUID) }}</span
-                >
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+      <train-table :columns="columns" :data="rows" row-key="StationUID" table-class="data-table">
+        <template #cell-name="{ row }">{{ nameOf(row.StationName) }}</template>
+        <template #cell-en="{ row }">{{ row.StationName?.En }}</template>
+        <template #cell-system="{ row }">
+          <train-tag>{{ infoStore.systemName(row.System) }}</train-tag>
+        </template>
+        <template #cell-code="{ row }">{{ row.StationID }}</template>
+        <template #cell-lines="{ row }">
+          <span class="tag-list">
+            <train-tag v-for="line in row.Lines || []" :key="lineUid(line)" :color="lineStore.lineColor(lineUid(line))">
+              {{ lineStore.lineName(lineUid(line)) }}
+            </train-tag>
+          </span>
+        </template>
+      </train-table>
+    </train-card>
   </div>
 </template>

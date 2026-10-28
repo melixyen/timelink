@@ -101,6 +101,14 @@ function headSign(leg) {
   return ''
 }
 
+const columns = computed(() => [
+  { key: 'sect', label: t('journey.col.leg'), class: 'sect' },
+  { key: 'time', label: t('journey.col.time'), class: 'time' },
+  { key: 'station', label: t('journey.col.station'), class: 'station' },
+  { key: 'info', label: t('journey.col.info'), class: 'info' },
+  { key: 'line', label: t('journey.col.line'), class: 'line' },
+])
+
 const routeText = computed(() =>
   buildRouteText(props.journey, {
     t,
@@ -128,89 +136,64 @@ const routeText = computed(() =>
         {{ t('journey.endTime') }}: <span class="val">{{ journey.ArrivalTime }}</span>
       </div>
       <div v-if="tagLabels.length" class="tags">
-        <span v-for="label in tagLabels" :key="label" class="tag">{{ label }}</span>
+        <train-tag v-for="label in tagLabels" :key="label" effect="dark">{{ label }}</train-tag>
       </div>
     </div>
 
     <div class="route-text">{{ routeText }}</div>
 
-    <div class="table-scroll">
-      <table class="journey-table">
-        <thead>
-          <tr>
-            <th class="sect">{{ t('journey.col.leg') }}</th>
-            <th class="time">{{ t('journey.col.time') }}</th>
-            <th class="station">{{ t('journey.col.station') }}</th>
-            <th class="info">{{ t('journey.col.info') }}</th>
-            <th class="line">{{ t('journey.col.line') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(leg, i) in legs" :key="i">
-            <td class="sect">{{ i + 1 }}</td>
+    <train-table :columns="columns" :data="legs" table-class="journey-table">
+      <template #cell-sect="{ index: i }">{{ i + 1 }}</template>
 
-            <td class="time">
-              <TimeBox
-                v-if="leg.Type === 'ride'"
-                type="ride"
-                :departure-time="leg.DepartureTime"
-                :arrival-time="leg.ArrivalTime"
-                :duration="formatDuration(leg.TravelMinutes)"
-              />
-              <TimeBox
-                v-else
-                type="walk"
-                :walk-text="t('journey.walkShort', { min: leg.Minutes })"
-              />
-            </td>
+      <template #cell-time="{ row: leg }">
+        <TimeBox
+          v-if="leg.Type === 'ride'"
+          type="ride"
+          :departure-time="leg.DepartureTime"
+          :arrival-time="leg.ArrivalTime"
+          :duration="formatDuration(leg.TravelMinutes)"
+        />
+        <TimeBox v-else type="walk" :walk-text="t('journey.walkShort', { min: leg.Minutes })" />
+      </template>
 
-            <td class="station">
-              <StationBox
-                :from-name="nameOf(leg.From?.StationName)"
-                :to-name="nameOf(leg.To?.StationName)"
-                :color="legColor(leg)"
-                :rail="isRail(leg)"
-              />
-            </td>
+      <template #cell-station="{ row: leg }">
+        <StationBox
+          :from-name="nameOf(leg.From?.StationName)"
+          :to-name="nameOf(leg.To?.StationName)"
+          :color="legColor(leg)"
+          :rail="isRail(leg)"
+        />
+      </template>
 
-            <td class="info">
-              <div v-if="leg.Type === 'ride'" class="info-box">
-                <div v-if="trainLabel(leg)">{{ t('journey.trainNo') }}: {{ trainLabel(leg) }}</div>
-                <div v-if="trainClassText(leg)" :title="trainTypeFull(leg)">
-                  {{ t('journey.trainClass') }}: {{ trainClassText(leg) }}
-                </div>
-                <div v-if="headSign(leg)">{{ headSign(leg) }}</div>
-                <div v-if="typeof leg.Stops === 'number'">{{ t('journey.stops') }}: {{ leg.Stops }}</div>
-                <div v-if="leg.DataTier && leg.DataTier !== 'real'" class="derived">
-                  {{ t('journey.derived') }}
-                </div>
-              </div>
-              <div v-else class="info-box">
-                <div>{{ t('journey.walk', { min: leg.Minutes }) }}</div>
-                <a
-                  v-for="v in leg.Videos || []"
-                  :key="v.ID"
-                  class="video"
-                  :href="v.Url"
-                  :title="v.Title || ''"
-                  target="_blank"
-                  rel="noopener"
-                  >{{ t('journey.video') }}</a
-                >
-              </div>
-            </td>
+      <template #cell-info="{ row: leg }">
+        <div v-if="leg.Type === 'ride'" class="info-box">
+          <div v-if="trainLabel(leg)">{{ t('journey.trainNo') }}: {{ trainLabel(leg) }}</div>
+          <div v-if="trainClassText(leg)" :title="trainTypeFull(leg)">
+            {{ t('journey.trainClass') }}: {{ trainClassText(leg) }}
+          </div>
+          <div v-if="headSign(leg)">{{ headSign(leg) }}</div>
+          <div v-if="typeof leg.Stops === 'number'">{{ t('journey.stops') }}: {{ leg.Stops }}</div>
+          <div v-if="leg.DataTier && leg.DataTier !== 'real'" class="derived">
+            {{ t('journey.derived') }}
+          </div>
+        </div>
+        <div v-else class="info-box">
+          <div>{{ t('journey.walk', { min: leg.Minutes }) }}</div>
+          <train-link
+            v-for="v in leg.Videos || []"
+            :key="v.ID"
+            class="video"
+            :href="v.Url"
+            :title="v.Title || ''"
+            target="_blank"
+            >{{ t('journey.video') }}</train-link
+          >
+        </div>
+      </template>
 
-            <td class="line">
-              <span
-                v-if="leg.Type === 'ride'"
-                class="line-badge"
-                :style="{ background: legColor(leg), color: '#fff' }"
-                >{{ legLineName(leg) }}</span
-              >
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+      <template #cell-line="{ row: leg }">
+        <train-tag v-if="leg.Type === 'ride'" :color="legColor(leg)">{{ legLineName(leg) }}</train-tag>
+      </template>
+    </train-table>
   </div>
 </template>

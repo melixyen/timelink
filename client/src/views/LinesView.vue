@@ -37,15 +37,15 @@ onMounted(() => {
 
 <template>
   <div class="page">
-    <section class="panel">
-      <h2 class="panel-title">
+    <train-card>
+      <template #header>
         {{ t('lines.title') }}
         <span class="result-count">{{ t('lines.count', { count: lineStore.lines.length }) }}</span>
-      </h2>
+      </template>
 
       <div v-for="group in grouped" :key="group.id" class="line-group">
         <h3 class="group-title">
-          <span class="badge">{{ group.name }}</span>
+          <train-tag>{{ group.name }}</train-tag>
           <span class="count">{{ group.lines.length }}</span>
         </h3>
         <ul class="line-list">
@@ -63,31 +63,26 @@ onMounted(() => {
           </li>
         </ul>
       </div>
-    </section>
+    </train-card>
 
-    <section v-if="current" class="panel">
-      <h2 class="panel-title">
+    <train-card v-if="current">
+      <template #header>
         {{ nameOf(current.LineName) }}
         <span class="result-count">{{ current.LineUID }}</span>
-      </h2>
+      </template>
 
-      <div v-if="detailLoading" class="hint">{{ t('common.loading') }}</div>
-      <div v-else-if="detailError" class="error-text">{{ detailError }}</div>
+      <train-spinner v-if="detailLoading" :text="t('common.loading')" />
+      <train-alert v-else-if="detailError" type="error" simple>{{ detailError }}</train-alert>
       <ol v-else-if="detail" class="station-order">
         <li v-for="s in detail.Stations" :key="s.StationUID">
           <span class="seq">{{ s.Sequence }}</span>
           <span class="name">{{ nameOf(s.StationName) }}</span>
-          <span v-if="s.TrainChange" class="tag">{{ t('lines.canChange') }}</span>
-          <span
-            v-for="transfer in s.TransferLines || []"
-            :key="transfer"
-            class="line-badge"
-            :style="{ background: lineStore.lineColor(transfer) }"
-          >
+          <train-tag v-if="s.TrainChange" effect="dark" size="small">{{ t('lines.canChange') }}</train-tag>
+          <train-tag v-for="transfer in s.TransferLines || []" :key="transfer" :color="lineStore.lineColor(transfer)">
             {{ lineStore.lineName(transfer) }}
-          </span>
+          </train-tag>
         </li>
       </ol>
-    </section>
+    </train-card>
   </div>
 </template>

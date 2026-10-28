@@ -526,21 +526,61 @@ function appTripJourneys()
     $limit = appParamInt('limit', APP_JOURNEYS_LIMIT_DEFAULT, 1, APP_JOURNEYS_LIMIT_MAX);
     $opt = ['extra' => $extra, 'max_transfers' => appParam('max_transfers') !== null ? appParamInt('max_transfers', null, 0, APP_MAX_TRANSFERS_MAX) : null,
             'via' => appParam('via') !== null ? appStationParam('via') : null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'deeper' => appParamInt('deeper', min(appRouteSearch()['Deeper'], APP_DEEPER_MAX), 0, APP_DEEPER_MAX)];
-    list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt'));
+    $fixed = appParam('routes') !== null ? appJourneyFixedRoutes(appParam('routes'), $extra) : null;
+    list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed'));
     appSend($data, $meta);
 }
 
 /**
+ * journeys 的 routes 參數：逗號分隔的路由代碼（最多 APP_JOURNEY_ROUTES 條），只串接這幾條路由。
+ * 每條都要從 from 到 to；回傳 appJourneysCompute 的 fixed：[['route', 'legs'], ...]
+ */
+function appJourneyFixedRoutes($param, $extra)
+{
+    $db = appDb();
+    $m = appModel();
+    list($from, $to) = appFromTo();
+    $codes = array_values(array_unique(array_filter(array_map('trim', explode(',', $param)), 'strlen')));
+    if (!$codes || count($codes) > APP_JOURNEY_ROUTES) {
+        appFail(40023, ['detail' => 'routes 要給 1～' . APP_JOURNEY_ROUTES . ' 條路由代碼，以逗號分隔'], ['routes' => $param]);
+    }
+    // 起訖是別名站（臺北-環島）時，路由寫它代表的車站也算
+    $alias = appNoTransferStations();
+    $same = function ($a, $b) use ($alias) {
+        return $a === $b || (is_string($alias[$a] ?? null) && $alias[$a] === $b) || (is_string($alias[$b] ?? null) && $alias[$b] === $a);
+    };
+    $out = [];
+    foreach ($codes as $code) {
+        try {
+            $r = appRouteValidate(appRouteParse($code), $db, $m);
+        } catch (InvalidArgumentException $e) {
+            appFail(40023, ['detail' => $e->getMessage()], ['route' => $code]);
+        }
+        $conf = appRouteExtraConflicts($r, $extra);
+        if ($conf) {
+            appFail(40023, ['detail' => implode('；', $conf)], ['route' => $code]);
+        }
+        if (!$same($r['Stations'][0], $from) || !$same(end($r['Stations']), $to)) {
+            appFail(40023, ['detail' => '路由的起訖要與 from、to 相同'], ['route' => $code]);
+        }
+        $out[] = ['route' => appRouteFormat($r), 'legs' => $r['Legs']];
+    }
+    return $out;
+}
+
+/**
  * journeys 的計算（API 與路由回歸測試共用）。$q：from、to、extra、week、date、mode（depart／arrive／first／last）、
- * start、end（營運日分鐘）、sort、limit、opt（appCoreRoutes 的選項）。回傳 [data, meta]
+ * start、end（營運日分鐘）、sort、limit、opt（appCoreRoutes 的選項）、fixed（選填，指定的路由：不找路，
+ * 也不做跨路由的互不支配與繞遠排除，每條路由串得起來的班次都列）。回傳 [data, meta]
  */
 function appJourneysCompute(array $q)
 {
     extract($q);
+    $fixed = $q['fixed'] ?? null;
     $m = appModel();
     $back = $mode === 'arrive' || $mode === 'last';
     $t0 = microtime(true);
-    $routes = appCoreRoutes($m, $from, $to, $opt);
+    $routes = $fixed ?? appCoreRoutes($m, $from, $to, $opt);
     $d = &appRouterData($week);
     // 每條路由串接，收集所有旅程（同一組班次只留一個）
     $all = [];
@@ -555,8 +595,9 @@ function appJourneysCompute(array $q)
     }
     $all = array_values($all);
     // 互不支配：較晚（或同時）出發、較早（或同時）到達、轉乘不多於，且至少一項較好的方案淘汰其他
-    $keep = [];
-    foreach ($all as $i => $a) {
+    // 指定路由（fixed）時全部保留
+    $keep = $fixed !== null ? $all : [];
+    foreach ($fixed !== null ? [] : $all as $i => $a) {
         $dominated = false;
         foreach ($all as $k => $b) {
             if ($k === $i) {
@@ -574,7 +615,7 @@ function appJourneysCompute(array $q)
         }
     }
     // 明顯繞遠的不列：行車時間超過最短那個的 1.5 倍再多 30 分、轉乘又不比它少
-    if ($keep) {
+    if ($keep && $fixed === null) {
         $short = $keep[0];
         foreach ($keep as $j) {
             if ([$j['TravelMinutes'], $j['TransferCount']] < [$short['TravelMinutes'], $short['TransferCount']]) {
@@ -637,5 +678,6 @@ function appJourneysCompute(array $q)
        + appTimeWindowMeta($back ? 'arr' : 'dep', $start, $end)
        + ($back ? ['arrive_from' => appHM($start), 'arrive' => appHM($end)] : ['depart' => appHM($start)])
        + ['sort' => $sort]
-       + appExtraInfo($extra) + ['routes' => count($routes), 'seconds' => round(microtime(true) - $t0, 3)]];
+       + appExtraInfo($extra) + ['routes' => count($routes)] + ($fixed !== null ? ['fixed' => true] : [])
+       + ['seconds' => round(microtime(true) - $t0, 3)]];
 }

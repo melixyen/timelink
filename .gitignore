@@ -24,6 +24,9 @@ Thumbs.db
 *.tmp
 *.swp
 
+# Claude Code 的本機設定（launch.json 等）
+.claude/
+
 # 前端專案（client/ 層次往下）：相依套件、建置結果與本機設定
 client/node_modules/
 client/dist/

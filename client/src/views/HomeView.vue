@@ -17,8 +17,7 @@ onMounted(() => {
 
 <template>
   <div class="page home-page">
-    <section class="panel">
-      <h2 class="panel-title">{{ t('home.title') }}</h2>
+    <train-card :title="t('home.title')">
       <p>{{ t('home.intro') }}</p>
       <ul class="help-list">
         <li>
@@ -37,30 +36,28 @@ onMounted(() => {
           <b>{{ t('home.help.result.title') }}</b>{{ t('home.help.result.body') }}
         </li>
       </ul>
-    </section>
+    </train-card>
 
-    <section class="panel">
-      <h2 class="panel-title">{{ t('home.service.title') }}</h2>
+    <train-card :title="t('home.service.title')">
       <ul class="help-list">
         <li>{{ t('home.service.stations', { count: stationStore.stations.length }) }}</li>
         <li>{{ t('home.service.lines', { count: lineStore.lines.length }) }}</li>
         <li>{{ t('home.service.timetable') }}</li>
       </ul>
       <div class="quick-links">
-        <router-link class="btn primary" to="/search">{{ t('home.quick.search') }}</router-link>
-        <router-link class="btn ghost" to="/stations">{{ t('home.quick.stations') }}</router-link>
-        <router-link class="btn ghost" to="/lines">{{ t('home.quick.lines') }}</router-link>
+        <train-button type="primary" round to="/search">{{ t('home.quick.search') }}</train-button>
+        <train-button round to="/stations">{{ t('home.quick.stations') }}</train-button>
+        <train-button round to="/lines">{{ t('home.quick.lines') }}</train-button>
       </div>
-    </section>
+    </train-card>
 
-    <section class="panel">
-      <h2 class="panel-title">{{ t('home.source.title') }}</h2>
+    <train-card :title="t('home.source.title')">
       <i18n-t keypath="home.source.body" tag="p">
         <template #tdx>
-          <a :href="config.dataSourceUrl" target="_blank" rel="noopener">{{ config.dataSourceName }}</a>
+          <train-link :href="config.dataSourceUrl" target="_blank">{{ config.dataSourceName }}</train-link>
         </template>
         <template #license>
-          <a :href="config.licenseUrl" target="_blank" rel="noopener">{{ config.licenseName }}</a>
+          <train-link :href="config.licenseUrl" target="_blank">{{ config.licenseName }}</train-link>
         </template>
       </i18n-t>
       <p class="api-line">
@@ -69,6 +66,6 @@ onMounted(() => {
           >{{ config.apiBaseUrl }}/txapi/public_line/list</code
         >、<code>{{ config.apiBaseUrl }}/txapi/app_trip/journeys</code>
       </p>
-    </section>
+    </train-card>
   </div>
 </template>

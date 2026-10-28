@@ -59,6 +59,11 @@ export const envConfig = {
   defaultEndTime: str('VITE_DEFAULT_END_TIME', '09:00'),
   defaultWeek: parseWeek(env.VITE_DEFAULT_WEEK),
   defaultResultLimit: num('VITE_DEFAULT_RESULT_LIMIT', 10),
+  // 指定路由查詢：路由清單最多列幾條（後端上限 APP_ROUTES_LIMIT_MAX）、一次最多勾幾條（後端上限 APP_JOURNEY_ROUTES）、
+  // 回傳幾個方案（後端上限 APP_JOURNEYS_LIMIT_MAX）
+  routeListLimit: num('VITE_ROUTE_LIST_LIMIT', 50),
+  maxPickedRoutes: num('VITE_MAX_PICKED_ROUTES', 10),
+  pickedResultLimit: num('VITE_PICKED_RESULT_LIMIT', 50),
 
   // 限制
   maxRangeMinutes: num('VITE_MAX_RANGE_MINUTES', 180),
