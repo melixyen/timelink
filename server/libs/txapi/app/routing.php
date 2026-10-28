@@ -1245,20 +1245,59 @@ function appRouteVia(array $m, array $legs, $via)
     return false;
 }
 
+/**
+ * 營運單位的基本速度等級：路由清單轉乘次數相同時，經由等級高的排前面（高鐵 > 臺鐵 > 各縣市捷運 > 輕軌）。
+ * 沒列的系統（捷運）用 APP_ROUTE_SPEED_DEFAULT
+ */
+const APP_ROUTE_SPEED_RANK = ['THSR' => 4, 'TRA' => 3, 'NTDLRT' => 1, 'NTALRT' => 1, 'KLRT' => 1];
+const APP_ROUTE_SPEED_DEFAULT = 2;
+
+/**
+ * 路由的主幹：搭乘里程加總最多的系統（有一段算不出里程時改用行駛分鐘）。
+ * 例如臺北→高鐵苗栗→臺鐵豐富→高雄的主幹是臺鐵（高鐵 92 公里、臺鐵 263 公里）
+ */
+function appRouteMainSystem(array $legs)
+{
+    $km = [];
+    $mins = [];
+    $kmOk = true;
+    foreach ($legs as $l) {
+        if ($l['Type'] !== 'ride') {
+            continue;
+        }
+        $sys = $l['System'] ?? strtok($l['LineUID'], '-');
+        $kmOk = $kmOk && isset($l['DistanceKm']);
+        $km[$sys] = ($km[$sys] ?? 0) + (float) ($l['DistanceKm'] ?? 0);
+        $mins[$sys] = ($mins[$sys] ?? 0) + (float) ($l['EstimatedMinutes'] ?? 0);
+    }
+    $w = $kmOk ? $km : $mins;
+    if (!$w) {
+        return null;
+    }
+    arsort($w);
+    return array_key_first($w);
+}
+
+/** 路由主幹（appRouteMainSystem）的速度等級（APP_ROUTE_SPEED_RANK） */
+function appRouteSpeedRank(array $legs)
+{
+    $main = appRouteMainSystem($legs);
+    return $main === null ? 0 : (APP_ROUTE_SPEED_RANK[$main] ?? APP_ROUTE_SPEED_DEFAULT);
+}
+
 /** 營運業者保底時，主幹再依車種等級分開保底的系統（臺鐵：對號、非對號各要一條） */
 const APP_ROUTE_COVER_CLASS_SYSTEMS = ['TRA'];
 
 /**
  * 路由的營運業者鍵（保底用）：
  *   op:<系統>      每個搭乘段的系統（TRTC、NTMC、TRA、THSR…）
- *   main:<系統>    主幹：行駛分鐘加總最多的系統（跨縣市時是臺鐵或高鐵）
+ *   main:<系統>    主幹（appRouteMainSystem：里程最多的系統，跨縣市時是臺鐵或高鐵）
  *   main:TRA.express／main:TRA.local  主幹是臺鐵時：可搭對號（有對號段，或不限車種的直達段：長途直達車就是對號列車）／
  *                  全程非對號（區間車接力）
  */
 function appRouteCoverKeys(array $legs)
 {
     $keys = [];
-    $mins = [];
     $classes = [];
     foreach ($legs as $l) {
         if ($l['Type'] !== 'ride') {
@@ -1266,12 +1305,10 @@ function appRouteCoverKeys(array $legs)
         }
         $sys = $l['System'] ?? strtok($l['LineUID'], '-');
         $keys['op:' . $sys] = true;
-        $mins[$sys] = ($mins[$sys] ?? 0) + (float) ($l['EstimatedMinutes'] ?? 0);
         $classes[$sys][] = $l['Class'] ?? null;
     }
-    if ($mins) {
-        arsort($mins);
-        $main = array_key_first($mins);
+    $main = appRouteMainSystem($legs);
+    if ($main !== null) {
         $keys['main:' . $main] = true;
         if (in_array($main, APP_ROUTE_COVER_CLASS_SYSTEMS, true)) {
             $allLocal = array_unique($classes[$main]) === [APP_CLASS_LOCAL];
@@ -1515,10 +1552,20 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
         }
     }
     $out = array_values($out);
-    // 排序：轉乘次數 → 里程（繞遠的排後面；算不出里程的排最後）→ 估計分鐘。路由不排除繞遠的走法，真的比較快的由 journeys 依時刻挑出
+    // 排序：轉乘次數 → 經由的營運單位速度等級（高鐵 > 臺鐵 > 捷運 > 輕軌）→ 里程（繞遠的排後面；算不出里程的排最後）→ 估計分鐘。
+    // 路由不排除繞遠的走法，真的比較快的由 journeys 依時刻挑出
+    foreach ($out as &$r) {
+        $r['_speed'] = appRouteSpeedRank($r['legs']);
+    }
+    unset($r);
     usort($out, function ($a, $b) {
-        return [$a['TransferCount'], $a['DistanceKm'] ?? INF, $a['EstimatedMinutes']] <=> [$b['TransferCount'], $b['DistanceKm'] ?? INF, $b['EstimatedMinutes']];
+        return [$a['TransferCount'], -$a['_speed'], $a['DistanceKm'] ?? INF, $a['EstimatedMinutes']]
+           <=> [$b['TransferCount'], -$b['_speed'], $b['DistanceKm'] ?? INF, $b['EstimatedMinutes']];
     });
+    foreach ($out as &$r) {
+        unset($r['_speed']);
+    }
+    unset($r);
     $minKm = null;
     foreach ($out as $r) {
         if ($r['DistanceKm'] !== null && ($minKm === null || $r['DistanceKm'] < $minKm)) {

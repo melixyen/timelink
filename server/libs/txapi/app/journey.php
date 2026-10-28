@@ -614,25 +614,34 @@ function appJourneysCompute(array $q)
             $keep[] = $a;
         }
     }
-    // 明顯繞遠的不列：行車時間超過最短那個的 1.5 倍再多 30 分、轉乘又不比它少
-    if ($keep && $fixed === null) {
+    // 慢的方案：行車時間超過最短那個的 1.5 倍再多 30 分。轉乘又不比它少的明顯繞遠，不列（指定路由時照列）；
+    // 轉乘比較少而留下的（例如高鐵為主時的臺鐵直達），依抵達、行車時間、出發排序時一律排在其他方案後面
+    $slowOver = INF;
+    if ($keep) {
         $short = $keep[0];
         foreach ($keep as $j) {
             if ([$j['TravelMinutes'], $j['TransferCount']] < [$short['TravelMinutes'], $short['TransferCount']]) {
                 $short = $j;
             }
         }
-        $keep = array_values(array_filter($keep, function ($j) use ($short) {
-            return $j['TravelMinutes'] <= $short['TravelMinutes'] * 1.5 + 30 || $j['TransferCount'] < $short['TransferCount'];
-        }));
+        $slowOver = $short['TravelMinutes'] * 1.5 + 30;
+        if ($fixed === null) {
+            $keep = array_values(array_filter($keep, function ($j) use ($short, $slowOver) {
+                return $j['TravelMinutes'] <= $slowOver || $j['TransferCount'] < $short['TransferCount'];
+            }));
+        }
     }
-    // 排序與標籤
+    foreach ($keep as &$j) {
+        $j['_slow'] = $j['TravelMinutes'] > $slowOver;
+    }
+    unset($j);
+    // 排序與標籤（最少轉乘以外，慢的方案排在後面，也不會拿到最早到達、最短行車時間）
     $cmp = [
-        'arrival'   => function ($a, $b) { return [$a['ArrivalMinute'], $a['TransferCount'], -$a['DepartureMinute']] <=> [$b['ArrivalMinute'], $b['TransferCount'], -$b['DepartureMinute']]; },
+        'arrival'   => function ($a, $b) { return [$a['_slow'], $a['ArrivalMinute'], $a['TransferCount'], -$a['DepartureMinute']] <=> [$b['_slow'], $b['ArrivalMinute'], $b['TransferCount'], -$b['DepartureMinute']]; },
         'transfers' => function ($a, $b) { return [$a['TransferCount'], $a['ArrivalMinute']] <=> [$b['TransferCount'], $b['ArrivalMinute']]; },
-        'duration'  => function ($a, $b) { return [$a['TravelMinutes'], $a['TransferCount'], $a['DepartureMinute']] <=> [$b['TravelMinutes'], $b['TransferCount'], $b['DepartureMinute']]; },
+        'duration'  => function ($a, $b) { return [$a['_slow'], $a['TravelMinutes'], $a['TransferCount'], $a['DepartureMinute']] <=> [$b['_slow'], $b['TravelMinutes'], $b['TransferCount'], $b['DepartureMinute']]; },
         // 抵達時刻模式、末班沒給 sort 時：出發由晚到早（轉乘少、到達早的優先）
-        'late'      => function ($a, $b) { return [-$a['DepartureMinute'], $a['TransferCount'], $a['ArrivalMinute']] <=> [-$b['DepartureMinute'], $b['TransferCount'], $b['ArrivalMinute']]; },
+        'late'      => function ($a, $b) { return [$a['_slow'], -$a['DepartureMinute'], $a['TransferCount'], $a['ArrivalMinute']] <=> [$b['_slow'], -$b['DepartureMinute'], $b['TransferCount'], $b['ArrivalMinute']]; },
     ];
     $best = [];
     foreach (['Fastest' => 'arrival', 'ShortestTime' => 'duration', 'FewestTransfers' => 'transfers'] as $tag => $s) {
@@ -666,7 +675,7 @@ function appJourneysCompute(array $q)
             $tags[] = 'Direct';
         }
         $j['Tags'] = $tags;
-        unset($j['_sig']);
+        unset($j['_sig'], $j['_slow']);
     }
     unset($j);
     return [[

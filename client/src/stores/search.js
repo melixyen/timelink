@@ -95,15 +95,18 @@ export const useSearchStore = defineStore('search', () => {
       }
     })
     const groups = Array.from(map.values())
+    // 慢的路由（與後端相同：最短行車時間超過全部最短的 1.5 倍再多 30 分，例如高鐵為主時的臺鐵直達）排在後面
+    const shortest = Math.min(...groups.map((g) => g.minTravelMinutes))
     groups.forEach((g) => {
       g.journeys.sort((a, b) => (a.ArrivalMinute || 0) - (b.ArrivalMinute || 0))
+      g.slow = g.minTravelMinutes > shortest * 1.5 + 30
       // 以目前語言重組路徑說明
       g.text = buildRouteText(g.journeys[0], {
         t,
         lineName: (uid) => publicLine.lineName(uid),
       })
     })
-    groups.sort((a, b) => a.minArrivalMinute - b.minArrivalMinute)
+    groups.sort((a, b) => a.slow - b.slow || a.minArrivalMinute - b.minArrivalMinute)
     return groups
   })
 
