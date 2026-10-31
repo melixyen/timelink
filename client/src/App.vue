@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
@@ -7,7 +7,6 @@ import { config } from '@/config'
 import { usePublicInfoStore } from '@/stores/publicInfo'
 import { usePublicStationStore } from '@/stores/publicStation'
 import { usePublicLineStore } from '@/stores/publicLine'
-import { useIsMobile } from '@/utils/media'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -22,9 +21,10 @@ const navItems = [
   { to: '/lines', labelKey: 'nav.lines' },
 ]
 
-// 手機模式：導覽列與語言切換預設收合，點了才展開
-const isMobile = useIsMobile()
+// 手機模式：導覽列與語言切換預設收合，點了才展開（切換路由、按 Esc、點選單外面都會收合）
 const navOpen = ref(false)
+const headerEl = ref(null)
+const navToggleEl = ref(null)
 
 watch(
   () => route.path,
@@ -32,6 +32,40 @@ watch(
     navOpen.value = false
   },
 )
+
+function onKeydown(e) {
+  if (e.key !== 'Escape' || !navOpen.value) return
+  navOpen.value = false
+  navToggleEl.value?.$el?.focus?.()
+}
+
+function onPointerDown(e) {
+  if (navOpen.value && headerEl.value && !headerEl.value.contains(e.target)) navOpen.value = false
+}
+
+// 標題列實際高度寫到 CSS 變數 --app-header-height，讓下方 sticky 元素（例如收合的查詢列）貼齊，
+// 選單展開後標題列變高也會跟著更新
+let headerObserver = null
+function syncHeaderHeight() {
+  if (!headerEl.value) return
+  document.documentElement.style.setProperty('--app-header-height', `${headerEl.value.offsetHeight}px`)
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
+  document.addEventListener('pointerdown', onPointerDown)
+  syncHeaderHeight()
+  if (typeof ResizeObserver !== 'undefined') {
+    headerObserver = new ResizeObserver(syncHeaderHeight)
+    headerObserver.observe(headerEl.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
+  document.removeEventListener('pointerdown', onPointerDown)
+  headerObserver?.disconnect()
+})
 
 // 公共資料只載入一次，之後切路由不再重新請求
 onMounted(() => {
@@ -43,27 +77,30 @@ onMounted(() => {
 
 <template>
   <div class="app">
-    <header class="app-header" :class="{ 'is-open': navOpen }">
+    <header ref="headerEl" class="app-header" :class="{ 'is-open': navOpen }">
       <div class="brand">
         <router-link to="/" class="brand-link">
           {{ config.appName }} <span class="sub">{{ config.appSubtitle }}</span>
         </router-link>
       </div>
       <train-button
+        ref="navToggleEl"
         class="nav-toggle"
         size="small"
         round
         icon="menu"
-        :aria-expanded="navOpen"
+        aria-controls="app-nav app-header-right"
+        :aria-expanded="navOpen ? 'true' : 'false'"
         @click="navOpen = !navOpen"
       >
         {{ navOpen ? t('nav.close') : t('nav.menu') }}
-      </train-button>      <train-menu class="app-nav">
+      </train-button>
+      <train-menu id="app-nav" class="app-nav">
         <train-menu-item v-for="item in navItems" :key="item.to" :to="item.to">
           {{ t(item.labelKey) }}
         </train-menu-item>
       </train-menu>
-      <div class="header-right">
+      <div id="app-header-right" class="header-right">
         <LocaleSwitcher />
       </div>
     </header>

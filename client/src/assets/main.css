@@ -964,7 +964,8 @@ code {
   /* 查詢面板：收合時只留一行起訖站與左上角展開鈕（固定在畫面上方） */
   .query-collapsed {
     position: sticky;
-    top: 48px;
+    /* 標題列實際高度由 App.vue 量測後寫入（選單展開變高時也會更新） */
+    top: var(--app-header-height, 48px);
     z-index: 15;
     display: flex;
     align-items: center;

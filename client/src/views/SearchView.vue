@@ -28,7 +28,10 @@ const pickerOpen = ref(false)
  */
 const isMobile = useIsMobile()
 const panelOpen = ref(true)
-const panelCollapsed = computed(() => isMobile.value && search.searched && !panelOpen.value)
+// 查詢失敗時不收合：錯誤訊息在查詢面板裡，收起來就看不到了
+const panelCollapsed = computed(
+  () => isMobile.value && search.searched && !panelOpen.value && !search.error,
+)
 const fromName = computed(() => stationStore.stationName(form.from) || form.from)
 const toName = computed(() => stationStore.stationName(form.to) || form.to)
 
@@ -79,14 +82,19 @@ function syncUrl() {
 async function doSearch() {
   await search.run()
   syncUrl()
-  // 手機模式：查出結果後把查詢面板收起來，只留一行起訖站
-  if (isMobile.value) panelOpen.value = false
+  collapsePanelOnMobile()
 }
 
 /** 以「選擇路由」視窗勾選的路由重新查詢（空陣列＝回到全部路由） */
 async function searchRoutes(codes) {
   await search.searchWithRoutes(codes)
   syncUrl()
+  collapsePanelOnMobile()
+}
+
+/** 手機模式：查出結果後把查詢面板收起來，只留一行起訖站（查詢失敗時保持展開以顯示錯誤） */
+function collapsePanelOnMobile() {
+  if (isMobile.value && !search.error) panelOpen.value = false
 }
 
 const resultCount = computed(() => search.visibleJourneys.length)
@@ -259,9 +267,10 @@ onMounted(async () => {
       </train-alert>
 
       <QuickSort
+        v-if="search.journeys.length"
         v-model="search.quickSort"
         class="quick-sort-bar"
-        :disabled="search.loading || !search.journeys.length"
+        :disabled="search.loading"
       />
 
       <RouteFilter

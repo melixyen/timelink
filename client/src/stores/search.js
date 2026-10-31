@@ -152,15 +152,10 @@ export const useSearchStore = defineStore('search', () => {
     if (!mode) return list
     const cmp = quickCompare(mode, new Map(routeGroups.value.map((g) => [g.key, g.slow])))
     if (!cmp) return list
-    // 準則有差異時就排序；都一樣（排序沒有意義）時改用過濾：只留下被標記的那個方案
-    const keys = list.map((j) =>
-      mode === 'Fastest' ? j.ArrivalMinute : mode === 'ShortestTime' ? j.TravelMinutes : j.TransferCount,
-    )
-    if (new Set(keys).size > 1) {
-      return list.slice().sort(cmp)
-    }
-    const tagged = list.filter((j) => (j.Tags || []).includes(mode))
-    return tagged.length ? tagged : list
+    // 一律只排序、不過濾：主要準則都一樣時（例如全部直達）仍依次要準則排；
+    // 完全並列時，後端標記為該準則代表的方案排在最前面
+    const tagRank = (j) => ((j.Tags || []).includes(mode) ? 0 : 1)
+    return list.slice().sort((a, b) => cmp(a, b) || tagRank(a) - tagRank(b))
   })
 
   /** 只看最快的前 N 條路由（對應接軌時刻的 1 / 2 / 3 快速切換） */
