@@ -334,7 +334,8 @@ const APP_PASS_MAX = 40;
  * 相鄰兩個停靠站之間「通過」（不停）的車站：[k => [StationUID, ...]]，k 是前一個停靠站在 $stops 的索引，車站依行進方向排列。
  * 兩站之間的路線用 appTrainPath 找（與 Path 相同；臺鐵 TripLine 1 山線、2 海線），同一條路線上兩站之間的站都算通過；
  * 不停路線交會站時（例如不停八堵），交會站也算通過。
- * 只算有快慢車之分的系統（臺鐵、高鐵、機捷等，appClassHasSplit）：其他捷運、輕軌每站都停，路線站序也可能含支線，不補
+ * 只算有快慢車之分的系統（臺鐵、高鐵、機捷等，appClassHasSplit）：其他捷運、輕軌每站都停，路線站序也可能含支線，不補。
+ * 資料上的別名站（NoTransferStations 有 AliasOf 的，例如臺北-環島 TRA-1001＝臺北）是同一個車站的另一個站碼，不算通過
  */
 function appPassStations(array $m, $sys, array $stops, array $lineIds, $tripLine = 0)
 {
@@ -342,6 +343,10 @@ function appPassStations(array $m, $sys, array $stops, array $lineIds, $tripLine
     if (!in_array($sys, FINDER_TRAIN_SYSTEMS, true) && !appClassHasSplit($sys)) {
         return $out;
     }
+    $alias = appNoTransferStations();
+    $isAlias = function ($u) use ($alias) {
+        return is_string($alias[$u] ?? null);
+    };
     $n = count($stops);
     for ($k = 0; $k + 1 < $n; $k++) {
         $pass = [];
@@ -368,6 +373,7 @@ function appPassStations(array $m, $sys, array $stops, array $lineIds, $tripLine
                 }
             }
         }
+        $pass = array_values(array_filter($pass, function ($u) use ($isAlias) { return !$isAlias($u); }));
         if ($ok && $pass && count($pass) <= APP_PASS_MAX) {
             $out[$k] = $pass;
         }
