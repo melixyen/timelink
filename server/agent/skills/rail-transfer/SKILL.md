@@ -240,8 +240,11 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
   關鍵字要整個元素完全命中（名稱在第一個 `-` 之前）。解析與驗證在 `app/route.php`，`/txapi/public_info/route` 可直接檢查
 - 核心 B（`app/timetable.php` 的 appCoreDirect）：用 transferRouterData（與 transfer/route 同一份路網時刻）＋ transferFollowLeg 取兩站間每一班，取資料時就依 extra、class 排除；
   環狀線（高雄輕軌）兩個方向都到得了時，行車時間中位數超過最短方向 1.5 倍的方向不列
-- 班次代碼 `Train`：臺鐵、高鐵＝train_key（TRA-1132）；捷運整列車＝`SYS-LINE-R<sha1(mroute key) 前 8 碼>-<班>-w<星期>`；
-  營運路線（文湖線、臺中捷運等沒有真實站別時刻表的）＝`SYS-LINE-P<雜湊>-<站序>-<時刻群組>-<秒>-w<星期>`。單站時刻表的捷運班次用「時刻群組＋發車分鐘」對回整列車
+- 班次代碼 `RunCode`（帶給 app_train/stops）：臺鐵、高鐵＝train_key（TRA-1132）；捷運整列車＝`SYS-LINE-R<sha1(mroute key) 前 8 碼>-<班>-w<星期>`；
+  營運路線（文湖線、臺中捷運等沒有真實站別時刻表的）＝`SYS-LINE-P<雜湊>-<站序>-<時刻群組>-<秒>-w<星期>`。單站時刻表的捷運班次用「時刻群組＋發車分鐘」對回整列車。
+  `Train` 只放真實車次代碼（臺鐵、高鐵＝RunCode）；捷運沒有車次，`Train`、`TrainNo` 一律 null（系統編的代碼不能被前端當車次顯示）
+- 途中各站與通過站：journeys、route_trains 的搭乘段帶 `StopTimes`（appRideStopTimes：transferRideStops＋appPassStations 插入通過站 `Pass`＝true），只對最後回傳的方案算（appJourneyStops）；
+  app_train/stops 的 `pass=1` 同樣插入通過站。通過站只算 appClassHasSplit 的系統（臺鐵、高鐵、機捷），沿用 appTrainPath 找兩停靠站間的路線；其他捷運的 lineStations 含支線（見下），不補
 - 核心 A（`app/routing.php`）理念（使用者）：從路網與轉乘站推導所有可能，推導途中遇到排除條件就整串剪掉；**寫死的只能是通則**，其他取捨一律放設定檔（transfer_route_rules.json），能用排除名單做到的就編輯名單，不加死碼。
   - 路網 BFS：成本＝搭乘的系統段數（同一鐵路系統在交會站換線成本 0）；同一路線最多搭 Search.MaxLineUses（2）次，不分鐵路捷運（文湖線→板南線→文湖線、山線→海線→山線這類捷徑要能找到）；最多 Search.MaxLines 條路線；預設 deeper＝Search.Deeper。
   - 有支線的捷運路線（中和新蘆線蘆洲支線、淡水信義線新北投支線、松山新店線小碧潭支線）：appLinePaths 用 metro_travel 的營運路線站序，appRideStations 只在同一條站序上直接搭，跨支線回 null；appLineJunctions 找分岔站，BFS 給這種路線自連邊、在分岔站同站換車（蘆洲→大橋頭→三重）；兩段合起來能直接搭到的同線換車不列。transfer 模組的 lineStations 是一條直線（迴龍接三重國小、淡水接新北投），不能直接拿來切沿途車站。

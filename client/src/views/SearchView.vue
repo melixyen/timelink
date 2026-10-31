@@ -293,6 +293,7 @@ onMounted(async () => {
         :key="journey.route + '-' + journey.DepartureMinute + '-' + i"
         :journey="journey"
         :index="i"
+        :week="search.meta?.week ?? search.form.week"
       />
     </train-card>
 

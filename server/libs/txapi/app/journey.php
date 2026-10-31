@@ -309,6 +309,7 @@ function appJourneyOut(array &$d, array $r, array $chain, $week)
         $byFirst[$x['first']] = $x;
     }
     $skipUntil = -1;
+    $pars = [];   // 搭乘段在 Legs 的索引 → 搭乘段參考（appJourneyStops 補途中各站時刻用）
     foreach ($legs as $i => $leg) {
         if ($i <= $skipUntil) {
             continue;
@@ -321,6 +322,7 @@ function appJourneyOut(array &$d, array $r, array $chain, $week)
         }
         if (isset($byFirst[$i])) {
             $x = $byFirst[$i];
+            $pars[count($out)] = $x['par'];
             $out[] = ['Type' => 'ride'] + appRideOut($d, $x['par'], $x['arr'], $week, $x['class']);
             $skipUntil = $x['last'];
         }
@@ -337,7 +339,23 @@ function appJourneyOut(array &$d, array $r, array $chain, $week)
         'TransferCount'   => max(0, $rides - 1),
         'Legs'            => $out,
         '_sig'            => implode('>', array_map(function ($x) { return $x['vid']; }, $merged)),
+        '_pars'           => $pars,
     ];
+}
+
+/**
+ * 要輸出的方案：搭乘段補上途中各站時刻 StopTimes（上車站到下車站，含通過站，見 appRideStopTimes），並移除內部欄位 _pars。
+ * 串接時每個候選方案都會產生，所以只對最後要回傳的方案做；$withStops＝false 時只移除
+ */
+function appJourneyStops(array &$d, array $j, $withStops = true)
+{
+    if ($withStops) {
+        foreach ($j['_pars'] ?? [] as $i => $par) {
+            $j['Legs'][$i]['StopTimes'] = appRideStopTimes($d, $par);
+        }
+    }
+    unset($j['_pars']);
+    return $j;
 }
 
 /** 路由清單項目的輸出 */
@@ -494,8 +512,9 @@ function appTripRouteTrains()
     // by=arr：抵達時刻在時段內（反向串接，每個抵達取最晚出發的組合）
     $chains = $by === 'arr' ? appChainRouteBack($d, $r['Legs'], $extra, $start, $end) : appChainRoute($d, $r['Legs'], $extra, $start, $end);
     $out = [];
+    $withStops = appParamInt('stops', 1, 0, 1) === 1;
     foreach ($chains as $c) {
-        $j = appJourneyOut($d, $item, $c, $week);
+        $j = appJourneyStops($d, appJourneyOut($d, $item, $c, $week), $withStops);
         unset($j['_sig']);
         $out[] = $j;
     }
@@ -527,7 +546,8 @@ function appTripJourneys()
     $opt = ['extra' => $extra, 'max_transfers' => appParam('max_transfers') !== null ? appParamInt('max_transfers', null, 0, APP_MAX_TRANSFERS_MAX) : null,
             'via' => appParam('via') !== null ? appStationParam('via') : null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'deeper' => appParamInt('deeper', min(appRouteSearch()['Deeper'], APP_DEEPER_MAX), 0, APP_DEEPER_MAX)];
     $fixed = appParam('routes') !== null ? appJourneyFixedRoutes(appParam('routes'), $extra) : null;
-    list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed'));
+    $stops = appParamInt('stops', 1, 0, 1) === 1;
+    list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops'));
     appSend($data, $meta);
 }
 
@@ -571,12 +591,13 @@ function appJourneyFixedRoutes($param, $extra)
 /**
  * journeys 的計算（API 與路由回歸測試共用）。$q：from、to、extra、week、date、mode（depart／arrive／first／last）、
  * start、end（營運日分鐘）、sort、limit、opt（appCoreRoutes 的選項）、fixed（選填，指定的路由：不找路，
- * 也不做跨路由的互不支配與繞遠排除，每條路由串得起來的班次都列）。回傳 [data, meta]
+ * 也不做跨路由的互不支配與繞遠排除，每條路由串得起來的班次都列）、stops（選填，true＝搭乘段帶途中各站時刻 StopTimes）。回傳 [data, meta]
  */
 function appJourneysCompute(array $q)
 {
     extract($q);
     $fixed = $q['fixed'] ?? null;
+    $withStops = !empty($q['stops']);
     $m = appModel();
     $back = $mode === 'arrive' || $mode === 'last';
     $t0 = microtime(true);
@@ -676,6 +697,7 @@ function appJourneysCompute(array $q)
         }
         $j['Tags'] = $tags;
         unset($j['_sig'], $j['_slow']);
+        $j = appJourneyStops($d, $j, $withStops);
     }
     unset($j);
     return [[

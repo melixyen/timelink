@@ -202,8 +202,12 @@ function appRideOut(array &$d, array $par, $arrSec, $week, $class = null)
     $m = $d['m'];
     $class = $class ?? appRideClass($d, $par);
     $sys = $r['System'];
+    $code = appTrainCode($d, $par, $week);
     $out = [
-        'Train'         => appTrainCode($d, $par, $week),
+        // Train：真實的車次代碼（臺鐵、高鐵）；捷運沒有車次，給 null（系統自動編的班次代碼不是車次，不給前端當車次顯示）
+        // RunCode：查 app_train/stops 用的班次代碼（臺鐵、高鐵＝車次代碼；捷運＝系統編的代碼，只在同一份離線資料內有效）
+        'Train'         => $par[0] === 'trip' ? $code : null,
+        'RunCode'       => $code,
         'System'        => $sys,
         'LineUID'       => $r['LineUID'],
         'TrainNo'       => $r['TrainNo'] ?? null,
@@ -318,6 +322,92 @@ function appTrainPath(array $m, array $stops, array $lineIds, $tripLine = 0)
                 'From' => ['StationUID' => $p['From'], 'StationName' => $m['names'][$p['From']] ?? null],
                 'To' => ['StationUID' => $p['To'], 'StationName' => $m['names'][$p['To']] ?? null]];
     }, $out);
+}
+
+// ================================================================
+// 通過站
+
+/** 相鄰兩個停靠站之間最多補幾個通過站；超過的視為資料對不上（例如環狀線繞回首站），不補 */
+const APP_PASS_MAX = 40;
+
+/**
+ * 相鄰兩個停靠站之間「通過」（不停）的車站：[k => [StationUID, ...]]，k 是前一個停靠站在 $stops 的索引，車站依行進方向排列。
+ * 兩站之間的路線用 appTrainPath 找（與 Path 相同；臺鐵 TripLine 1 山線、2 海線），同一條路線上兩站之間的站都算通過；
+ * 不停路線交會站時（例如不停八堵），交會站也算通過。
+ * 只算有快慢車之分的系統（臺鐵、高鐵、機捷等，appClassHasSplit）：其他捷運、輕軌每站都停，路線站序也可能含支線，不補
+ */
+function appPassStations(array $m, $sys, array $stops, array $lineIds, $tripLine = 0)
+{
+    $out = [];
+    if (!in_array($sys, FINDER_TRAIN_SYSTEMS, true) && !appClassHasSplit($sys)) {
+        return $out;
+    }
+    $n = count($stops);
+    for ($k = 0; $k + 1 < $n; $k++) {
+        $pass = [];
+        $ok = true;
+        foreach (appTrainPath($m, [$stops[$k], $stops[$k + 1]], $lineIds, $tripLine) as $i => $p) {
+            $lu = $p['LineUID'];
+            $a = $m['stationLines'][$p['From']['StationUID']][$lu] ?? null;
+            $b = $m['stationLines'][$p['To']['StationUID']][$lu] ?? null;
+            if ($lu === null || $a === null || $b === null) {
+                $ok = false;
+                break;
+            }
+            if ($i > 0) {
+                $pass[] = $p['From']['StationUID'];   // 不停的路線交會站
+            }
+            $seq = $m['lineStations'][$lu];
+            if ($a < $b) {
+                for ($j = $a + 1; $j < $b; $j++) {
+                    $pass[] = $seq[$j];
+                }
+            } else {
+                for ($j = $a - 1; $j > $b; $j--) {
+                    $pass[] = $seq[$j];
+                }
+            }
+        }
+        if ($ok && $pass && count($pass) <= APP_PASS_MAX) {
+            $out[$k] = $pass;
+        }
+    }
+    return $out;
+}
+
+/**
+ * 停靠站清單（每項有 StationUID）插入通過站（appPassStations 的結果）：停靠站加 Pass＝false，
+ * 通過站是 {StationUID, StationName, ArrivalTime: null, DepartureTime: null, Pass: true}（沒有時刻）
+ */
+function appStopsWithPass(array $m, array $list, array $pass)
+{
+    $out = [];
+    foreach (array_values($list) as $k => $s) {
+        $out[] = $s + ['Pass' => false];
+        foreach ($pass[$k] ?? [] as $u) {
+            $out[] = ['StationUID' => $u, 'StationName' => $m['names'][$u] ?? null, 'ArrivalTime' => null, 'DepartureTime' => null, 'Pass' => true];
+        }
+    }
+    return $out;
+}
+
+/** 一個搭乘段（['trip'|'mrun'|'pattern', …]）上下車站之間的各站時刻（transferRideStops）並插入通過站 */
+function appRideStopTimes(array &$d, array $par)
+{
+    $list = transferRideStops($d, $par);
+    if ($par[0] === 'trip') {
+        $tr = $d['trips'][$par[1]];
+        $sys = $tr['system'];
+        $info = appTrainRows([$tr['key']])[$tr['key']]['info'] ?? [];
+        $lineIds = array_map(function ($l) use ($sys) { return $sys . '-' . $l; }, $info['LineIDs'] ?? []);
+        $tripLine = (int) ($info['TripLine'] ?? 0);
+    } else {
+        $x = $par[0] === 'mrun' ? $d['mroutes'][$par[1]] : $d['patterns'][$par[1]];
+        $sys = $x['system'];
+        $lineIds = [$sys . '-' . $x['line']];
+        $tripLine = 0;
+    }
+    return appStopsWithPass($d['m'], $list, appPassStations($d['m'], $sys, array_column($list, 'StationUID'), $lineIds, $tripLine));
 }
 
 // ================================================================
@@ -438,12 +528,14 @@ function actionAppTrip()
                      txapiUrl('app_trip', 'routes', ['from' => 'TRA-0950', 'to' => 'TRA-3300'])],
         'route_trains' => ['appTripRouteTrains', '帶入路由取列車組合：同一個路由在出發時段內所有串得起來的班次（每段核心 B → 串接）',
                      ['route' => '路由代碼（必填）', 'date' => 'YYYY-MM-DD（或 week）', 'start' => '時段起 HH:MM（省略為現在）', 'end' => '時段迄（預設 start＋系統最長查詢時段）',
-                      'by' => 'dep（出發時刻在時段內，預設）／arr（抵達時刻在時段內）', 'extra' => '排除位元 0～3'],
+                      'by' => 'dep（出發時刻在時段內，預設）／arr（抵達時刻在時段內）', 'extra' => '排除位元 0～3',
+                      'stops' => '1＝搭乘段帶途中各站時刻 StopTimes（預設）、0＝不帶'],
                      txapiUrl('app_trip', 'route_trains', ['route' => 'TRA-0950.TRA.local.TRA-1000.TRA.express.TRA-3300', 'week' => 1, 'start' => '08:00', 'end' => '10:00'])],
         'journeys' => ['appTripJourneys', '起訖站間各種轉乘列車組合：找出路由、每段取時刻、串接，依最早到達／最少轉乘／最短行車時間排序並加標籤（核心 A＋B）',
                      ['from' => '起站（必填）', 'to' => '迄站（必填）', 'date' => 'YYYY-MM-DD（或 week）', 'start' => '時段起 HH:MM（省略為現在）', 'end' => '時段迄（預設 start＋系統最長查詢時段；只給 end 時往前同樣長度）',
                       'by' => 'dep（出發時刻在時段內，預設）／arr（抵達時刻在時段內，反向串接）', 'first' => '1＝當天最早能到（不能與時段併用）', 'last' => '1＝當天最晚還能到',
-                      'extra' => '排除位元 0～3', 'sort' => 'arrival（預設）／transfers／duration', 'max_transfers' => '最多轉乘次數', 'via' => '經由車站', 'limit' => '最多幾個（1～' . APP_JOURNEYS_LIMIT_MAX . '，預設 ' . APP_JOURNEYS_LIMIT_DEFAULT . '）'],
+                      'extra' => '排除位元 0～3', 'sort' => 'arrival（預設）／transfers／duration', 'max_transfers' => '最多轉乘次數', 'via' => '經由車站', 'limit' => '最多幾個（1～' . APP_JOURNEYS_LIMIT_MAX . '，預設 ' . APP_JOURNEYS_LIMIT_DEFAULT . '）',
+                      'stops' => '1＝搭乘段帶途中各站時刻 StopTimes（預設）、0＝不帶'],
                      txapiUrl('app_trip', 'journeys', ['from' => 'TRA-0950', 'to' => 'TRA-1210', 'week' => 1, 'start' => '08:00', 'end' => '10:00'])],
     ]);
 }
@@ -559,7 +651,7 @@ function appStationDepartureRows($uid, array $f)
                    : appTrainClassByStops(appLineStationsOf($sys, ''), explode(',', (string) $r['stops']));
             $lines = array_map(function ($l) use ($sys) { return $sys . '-' . $l; }, $info['LineIDs'] ?? []);
             $out[] = [
-                'Train' => $r['train_key'], 'System' => $sys, 'LineUIDs' => $lines, 'TrainNo' => $info['TrainNo'] ?? '',
+                'Train' => $r['train_key'], 'RunCode' => $r['train_key'], 'System' => $sys, 'LineUIDs' => $lines, 'TrainNo' => $info['TrainNo'] ?? '',
                 'TrainType' => $r['train_type_code'] === '' ? null : ['Code' => $r['train_type_code'], 'Name' => $info['TrainTypeName'] ?? null],
                 'Class' => $class, 'ClassLabel' => appClassLabel($sys, $class),
                 'Direction' => (string) ($info['Direction'] ?? ''), 'HeadSign' => $info['TripHeadSign'] ?? '',
@@ -589,7 +681,7 @@ function appStationDepartureRows($uid, array $f)
             $tt = (string) $r['train_type_code'];
             $class = appClassHasSplit($sys) ? ($tt === '2' ? APP_CLASS_EXPRESS : APP_CLASS_LOCAL) : APP_CLASS_LOCAL;
             $out[] = [
-                'Train' => null, 'System' => $sys, 'LineUIDs' => [$line], 'TrainNo' => null,
+                'Train' => null, 'RunCode' => null, 'System' => $sys, 'LineUIDs' => [$line], 'TrainNo' => null,
                 'TrainType' => $tt !== '' ? ['Code' => $tt, 'Name' => $patterns[$r['pattern_id']] ?? ['Zh_tw' => FINDER_TRAIN_TYPES[(int) $tt] ?? '', 'En' => '']] : null,
                 'Class' => appClassHasSplit($sys) ? $class : null, 'ClassLabel' => appClassHasSplit($sys) ? appClassLabel($sys, $class) : null,
                 'Direction' => (string) $r['direction'], 'HeadSign' => $info['TripHeadSign'] ?? '', 'RouteID' => $info['RouteID'] ?? '',
@@ -600,13 +692,14 @@ function appStationDepartureRows($uid, array $f)
                 '_group' => $line . '|' . $r['direction'], '_gid' => (int) $r['group_id'], '_min' => (int) $r['sort_min'],
             ];
         }
-        // 班次代碼：對到路網時刻資料的整列車或營運路線（同一個時刻群組、同一分鐘發車），可再查 app_train/stops
+        // 班次代碼 RunCode：對到路網時刻資料的整列車或營運路線（同一個時刻群組、同一分鐘發車），可再查 app_train/stops；
+        // 捷運沒有車次，Train 維持 null
         if ($out) {
             $codes = appStationRunCodes($uid, $f['week']);
             $names = $m['names'];
             foreach ($out as &$e) {
                 $c = $codes[$e['_gid'] . '|' . $e['_min']] ?? null;
-                $e['Train'] = $c[0] ?? null;
+                $e['RunCode'] = $c[0] ?? null;
                 $e['NextStation'] = $c ? ['StationUID' => $c[1], 'StationName' => $names[$c[1]] ?? null] : null;
                 unset($e['_gid'], $e['_min']);
             }
@@ -786,7 +879,8 @@ function actionAppTrain()
 {
     appDispatch('app_train', [
         'stops' => ['appTrainStops', '列車各站時刻：停靠站與到離時刻、車種、起訖、行駛日；臺鐵、高鐵用車次代碼，捷運用其他 API 回傳的班次代碼',
-                    ['train' => '班次代碼（必填），例如 TRA-1132、THSR-1305，或 direct 回傳的捷運代碼', 'date' => 'YYYY-MM-DD（或 week；臺鐵、高鐵用來判斷當天有沒有行駛）'],
+                    ['train' => '班次代碼（必填），例如 TRA-1132、THSR-1305，或其他 API 回傳的 RunCode（捷運）', 'date' => 'YYYY-MM-DD（或 week；臺鐵、高鐵用來判斷當天有沒有行駛）',
+                     'pass' => '1＝在停靠站之間插入通過（不停）的車站（Pass＝true，沒有時刻）；只有臺鐵、高鐵等有快慢車之分的系統'],
                     txapiUrl('app_train', 'stops', ['train' => 'TRA-1132'])],
     ]);
 }
@@ -822,6 +916,7 @@ function appTrainStops()
     $stops = $db->all('SELECT seq, station_uid, arr, dep, sort_min, arr_src, dep_src FROM train_stop WHERE train_key = ? ORDER BY seq', [$row['train_key']]);
     $class = $sys === 'TRA' ? appTrainClassByType($row['train_type_code']) : appTrainClassByStops(appLineStationsOf($sys, ''), array_column($stops, 'station_uid'));
     $week = appParam('date') !== null || appParam('week') !== null ? appParamWeek()[0] : null;
+    $withPass = appParamInt('pass', 0, 0, 1) === 1;
     $n = count($stops);
     $list = [];
     foreach ($stops as $i => $s) {
@@ -832,16 +927,21 @@ function appTrainStops()
     $st = function ($u) use ($m) {
         return $u ? ['StationUID' => $u, 'StationName' => $m['names'][$u] ?? null] : null;
     };
+    $lineUids = array_map(function ($l) use ($sys) { return $sys . '-' . $l; }, json_decode($row['line_ids'], true) ?: []);
+    $list = appStopMinutes($list, $stops ? (int) $stops[0]['sort_min'] : null);
+    if ($withPass) {
+        $list = appStopsWithPass($m, $list, appPassStations($m, $sys, array_column($list, 'StationUID'), $lineUids, (int) ($info['TripLine'] ?? 0)));
+    }
     appSend([
-        'Train' => $row['train_key'], 'System' => $sys, 'TrainNo' => $row['train_no'],
+        'Train' => $row['train_key'], 'RunCode' => $row['train_key'], 'System' => $sys, 'TrainNo' => $row['train_no'],
         'TrainType' => $row['train_type_code'] === '' ? null : ['Code' => $row['train_type_code'], 'Name' => $info['TrainTypeName'] ?? null],
         'Class' => $class, 'ClassLabel' => appClassLabel($sys, $class),
         'Direction' => (string) $row['direction'], 'HeadSign' => $info['TripHeadSign'] ?? '', 'TripLine' => $info['TripLine'] ?? '',
-        'LineUIDs' => array_map(function ($l) use ($sys) { return $sys . '-' . $l; }, json_decode($row['line_ids'], true) ?: []),
+        'LineUIDs' => $lineUids,
         'Origin' => $st($info['StartingStationUID'] ?? ''), 'Destination' => $st($info['EndingStationUID'] ?? ''),
         'Weekdays' => appWeekdaysOf($row['weekmask']), 'ServiceDay' => json_decode($row['service_day'], true),
         'RunsOnWeek' => $week === null ? null : (((int) $row['weekmask'] & (1 << $week)) !== 0),
-        'Note' => $info['Note'] ?? '', 'count' => $n, 'Stops' => appStopMinutes($list, $stops ? (int) $stops[0]['sort_min'] : null),
+        'Note' => $info['Note'] ?? '', 'count' => $n, 'Stops' => $list,
     ], $week === null ? [] : ['week' => $week, 'weekday' => FINDER_WEEKDAYS[$week]]);
 }
 
@@ -883,14 +983,19 @@ function appTrainStopsMetro($code, array $mm)
         }
     }
     $m = $d['m'];
+    $list = appStopMinutes($list, intdiv($par[0] === 'mrun' ? $d['mroutes'][$par[1]]['trips'][$par[4]]['dep'][$par[2]] : $par[4][0], 60));
+    if (appParamInt('pass', 0, 0, 1) === 1) {
+        $list = appStopsWithPass($m, $list, appPassStations($m, $sys, array_column($list, 'StationUID'), [$sys . '-' . $line]));
+    }
     appSend([
-        'Train' => $code, 'System' => $sys, 'TrainNo' => null,
+        // 捷運沒有車次：Train、TrainNo 都是 null，班次代碼在 RunCode
+        'Train' => null, 'RunCode' => $code, 'System' => $sys, 'TrainNo' => null,
         'TrainType' => $ride['TrainType'] ? ['Code' => (string) $ride['TrainType'], 'Name' => ['Zh_tw' => FINDER_TRAIN_TYPES[$ride['TrainType']] ?? '', 'En' => '']] : null,
         'Class' => appClassHasSplit($sys) ? $class : null, 'ClassLabel' => appClassHasSplit($sys) ? appClassLabel($sys, $class) : null,
         'Direction' => (string) $ride['Direction'], 'RouteID' => $ride['RouteID'] ?? null, 'LineUIDs' => [$sys . '-' . $line],
         'Origin' => ['StationUID' => $list[0]['StationUID'], 'StationName' => $list[0]['StationName']],
         'Destination' => $ride['EndingStationUID'] ? ['StationUID' => $ride['EndingStationUID'], 'StationName' => $m['names'][$ride['EndingStationUID']] ?? null] : null,
         'Note' => $par[0] === 'pattern' ? '沒有真實站別時刻表的路線：從上車站起依發車與站間行駛時間推算' : '',
-        'count' => count($list), 'Stops' => appStopMinutes($list, intdiv($par[0] === 'mrun' ? $d['mroutes'][$par[1]]['trips'][$par[4]]['dep'][$par[2]] : $par[4][0], 60)),
+        'count' => count(array_filter($list, function ($s) { return empty($s['Pass']); })), 'Stops' => $list,
     ], ['week' => $week, 'weekday' => FINDER_WEEKDAYS[$week]]);
 }

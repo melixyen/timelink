@@ -798,6 +798,276 @@ code {
   font-size: var(--train-ui-font-size-sm);
 }
 
+.info-box .no-train {
+  color: var(--muted);
+}
+
+/* 「列車時刻」「列車資訊」欄：整格是按鈕，點下去開停靠站視窗 */
+.stops-trigger {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--train-ui-radius-base);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  transition: border-color var(--train-ui-transition-duration) var(--train-ui-transition-ease),
+    background-color var(--train-ui-transition-duration) var(--train-ui-transition-ease);
+}
+
+td.time .stops-trigger {
+  display: flex;
+  justify-content: center;
+}
+
+.stops-trigger:hover {
+  border-color: var(--train-ui-color-primary-light-5);
+  background: var(--train-ui-color-primary-light-9);
+}
+
+.stops-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--train-ui-focus-ring);
+}
+
+.journey-table .stops-trigger:hover .time-box .minute {
+  background: var(--train-ui-color-primary-light-9);
+}
+
+/* 停靠站視窗（TrainStopsModal） */
+.train-stops-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.train-stops-head .title {
+  font-weight: var(--train-ui-font-weight-bold);
+}
+
+.train-stops-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--train-ui-font-size-sm);
+  color: var(--train-ui-text-color-regular);
+}
+
+.train-stops-info .label {
+  color: var(--muted);
+}
+
+.train-stops-info .muted {
+  color: var(--muted);
+}
+
+.train-stops-info .ride {
+  flex-basis: 100%;
+  color: var(--fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.train-stops-hint,
+.train-stops-legend {
+  font-size: var(--train-ui-font-size-xs);
+  color: var(--muted);
+}
+
+.train-stops-hint {
+  margin-bottom: 6px;
+}
+
+.train-stops-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 10px;
+}
+
+.train-stops-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.train-stops-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 10px 0 4px;
+}
+
+/* 搭乘區間以外：降低不透明度 */
+.train-stops-row.is-outside {
+  opacity: 0.8;
+}
+
+/* 搭乘區間：醒目顯示 */
+.train-stops-row.is-ride {
+  background: var(--train-ui-color-primary-light-9);
+}
+
+.train-stops-row.is-board {
+  border-top-left-radius: var(--train-ui-radius-base);
+  border-top-right-radius: var(--train-ui-radius-base);
+}
+
+.train-stops-row.is-alight {
+  border-bottom-left-radius: var(--train-ui-radius-base);
+  border-bottom-right-radius: var(--train-ui-radius-base);
+}
+
+.train-stops-row.is-board .name,
+.train-stops-row.is-alight .name {
+  font-weight: var(--train-ui-font-weight-bold);
+}
+
+/* 左側的路線線條與停靠點 */
+.train-stops-row .mark {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.train-stops-row .mark::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  background: var(--train-ui-border-color);
+}
+
+.train-stops-row.is-ride .mark::before {
+  background: var(--line-color, var(--primary));
+}
+
+.train-stops-row.is-board .mark::before {
+  top: 50%;
+}
+
+.train-stops-row.is-alight .mark::before {
+  bottom: 50%;
+}
+
+/* 整班車時刻表裡，上車站以前、下車站以後的線條改回灰色（只在搭乘區間塗路線色） */
+.train-stops-row.is-board:not(:first-child) .mark::after,
+.train-stops-row.is-alight:not(:last-child) .mark::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  background: var(--train-ui-border-color);
+}
+
+.train-stops-row.is-board:not(:first-child) .mark::after {
+  top: 0;
+  bottom: 50%;
+}
+
+.train-stops-row.is-alight:not(:last-child) .mark::after {
+  top: 50%;
+  bottom: 0;
+}
+
+.train-stops-row:first-child .mark::before {
+  top: 50%;
+}
+
+.train-stops-row:last-child .mark::before {
+  bottom: 50%;
+}
+
+.train-stops-row .dot {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 3px solid var(--train-ui-border-color);
+  background: var(--card);
+}
+
+.train-stops-row.is-ride .dot {
+  border-color: var(--line-color, var(--primary));
+}
+
+.train-stops-row.is-board .dot,
+.train-stops-row.is-alight .dot {
+  width: 14px;
+  height: 14px;
+  background: var(--line-color, var(--primary));
+}
+
+/* 通過站：不畫停靠點、站名與文字淡一點 */
+.train-stops-row.is-pass {
+  min-height: 30px;
+}
+
+.train-stops-row.is-pass .dot {
+  width: 8px;
+  height: 2px;
+  border: 0;
+  border-radius: 0;
+  background: var(--muted);
+}
+
+.train-stops-row.is-pass .name,
+.train-stops-row .pass {
+  color: var(--muted);
+  font-size: var(--train-ui-font-size-sm);
+}
+
+.train-stops-row .name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px;
+}
+
+.train-stops-row .times {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.train-stops-row .time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.train-stops-row .time-label {
+  font-size: var(--train-ui-font-size-xs);
+  color: var(--muted);
+}
+
+.train-stops-row .time-value {
+  font-weight: 600;
+}
+
+.train-stops-row .time.estimate .time-value {
+  font-style: italic;
+  font-weight: 400;
+}
+
 /* 車站 / 路線頁 */
 .data-table .strong {
   font-weight: 600;

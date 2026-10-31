@@ -155,7 +155,8 @@ function appLineTimetable()
             }
         }
         $trains[] = [
-            'Train' => $c['code'], 'TrainNo' => $c['no'], 'TrainType' => $c['type'],
+            // 捷運沒有車次：Train 是 null，查 app_train/stops 用 RunCode
+            'Train' => $c['no'] === null ? null : $c['code'], 'RunCode' => $c['code'], 'TrainNo' => $c['no'], 'TrainType' => $c['type'],
             'Class' => appClassHasSplit($sys) ? $c['class'] : null, 'ClassLabel' => appClassHasSplit($sys) ? appClassLabel($sys, $c['class']) : null,
             'Origin' => $st($c['origin']), 'Destination' => $st($c['dest']),
             'DepartureMinute' => intdiv($c['t'], 60), 'SortMinute' => intdiv($c['key'], 60), 'ArrivalSortMinute' => intdiv($c['keyArr'], 60),

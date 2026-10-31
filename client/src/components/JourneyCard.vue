@@ -1,14 +1,17 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { formatMinute2HM, isLatinLocale, nameOf, buildRouteText } from '@/utils/format'
 import TimeBox from '@/components/TimeBox.vue'
 import StationBox from '@/components/StationBox.vue'
+import TrainStopsModal from '@/components/TrainStopsModal.vue'
 
 const props = defineProps({
   journey: { type: Object, required: true },
   index: { type: Number, default: 0 },
+  /** 查詢的星期（0～6）：停靠站視窗查 app_train/stops 時帶入 */
+  week: { type: [Number, String], default: null },
 })
 
 const { t } = useI18n()
@@ -46,11 +49,23 @@ function legLineName(leg) {
   return lineStore.lineName(leg.LineUID)
 }
 
+/**
+ * 車次：只顯示真實車次（臺鐵、高鐵的 TrainNo）。
+ * 捷運沒有車次（後端給 null；RunCode 是系統編的查詢代碼，不能當車次顯示），顯示「無車次資訊」
+ */
 function trainLabel(leg) {
   if (leg.Type !== 'ride') return ''
-  if (leg.TrainNo) return leg.TrainNo
-  if (leg.Train) return leg.Train
-  return ''
+  return leg.TrainNo || t('journey.noTrainNo')
+}
+
+/** 停靠站視窗：點「列車時刻」「列車資訊」欄開啟 */
+const stopsOpen = ref(false)
+const stopsLeg = ref(null)
+
+function openStops(leg) {
+  if (leg.Type !== 'ride') return
+  stopsLeg.value = leg
+  stopsOpen.value = true
 }
 
 /**
@@ -146,13 +161,20 @@ const routeText = computed(() =>
       <template #cell-sect="{ index: i }">{{ i + 1 }}</template>
 
       <template #cell-time="{ row: leg }">
-        <TimeBox
+        <button
           v-if="leg.Type === 'ride'"
-          type="ride"
-          :departure-time="leg.DepartureTime"
-          :arrival-time="leg.ArrivalTime"
-          :duration="formatDuration(leg.TravelMinutes)"
-        />
+          type="button"
+          class="stops-trigger"
+          :title="t('journey.openStops')"
+          @click="openStops(leg)"
+        >
+          <TimeBox
+            type="ride"
+            :departure-time="leg.DepartureTime"
+            :arrival-time="leg.ArrivalTime"
+            :duration="formatDuration(leg.TravelMinutes)"
+          />
+        </button>
         <TimeBox v-else type="walk" :walk-text="t('journey.walkShort', { min: leg.Minutes })" />
       </template>
 
@@ -166,8 +188,17 @@ const routeText = computed(() =>
       </template>
 
       <template #cell-info="{ row: leg }">
-        <div v-if="leg.Type === 'ride'" class="info-box">
-          <div v-if="trainLabel(leg)">{{ t('journey.trainNo') }}: {{ trainLabel(leg) }}</div>
+        <button
+          v-if="leg.Type === 'ride'"
+          type="button"
+          class="info-box stops-trigger"
+          :title="t('journey.openStops')"
+          @click="openStops(leg)"
+        >
+          <div>
+            {{ t('journey.trainNo') }}:
+            <span :class="{ 'no-train': !leg.TrainNo }">{{ trainLabel(leg) }}</span>
+          </div>
           <div v-if="trainClassText(leg)" :title="trainTypeFull(leg)">
             {{ t('journey.trainClass') }}: {{ trainClassText(leg) }}
           </div>
@@ -176,7 +207,7 @@ const routeText = computed(() =>
           <div v-if="leg.DataTier && leg.DataTier !== 'real'" class="derived">
             {{ t('journey.derived') }}
           </div>
-        </div>
+        </button>
         <div v-else class="info-box">
           <div>{{ t('journey.walk', { min: leg.Minutes }) }}</div>
           <train-link
@@ -195,5 +226,7 @@ const routeText = computed(() =>
         <train-tag v-if="leg.Type === 'ride'" :color="legColor(leg)">{{ legLineName(leg) }}</train-tag>
       </template>
     </train-table>
+
+    <TrainStopsModal v-model="stopsOpen" :leg="stopsLeg" :week="week" />
   </div>
 </template>

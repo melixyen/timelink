@@ -171,6 +171,7 @@ cp .env .env.local   # 本機想覆蓋時另存 .env.local（.env.local 不進�
 | 路線站序與轉乘 | `GET /txapi/public_line/detail?line=` |
 | 全站路線站序（一次取得，備援） | `GET /txapi/finder/rail_stations` |
 | 時刻表轉乘方案 | `GET /txapi/app_trip/journeys?from=&to=&week=&start=&end=&by=&sort=&extra=&limit=` |
+| 列車停靠站與時刻（停靠站視窗） | `GET /txapi/app_train/stops?train=<RunCode>&week=&pass=1` |
 
 查詢限制（後端限制）：同一 IP 每分鐘 60 次、每小時 1000 次；查詢時段最長 3 小時。
 
@@ -198,6 +199,7 @@ client/
 │  ├─ components/
 │  │  ├─ StationSelect.vue 可搜尋的車站下拉選單
 │  │  ├─ JourneyCard.vue   組合結果卡片（區段／時刻／車站／資訊／路線）
+│  │  ├─ TrainStopsModal.vue 列車停靠站與時刻視窗（點「列車時刻」「列車資訊」欄開啟）
 │  │  ├─ RouteFilter.vue   路徑勾選與最快 1／2／3 切換
 │  │  └─ LocaleSwitcher.vue 語言切換選單
 │  ├─ views/               HomeView / SearchView / StationsView / LinesView
@@ -214,6 +216,17 @@ client/
 - `/lines` 路線：全部路線清單，可展開站序
 
 查詢條件會寫入網址參數（`a`、`b`、`w`、`startTime`、`endTime`），複製網址即可重現同一組條件。
+
+### 停靠站視窗（`TrainStopsModal.vue`）
+
+結果表格的「列車時刻」「列車資訊」欄點下去，開啟該班車的停靠站與時刻：
+
+- 搭乘區間（上車站到下車站）用 journeys 一起回傳的 `StopTimes`（含通過站），與查詢結果的時刻一致
+- 開啟時再查 `app_train/stops?train=<RunCode>&pass=1` 取整班車時刻表：臺鐵、高鐵是全程，捷運是整列車或從上車站起；
+  搭乘區間醒目顯示，區間以外的車站 `opacity: 0.8`；查不到時只列搭乘區間
+- 有到站、離站兩個時刻時分開顯示（到／開），只有一個時只顯示那一個；通過（不停）的車站顯示「通過」；推算的時刻用斜體
+- 車次只顯示真實車次 `TrainNo`；捷運沒有車次（後端 `Train`、`TrainNo` 為 null），顯示「無車次資訊」。
+  `RunCode` 是查 `app_train/stops` 用的系統代碼，不顯示
 
 ## 資料來源
 
