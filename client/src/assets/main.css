@@ -753,14 +753,16 @@ code {
   align-items: center;
   justify-content: flex-start;
   gap: 2px;
-  white-space: nowrap;
   min-width: 64px;
 }
 
+/* 站名是重要資訊，不截斷：欄寬上限 96px，過長就換行顯示完整站名 */
 .station-box .value {
   max-width: 96px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.3;
 }
 
 .station-box .line-color {
