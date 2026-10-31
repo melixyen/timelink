@@ -125,6 +125,8 @@
   "stops.fullLine": "全区間の時刻表（乗車区間を強調表示）",
   "stops.estimate": "斜体は推算時刻です",
   "stops.passNote": "「通過」は列車が停車しない駅です",
+  "stops.metroEstimated": "地下鉄には列車ごとの時刻表がありません。乗車駅と降車駅のみ駅時刻表の時刻で、途中の駅は駅間の所要時間の比率で推算しているため、駅時刻表と異なる場合があります。",
+  "stops.metroSimulated": "この路線は駅時刻表自体も推算値のため、乗車駅の時刻も目安です。",
   "stations.title": "駅一覧",
   "stations.count": "全 {count} 駅",
   "stations.search": "駅名を検索（中国語・英語・ピンイン・駅コード）",

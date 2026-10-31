@@ -351,7 +351,7 @@ function transferFollowOutput(array &$d, array $parsed, array $c, $withStops = t
         $s = transferRideStep($d, $par, $arr);
         unset($s['_dep'], $s['_arr'], $s['_par']);
         if ($withStops) {
-            $s['StopTimes'] = transferRideStops($d, $par);
+            $s['StopTimes'] = transferRideStops($d, $par, $arr);
         }
         $s['FromStationName'] = $d['m']['names'][$s['FromStationUID']] ?? null;
         $s['ToStationName'] = $d['m']['names'][$s['ToStationUID']] ?? null;

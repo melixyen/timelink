@@ -309,7 +309,7 @@ function appJourneyOut(array &$d, array $r, array $chain, $week)
         $byFirst[$x['first']] = $x;
     }
     $skipUntil = -1;
-    $pars = [];   // 搭乘段在 Legs 的索引 → 搭乘段參考（appJourneyStops 補途中各站時刻用）
+    $pars = [];   // 搭乘段在 Legs 的索引 → [搭乘段參考, 下車站時刻]（appJourneyStops 補途中各站時刻用）
     foreach ($legs as $i => $leg) {
         if ($i <= $skipUntil) {
             continue;
@@ -322,7 +322,7 @@ function appJourneyOut(array &$d, array $r, array $chain, $week)
         }
         if (isset($byFirst[$i])) {
             $x = $byFirst[$i];
-            $pars[count($out)] = $x['par'];
+            $pars[count($out)] = [$x['par'], $x['arr']];
             $out[] = ['Type' => 'ride'] + appRideOut($d, $x['par'], $x['arr'], $week, $x['class']);
             $skipUntil = $x['last'];
         }
@@ -350,8 +350,8 @@ function appJourneyOut(array &$d, array $r, array $chain, $week)
 function appJourneyStops(array &$d, array $j, $withStops = true)
 {
     if ($withStops) {
-        foreach ($j['_pars'] ?? [] as $i => $par) {
-            $j['Legs'][$i]['StopTimes'] = appRideStopTimes($d, $par);
+        foreach ($j['_pars'] ?? [] as $i => list($par, $arr)) {
+            $j['Legs'][$i]['StopTimes'] = appRideStopTimes($d, $par, $arr);
         }
     }
     unset($j['_pars']);

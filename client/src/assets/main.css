@@ -875,6 +875,11 @@ td.time .stops-trigger {
   font-variant-numeric: tabular-nums;
 }
 
+.train-stops-metro {
+  margin-bottom: 10px;
+  font-size: var(--train-ui-font-size-sm);
+}
+
 .train-stops-hint,
 .train-stops-legend {
   font-size: var(--train-ui-font-size-xs);

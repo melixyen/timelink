@@ -125,6 +125,8 @@
   "stops.fullLine": "Full timetable; your ride is highlighted",
   "stops.estimate": "Times in italics are estimated",
   "stops.passNote": "\"Pass\" means the train does not stop at that station",
+  "stops.metroEstimated": "Metro lines have no per-train timetable: only the boarding and alighting stations use station timetable times. Times at the stations in between are estimated from the travel time between stations and may differ from the station timetables.",
+  "stops.metroSimulated": "The station timetables of this line are themselves estimated, so the boarding time is approximate too.",
   "stations.title": "Station list",
   "stations.count": "{count} stations",
   "stations.search": "Search station name (Chinese, English, pinyin, code)",

@@ -4,8 +4,9 @@
  *
  * 資料來源（依序）：
  *   1. 搭乘段本身的 StopTimes（journeys 一起回傳：上車站到下車站，含通過站 Pass＝true）
- *   2. GET /txapi/app_train/stops?train=<RunCode>&week=&pass=1：整班車的時刻表
- *      （臺鐵、高鐵是全程；捷運是整列車或從上車站起），開啟時才查
+ *   2. 臺鐵、高鐵：GET /txapi/app_train/stops?train=<RunCode>&week=&pass=1 取整班車的全程時刻表，開啟時才查
+ * 捷運、輕軌沒有整列車時刻表：只列搭乘區間，不查 app_train/stops；開頭標明只有上下車站是車站時刻表的時刻，
+ * 中間各站是依站間行駛時間比例推算（上車站的時刻表本身也是推算時另外說明）
  * 有整班車時刻表時全部列出：搭乘區間醒目顯示，區間以外的車站降低不透明度；
  * 搭乘區間優先用 StopTimes（與查詢結果的時刻一致）。查不到時只列搭乘區間；
  * 兩者都沒有（舊版後端）時只列上下車站。
@@ -45,10 +46,28 @@ let loadedCode = null // 已查過的代碼：重開同一班車不再查
 /** 查 app_train/stops 用的代碼：新版後端是 RunCode；舊版後端的 Train 也是同一個代碼 */
 const runCode = computed(() => props.leg?.RunCode || props.leg?.Train || '')
 
+/** 捷運、輕軌（臺鐵、高鐵以外）：沒有整列車時刻表，中間站是推算的 */
+const isMetro = computed(() => {
+  const leg = props.leg
+  if (!leg) return false
+  const sys = leg.System || String(leg.LineUID || '').split('-')[0]
+  return sys !== 'TRA' && sys !== 'THSR'
+})
+
+/** 上車站的時刻也是推算的（文湖線、臺中捷運等只有模擬站別時刻表的路線） */
+const boardEstimated = computed(() => {
+  const first = segmentRows.value[0]
+  return isMetro.value && !!first && ESTIMATE_SOURCES.has(first.Source)
+})
+
 async function load() {
   train.value = null
   failed.value = false
   loadedCode = runCode.value
+  if (isMetro.value) {
+    scrollToRide()
+    return
+  }
   if (!runCode.value) {
     failed.value = true
     return
@@ -225,6 +244,11 @@ const rideText = computed(() => {
         <div v-if="directionText">{{ directionText }}</div>
         <div class="ride">{{ rideText }}</div>
       </div>
+
+      <train-alert v-if="isMetro" type="warning" show-icon class="train-stops-metro">
+        <div>{{ t('stops.metroEstimated') }}</div>
+        <div v-if="boardEstimated">{{ t('stops.metroSimulated') }}</div>
+      </train-alert>
 
       <train-spinner v-if="loading" block :text="t('stops.loading')" />
       <template v-else>

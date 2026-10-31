@@ -125,6 +125,8 @@
   "stops.fullLine": "全程時刻表，搭乘區間以醒目顯示",
   "stops.estimate": "斜體為推算時刻",
   "stops.passNote": "「通過」為列車不停靠的車站",
+  "stops.metroEstimated": "捷運沒有整列車時刻表：只有上車站與下車站是車站時刻表的時刻，中間各站依站間行駛時間比例推算，可能與車站時刻表有誤差。",
+  "stops.metroSimulated": "這條路線的車站時刻表本身也是推算的，上車站時刻同樣僅供參考。",
   "stations.title": "車站清單",
   "stations.count": "共 {count} 站",
   "stations.search": "搜尋站名（中文、英文、拼音、站碼）",

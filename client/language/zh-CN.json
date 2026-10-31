@@ -125,6 +125,8 @@
   "stops.fullLine": "全程时刻表，乘车区间以醒目显示",
   "stops.estimate": "斜体为推算时刻",
   "stops.passNote": "“通过”为列车不停靠的车站",
+  "stops.metroEstimated": "地铁没有整列车时刻表：只有上车站与下车站是车站时刻表的时刻，中间各站按站间行驶时间比例推算，可能与车站时刻表有误差。",
+  "stops.metroSimulated": "这条线路的车站时刻表本身也是推算的，上车站时刻同样仅供参考。",
   "stations.title": "车站清单",
   "stations.count": "共 {count} 站",
   "stations.search": "搜寻站名（中文、英文、拼音、站码）",

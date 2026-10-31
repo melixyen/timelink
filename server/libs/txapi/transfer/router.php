@@ -807,18 +807,13 @@ function transferRideStepMRun(array &$d, array $par)
  * 搭乘段途中各站（含上下車站）的時刻：[['StationUID', 'StationName', 'ArrivalTime', 'DepartureTime', 'Source'], ...]
  *
  *   臺鐵、高鐵：列車時刻表的到離站時刻（Source＝timetable）
- *   捷運、輕軌：和站別時刻表串車推算整列車同樣的做法——
- *     1. 標準行車時間＝兩相鄰停靠站間的行駛時間，以兩站間直接的資料為主（起訖矩陣；S2STravelTime 的相鄰兩站），沒有才用路線站距表一站一站加起來（transferPatternTravel），
- *        再加這一站的停站時間（站別時刻表是離站時刻）
- *     2. 從上車站的發車時刻起逐站「前一站的離站時刻＋標準行車時間」，到該站真實站別時刻表（同路線、同方向、同終點或同方向、同車種）找相差 ±1 分鐘內最接近的一班
- *        （至少比前一站晚最短行車時間，transferRunMinDep）
- *        （TDX 有真實到站時間的系統比到站時刻，否則比離站時刻；停站久的站，例如機捷 A8 普通車等直達車 4 分鐘，離站比到站晚很多）
- *        （時刻表只到分鐘，以該分鐘的中間比較；環狀輕軌等時刻表常比推算早的系統再多容許 FINDER_TRIP_TOLERANCE 分鐘），
- *        對到就用時刻表的時刻（Source＝timetable）並從這裡接著推
- *     3. 對不到、或該站只有推算時刻（文湖線、臺中捷運）：用推算時刻（Source＝estimate），之後從推算時刻接著推
- *     中途站給離站時刻（有 TDX 真實到站時間時另給到站）；下車站給到站時刻（時刻表只有離站時以離站時刻代表到站，列車在下車站終止時用推算）
+ *   捷運、輕軌：TDX 沒有整列車時刻表，只有上車站、下車站的時刻有依據——
+ *     上車站＝上車站時刻表的發車；下車站＝這班車在下車站的時刻（整列車 runs.php 對到下車站時刻表的時刻；營運路線用 $arrSec，
+ *     沒給時＝發車＋行駛時間推算）；中間各站不參考各站時刻表，依站間行駛時間（transferPatternTravel，含停站）的比例
+ *     把上下車站之間的時間分配給各站（Source＝interpolated，只給離站時刻）。
+ *     各站時刻表可能有錯（例如新北環狀線景安與中和同一分鐘），而且文湖線、臺中捷運的站別時刻表本身就是推算的，所以中間站一律推算
  */
-function transferRideStops(array &$d, array $par)
+function transferRideStops(array &$d, array $par, $arrSec = null)
 {
     $names = $d['m']['names'];
     $hm = function ($s) { return $s === null ? null : transferHM($s); };
@@ -834,107 +829,71 @@ function transferRideStops(array &$d, array $par)
         return $out;
     }
     if ($par[0] === 'mrun') {
-        // 整列車：每站的時刻已在 runs.php 對好（timetable／interpolated／estimate）；到站與離站相同時只給離站（中途站）或到站（下車站）
         list(, $rk, $j0, $j1, $ti) = $par;
         $mr = $d['mroutes'][$rk];
         $t = $mr['trips'][$ti];
-        for ($i = $j0; $i <= $j1; $i++) {
-            $a = $i === $j0 ? null : $t['arr'][$i];
-            $out[] = ['StationUID' => $mr['st'][$i], 'StationName' => $names[$mr['st'][$i]] ?? null,
-                      'ArrivalTime' => $a === null || ($i < $j1 && $a === $t['dep'][$i]) ? null : $hm($a),
-                      'DepartureTime' => $i === $j1 ? null : $hm($t['dep'][$i]), 'Source' => $t['src'][$i]];
+        $st = array_slice($mr['st'], $j0, $j1 - $j0 + 1);
+        // 站間行駛時間用這班車所屬的營運路線（整列車的站序是營運路線的一段）
+        $p = $d['patterns'][$t['pk'] ?? ''] ?? null;
+        $k0 = null;
+        if ($p !== null) {
+            $n = count($mr['st']);
+            for ($k = 0; $k + $n <= count($p['st']); $k++) {
+                if (array_slice($p['st'], $k, $n) === $mr['st']) {
+                    $k0 = $k + $j0;
+                    break;
+                }
+            }
         }
-        return $out;
+        return transferRideStopsSpread($d, $st, $k0 === null ? null : $p, (int) $k0, $t['dep'][$j0], $t['arr'][$j1],
+                                       $t['src'][$j0], $t['src'][$j1]);
     }
     list(, $pk, $j0, $j1, $dep) = $par;
     $p = $d['patterns'][$pk];
     $g0 = $d['groupInfo'][$dep[1]];
-    // 上車那一班的車種代碼
-    $code = '';
-    foreach (transferStationDep($d, $p['st'][$j0])[$dep[1]] ?? [] as $x) {
-        if ($x[0] === $dep[0]) {
-            $code = $x[1];
-            break;
-        }
-    }
-    $tol = (int) (FINDER_TRIP_TOLERANCE[$p['system']] ?? 0);
-    $out[] = ['StationUID' => $p['st'][$j0], 'StationName' => $names[$p['st'][$j0]] ?? null, 'ArrivalTime' => null,
-              'DepartureTime' => $hm($dep[0]), 'Source' => $g0['source'] === 'timetable' ? 'timetable' : 'estimate'];
-    $cur = $dep[0];          // 前一站的時刻（秒；對到時刻表時是該分鐘的開始）
-    $curReal = $g0['source'] === 'timetable';
-    for ($j = $j0 + 1; $j <= $j1; $j++) {
-        $u = $p['st'][$j];
-        $last = $j === $j1;
-        $hit = null;
-        // 推算：前一站離站（時刻表的分鐘取中間 30 秒）＋兩站間行駛時間（＋這站停站）
-        $from = $cur + ($curReal ? 30 : 0);
-        $run = transferPatternTravel($d, $p, $j - 1, $j)[0];
-        $estArr = $from + $run;
-        $estDep = $estArr + max(0, $p['dep'][$j] - $p['arr'][$j]);
-        if (!($last && $g0['ending'] === $u)) {                      // 列車在這站終止：時刻表沒有這班的離站
-            $bestD = null;
-            $minDep = transferRunMinDep($cur, $estDep - $from);
-            foreach (transferStopTimetable($d, $u, $p['line'], $g0, $code) as $x) {
-                // 時刻表有真實到站時間時比到站（例如機捷 A8 普通車停站 4 分鐘等直達車，離站比到站晚很多），否則比離站
-                $diff = $x[2] !== null ? $x[2] + 30 - $estArr : $x[0] + 30 - $estDep;
-                // 不早於前一站，且至少隔最短行車時間（站別時刻表有錯、相鄰兩站同一分鐘時不採用，見 transferRunMinDep）
-                if ($diff < -90 - $tol * 60 || $x[0] < intdiv($cur, 60) * 60 || $x[0] < $minDep) {
-                    continue;
-                }
-                if ($diff > 90) {
-                    break;
-                }
-                if ($bestD === null || abs($diff) < $bestD) {
-                    $hit = $x;
-                    $bestD = abs($diff);
-                }
-            }
-        }
-        if ($hit !== null) {
-            $cur = $hit[0];
-            $curReal = true;
-            $out[] = ['StationUID' => $u, 'StationName' => $names[$u] ?? null,
-                      'ArrivalTime' => $last ? $hm($hit[2] ?? $hit[0]) : $hm($hit[2]),
-                      'DepartureTime' => $last ? null : $hm($hit[0]), 'Source' => 'timetable'];
-        } else {
-            $cur = $estDep;
-            $curReal = false;
-            $out[] = ['StationUID' => $u, 'StationName' => $names[$u] ?? null,
-                      'ArrivalTime' => $last ? $hm($estArr) : null, 'DepartureTime' => $last ? null : $hm($estDep), 'Source' => 'estimate'];
-        }
-    }
-    return $out;
+    $st = array_slice($p['st'], $j0, $j1 - $j0 + 1);
+    return transferRideStopsSpread($d, $st, $p, $j0, $dep[0], $arrSec, $g0['source'] === 'timetable' ? 'timetable' : 'estimate', 'estimate');
 }
 
 /**
- * 某站同一列車系列的真實站別時刻（已排序）：同路線、同方向、來源為真實時刻表、同車種（有標時），同終點
- * （環狀線等沒有終點、或這站沒有同終點的班次時只看同方向）
+ * 捷運搭乘段各站時刻：上車站 $dep、下車站 $arr（null＝發車＋行駛時間推算）固定，中間各站依站間行駛時間比例分配（Source＝interpolated）。
+ * $p＝營運路線、$k0＝$st[0] 在營運路線的索引（$p 為 null 時各站間隔視為相同）
  */
-function transferStopTimetable(array &$d, $u, $line, array $g0, $code = '')
+function transferRideStopsSpread(array &$d, array $st, $p, $k0, $dep, $arr, $depSrc, $arrSrc)
 {
-    $ck = $u . '|' . $line . '|' . $g0['ending'] . '|' . $g0['dir'] . '|' . $code;
-    if (isset($d['stopTT'][$ck])) {
-        return $d['stopTT'][$ck];
+    $names = $d['m']['names'];
+    $m = count($st);
+    // 累計行駛時間（中間站含停站）
+    $cum = [0];
+    for ($i = 1; $i < $m; $i++) {
+        $seg = 60;
+        if ($p !== null) {
+            $seg = max(1, (int) transferPatternTravel($d, $p, $k0 + $i - 1, $k0 + $i)[0]);
+            if ($i < $m - 1) {
+                $seg += max(0, $p['dep'][$k0 + $i] - $p['arr'][$k0 + $i]);
+            }
+        }
+        $cum[$i] = $cum[$i - 1] + $seg;
     }
-    $strict = [];
-    $byDir = [];
-    foreach (transferStationDep($d, $u) as $gid => $list) {
-        $g = $d['groupInfo'][$gid];
-        if ($g['source'] !== 'timetable' || $g['line'] !== $line || ($g['dir'] !== '' && $g0['dir'] !== '' && $g['dir'] !== $g0['dir'])) {
-            continue;
-        }
-        if ($code !== '') {
-            $list = array_values(array_filter($list, function ($x) use ($code) { return $x[1] === '' || $x[1] === $code; }));
-        }
-        if ($g0['ending'] !== '' && $g['ending'] === $g0['ending']) {
-            array_push($strict, ...$list);
-        } elseif ($g['dir'] !== '' && $g['dir'] === $g0['dir']) {
-            array_push($byDir, ...$list);
+    $total = $cum[$m - 1];
+    if ($arr === null) {
+        $arr = $dep + $total;
+        $arrSrc = 'estimate';
+    }
+    $arr = max($arr, $dep);
+    $out = [];
+    foreach ($st as $i => $u) {
+        if ($i === 0) {
+            $out[] = ['StationUID' => $u, 'StationName' => $names[$u] ?? null, 'ArrivalTime' => null, 'DepartureTime' => transferHM($dep), 'Source' => $depSrc];
+        } elseif ($i === $m - 1) {
+            $out[] = ['StationUID' => $u, 'StationName' => $names[$u] ?? null, 'ArrivalTime' => transferHM($arr), 'DepartureTime' => null, 'Source' => $arrSrc];
+        } else {
+            // 時刻表只到分鐘：兩端各取該分鐘的中間（＋30 秒）再按比例分配
+            $tSec = (int) round($dep + 30 + ($arr - $dep) * ($total > 0 ? $cum[$i] / $total : $i / ($m - 1)));
+            $out[] = ['StationUID' => $u, 'StationName' => $names[$u] ?? null, 'ArrivalTime' => null, 'DepartureTime' => transferHM($tSec), 'Source' => 'interpolated'];
         }
     }
-    $list = $strict ?: $byDir;
-    usort($list, function ($a, $b) { return $a[0] <=> $b[0]; });
-    return $d['stopTT'][$ck] = $list;
+    return $out;
 }
 
 /** 方案的搭乘段補上途中各站時刻（StopTimes），並移除內部欄位 _par；$withStops = false 時只移除 */
@@ -943,7 +902,7 @@ function transferAddStops(array &$d, array &$steps, $withStops = true)
     foreach ($steps as &$s) {
         if (isset($s['_par'])) {
             if ($withStops) {
-                $s['StopTimes'] = transferRideStops($d, $s['_par']);
+                $s['StopTimes'] = transferRideStops($d, $s['_par'], $s['_arr'] ?? null);
             }
             unset($s['_par']);
         }

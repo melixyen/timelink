@@ -397,10 +397,10 @@ function appStopsWithPass(array $m, array $list, array $pass)
     return $out;
 }
 
-/** 一個搭乘段（['trip'|'mrun'|'pattern', …]）上下車站之間的各站時刻（transferRideStops）並插入通過站 */
-function appRideStopTimes(array &$d, array $par)
+/** 一個搭乘段（['trip'|'mrun'|'pattern', …]）上下車站之間的各站時刻（transferRideStops；$arrSec＝下車站時刻）並插入通過站 */
+function appRideStopTimes(array &$d, array $par, $arrSec = null)
 {
-    $list = transferRideStops($d, $par);
+    $list = transferRideStops($d, $par, $arrSec);
     if ($par[0] === 'trip') {
         $tr = $d['trips'][$par[1]];
         $sys = $tr['system'];
@@ -977,16 +977,18 @@ function appTrainStopsMetro($code, array $mm)
     if ($par === null) {
         appFail(40420, ['what' => '班次（捷運班次代碼只在同一份離線資料內有效，資料更新後請重新查詢）', 'id' => $code]);
     }
-    $stops = transferRideStops($d, $par);
-    // 營運路線的班次在終點站前就結束時，截到終點站
+    // 營運路線的班次在終點站前就結束時，只算到終點站（中間各站依站間行駛時間推算，見 transferRideStops）
     $ride = transferRideStep($d, $par, $par[0] === 'mrun' ? $d['mroutes'][$par[1]]['trips'][$par[4]]['arr'][$par[3]] : $par[4][0]);
+    if ($par[0] === 'pattern' && $ride['EndingStationUID']) {
+        $e = array_search($ride['EndingStationUID'], array_slice($d['patterns'][$par[1]]['st'], $par[2] + 1), true);
+        if ($e !== false) {
+            $par[3] = $par[2] + 1 + $e;
+        }
+    }
     $class = appRideClass($d, $par);
     $list = [];
-    foreach ($stops as $i => $s) {
+    foreach (transferRideStops($d, $par) as $i => $s) {
         $list[] = ['Sequence' => $i + 1] + $s;
-        if ($ride['EndingStationUID'] && $s['StationUID'] === $ride['EndingStationUID'] && $i > 0) {
-            break;
-        }
     }
     $m = $d['m'];
     $list = appStopMinutes($list, intdiv($par[0] === 'mrun' ? $d['mroutes'][$par[1]]['trips'][$par[4]]['dep'][$par[2]] : $par[4][0], 60));
@@ -1001,7 +1003,8 @@ function appTrainStopsMetro($code, array $mm)
         'Direction' => (string) $ride['Direction'], 'RouteID' => $ride['RouteID'] ?? null, 'LineUIDs' => [$sys . '-' . $line],
         'Origin' => ['StationUID' => $list[0]['StationUID'], 'StationName' => $list[0]['StationName']],
         'Destination' => $ride['EndingStationUID'] ? ['StationUID' => $ride['EndingStationUID'], 'StationName' => $m['names'][$ride['EndingStationUID']] ?? null] : null,
-        'Note' => $par[0] === 'pattern' ? '沒有真實站別時刻表的路線：從上車站起依發車與站間行駛時間推算' : '',
+        'Note' => $par[0] === 'pattern' ? '沒有真實站別時刻表的路線：從上車站起依發車與站間行駛時間推算'
+                                       : 'TDX 沒有捷運整列車時刻表：首末站是車站時刻表的時刻，中間各站依站間行駛時間比例推算',
         'count' => count(array_filter($list, function ($s) { return empty($s['Pass']); })), 'Stops' => $list,
     ], ['week' => $week, 'weekday' => FINDER_WEEKDAYS[$week]]);
 }
