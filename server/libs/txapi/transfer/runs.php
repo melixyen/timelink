@@ -4,7 +4,8 @@
  *
  *   有真實站別時刻表的路線（北捷文湖線以外、高捷、新北捷運、機捷、各輕軌）：
  *     從每一班發車起，沿營運路線逐站「前一站的時刻＋兩站間行駛時間（有直接資料用直接資料，否則一站一站加）」，
- *     到下一站真實時刻表找同路線、同方向、同終點、同車種、相差 ±1.5 分鐘內最接近、還沒被別班車用掉的一班（有真實到站時間的比到站），
+ *     到下一站真實時刻表找同路線、同方向、同終點、同車種、相差 ±1.5 分鐘內最接近、還沒被別班車用掉的一班（有真實到站時間的比到站；
+ *     至少要比前一站晚最短行車時間 transferRunMinDep，TDX 站別時刻表有相鄰兩站同一分鐘的錯誤資料時不採用），
  *     對到就用時刻表的時刻並從那裡接著推，一直串到這班車的終點站。每一站的時刻：
  *       timetable     對到時刻表
  *       interpolated  沒對到，但前後都有對到：按兩站間行駛時間的比例分配前後兩個時刻表時刻之間的時間（兩端都是真實時刻，誤差不累積）
@@ -195,19 +196,20 @@ function transferChainRun(array &$d, array $p, $j0, array $dep, array &$used)
         $estArr = $from + $seg;
         $estDep = $estArr + $dwell;
         $hit = null;
+        $minDep = transferRunMinDep($cur, $seg + $dwell);
         if ($j < $end || $g0['ending'] !== $u) {
-            $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, $estArr, $estDep, $used);
+            $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, $estArr, $estDep, $used, 90, false, $minDep);
             // 對不到：這一段的行駛時間資料可能和時刻表不一致（例如高捷 O12→O13 資料 4.3 分、時刻表 2 分），
             // 改用兩站時刻表本身的發車時間差（眾數）再對一次
             if ($hit === null && $curReal) {
                 $mode = transferRunSegmentMode($d, $p['st'][$j - 1], $u, $p, $g0, $code, $seg + $dwell);
                 if ($mode !== null && abs($mode * 60 - ($seg + $dwell)) >= 60) {
-                    $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, null, $cur + 30 + $mode * 60, $used);
+                    $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, null, $cur + 30 + $mode * 60, $used, 90, false, $minDep);
                 }
             }
             // 還是對不到（例如深夜班距拉長、時刻表的行駛時間和白天不同）：班距夠大、最接近的一班明顯比前後班都近時（相差不到前後班距的 1/3，且 10 分鐘內）才採用
             if ($hit === null && $curReal) {
-                $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, $estArr, $estDep, $used, 600, true);
+                $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, $estArr, $estDep, $used, 600, true, $minDep);
             }
         }
         $st[] = $u;
@@ -270,12 +272,30 @@ function transferChainRun(array &$d, array $p, $j0, array $dep, array &$used)
 }
 
 /**
- * 在 $u 站的真實時刻表找這班車：同路線、同方向（雙方都有標時）、同終點（沒有就同方向其他終點）、同車種、還沒被用掉、不早於前一站；
+ * 相鄰兩站間最短行車時間：行駛時間資料（含停站）的這個比例；比它還快的時刻表時刻視為對到別班車或資料錯誤。
+ * 0.6：行駛時間 100 秒以上的區間不接受同一分鐘發車；下一分鐘發車可接受到 198 秒、隔兩分鐘到 298 秒
+ * （行駛時間資料比時刻表長的區間，例如高捷 O12→O13 資料 4.3 分、時刻表 2 分，仍對得到）
+ */
+const TRANSFER_RUN_MIN_TRAVEL_RATIO = 0.6;
+
+/**
+ * 下一站時刻表時刻（分鐘的開始，秒）的下限：前一站時刻 $cur 加上最短行車時間（行駛時間 $travel 秒 × TRANSFER_RUN_MIN_TRAVEL_RATIO），
+ * 時刻表只到分鐘，再寬限 59 秒。例如 TDX 新北環狀線往新北產業園區的景安、中和站別時刻表完全相同（同一分鐘發車），
+ * 景安→中和行駛約 2 分鐘，中和的同一分鐘不採用、改由前後對到的時刻內插；行駛時間不到 100 秒的短區間仍可同一分鐘
+ */
+function transferRunMinDep($cur, $travel)
+{
+    return (int) ceil($cur + TRANSFER_RUN_MIN_TRAVEL_RATIO * $travel) - 59;
+}
+
+/**
+ * 在 $u 站的真實時刻表找這班車：同路線、同方向（雙方都有標時）、同終點（沒有就同方向其他終點）、同車種、還沒被用掉、不早於前一站（且不早於 $minDep）；
  * 有真實到站時間且有給 $estArr 時比到站，否則比離站；時刻表只到分鐘，以該分鐘的中間（＋30 秒）比較，相差 $win 秒內（早的一側再多容許 $tol 分鐘）取最接近的。
  * $unambiguous：最接近的一班與推算的差要小於它前後班距的 1/3 才算（放寬 $win 時避免對到別班車）。
+ * $minDep：發車不能早於這個時刻（transferRunMinDep：前一站＋最短行車時間）。
  * 回傳 [[發車秒, 車種, 到站秒], 群組] 或 null
  */
-function transferRunMatch(array &$d, $u, array $p, array $g0, $code, $tol, $cur, $estArr, $estDep, array &$used, $win = 90, $unambiguous = false)
+function transferRunMatch(array &$d, $u, array $p, array $g0, $code, $tol, $cur, $estArr, $estDep, array &$used, $win = 90, $unambiguous = false, $minDep = null)
 {
     $hit = null;
     $bestD = null;
@@ -291,7 +311,7 @@ function transferRunMatch(array &$d, $u, array $p, array $g0, $code, $tol, $cur,
             }
             foreach ($list as $xi => $x) {
                 $diff = $x[2] !== null && $estArr !== null ? $x[2] + 30 - $estArr : $x[0] + 30 - $estDep;
-                if ($diff < -$win - $tol * 60 || $x[0] < intdiv($cur, 60) * 60) {
+                if ($diff < -$win - $tol * 60 || $x[0] < intdiv($cur, 60) * 60 || ($minDep !== null && $x[0] < $minDep)) {
                     continue;
                 }
                 if ($diff > $win) {

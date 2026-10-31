@@ -811,6 +811,7 @@ function transferRideStepMRun(array &$d, array $par)
  *     1. 標準行車時間＝兩相鄰停靠站間的行駛時間，以兩站間直接的資料為主（起訖矩陣；S2STravelTime 的相鄰兩站），沒有才用路線站距表一站一站加起來（transferPatternTravel），
  *        再加這一站的停站時間（站別時刻表是離站時刻）
  *     2. 從上車站的發車時刻起逐站「前一站的離站時刻＋標準行車時間」，到該站真實站別時刻表（同路線、同方向、同終點或同方向、同車種）找相差 ±1 分鐘內最接近的一班
+ *        （至少比前一站晚最短行車時間，transferRunMinDep）
  *        （TDX 有真實到站時間的系統比到站時刻，否則比離站時刻；停站久的站，例如機捷 A8 普通車等直達車 4 分鐘，離站比到站晚很多）
  *        （時刻表只到分鐘，以該分鐘的中間比較；環狀輕軌等時刻表常比推算早的系統再多容許 FINDER_TRIP_TOLERANCE 分鐘），
  *        對到就用時刻表的時刻（Source＝timetable）並從這裡接著推
@@ -872,10 +873,12 @@ function transferRideStops(array &$d, array $par)
         $estDep = $estArr + max(0, $p['dep'][$j] - $p['arr'][$j]);
         if (!($last && $g0['ending'] === $u)) {                      // 列車在這站終止：時刻表沒有這班的離站
             $bestD = null;
+            $minDep = transferRunMinDep($cur, $estDep - $from);
             foreach (transferStopTimetable($d, $u, $p['line'], $g0, $code) as $x) {
                 // 時刻表有真實到站時間時比到站（例如機捷 A8 普通車停站 4 分鐘等直達車，離站比到站晚很多），否則比離站
                 $diff = $x[2] !== null ? $x[2] + 30 - $estArr : $x[0] + 30 - $estDep;
-                if ($diff < -90 - $tol * 60 || $x[0] < intdiv($cur, 60) * 60) {   // 不早於前一站
+                // 不早於前一站，且至少隔最短行車時間（站別時刻表有錯、相鄰兩站同一分鐘時不採用，見 transferRunMinDep）
+                if ($diff < -90 - $tol * 60 || $x[0] < intdiv($cur, 60) * 60 || $x[0] < $minDep) {
                     continue;
                 }
                 if ($diff > 90) {
