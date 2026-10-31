@@ -61,6 +61,12 @@ code {
   flex-wrap: wrap;
 }
 
+/* 導覽切換鈕（手機模式才顯示） */
+.nav-toggle {
+  display: none;
+  margin-left: auto;
+}
+
 .brand-link {
   font-size: 20px;
   font-weight: 700;
@@ -438,6 +444,40 @@ code {
 .quick-hint {
   font-size: var(--train-ui-font-size-xs);
   color: var(--muted);
+}
+
+/* 查詢結果的快速排序列 */
+.quick-sort {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.quick-sort-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quick-sort-title {
+  font-weight: 600;
+}
+
+/* 按鈕組在容器內左右滑動，不會撐破畫面 */
+.quick-sort-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.quick-sort-scroll .train-button-group {
+  width: max-content;
+  max-width: none;
 }
 
 .route-list {
@@ -873,4 +913,86 @@ code {
     padding-left: 14px;
     padding-right: 14px;
   }
+
+  /* 標題列：品牌與切換鈕同一排，導覽與語言切換收合時不顯示 */
+  .app-header {
+    flex-wrap: nowrap;
+    gap: 10px;
+    padding: 8px 12px;
+  }
+
+  .app-header .brand {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .app-header .brand-link {
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .app-header .app-nav,
+  .app-header .header-right {
+    display: none;
+  }
+
+  .app-header.is-open {
+    flex-wrap: wrap;
+  }
+
+  .app-header.is-open .app-nav {
+    display: flex;
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .app-header.is-open .header-right {
+    display: flex;
+    order: 4;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* 查詢面板：收合時只留一行起訖站與左上角展開鈕（固定在畫面上方） */
+  .query-collapsed {
+    position: sticky;
+    top: 48px;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--train-ui-shadow-light);
+  }
+
+  .query-collapsed .collapsed-route {
+    font-size: var(--train-ui-font-size-sm);
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* 查詢面板滑出／滑入 */
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }

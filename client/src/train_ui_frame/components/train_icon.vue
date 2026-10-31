@@ -2,7 +2,7 @@
 /**
  * 線條圖示（24×24 viewBox，跟著文字顏色）。
  * name：close、check、minus、plus、caret-down、caret-up、arrow-right、search、swap、clock、
- *       route、filter、info、success、warning、error、loading
+ *       route、filter、info、success、warning、error、loading、menu
  */
 import { computed } from 'vue'
 
@@ -29,6 +29,7 @@ const PATHS = {
   warning: 'M12 3.5L2.5 20h19zM12 10v4.5M12 17v.5',
   error: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 9l6 6M15 9l-6 6',
   loading: 'M12 3a9 9 0 1 0 9 9',
+  menu: 'M4 7h16M4 12h16M4 17h16',
 }
 
 const d = computed(() => PATHS[props.name] || '')

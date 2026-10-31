@@ -56,6 +56,11 @@ export const useSearchStore = defineStore('search', () => {
   const error = ref('')
   const searched = ref(false)
   const hiddenRoutes = ref(new Set())
+  /**
+   * 快速切換排序（只作用於本次查詢結果，前端重新排序，不再打 API）：
+   * ''（不排序）／Fastest（最早到達）／ShortestTime（最短行車時間）／FewestTransfers（最少轉乘）
+   */
+  const quickSort = ref('')
   /** 指定路由查詢：目前結果是只用這幾條路由查出來的（空陣列＝一般查詢） */
   const pickedRoutes = ref([])
   /** 路由清單快取：routeKey() → app_trip/routes 的 routes */
@@ -65,6 +70,33 @@ export const useSearchStore = defineStore('search', () => {
   const routeKey = () => `${form.from}|${form.to}|${form.extra}`
 
   const canSearch = computed(() => !!form.from && !!form.to)
+
+  /**
+   * 快速排序的比較器（與後端 journey.php 的排序一致）：
+   * Fastest         → [_slow, ArrivalMinute, TransferCount, -DepartureMinute]
+   * ShortestTime    → [_slow, TravelMinutes, TransferCount, DepartureMinute]
+   * FewestTransfers → [TransferCount, ArrivalMinute]（不看慢不慢：慢的路線也可能是轉乘最少的）
+   */
+  function quickCompare(mode, slow) {
+    if (mode === 'Fastest') {
+      return (a, b) =>
+        (slow.get(a.route || a.RouteText) ? 1 : 0) - (slow.get(b.route || b.RouteText) ? 1 : 0) ||
+        a.ArrivalMinute - b.ArrivalMinute ||
+        a.TransferCount - b.TransferCount ||
+        b.DepartureMinute - a.DepartureMinute
+    }
+    if (mode === 'ShortestTime') {
+      return (a, b) =>
+        (slow.get(a.route || a.RouteText) ? 1 : 0) - (slow.get(b.route || b.RouteText) ? 1 : 0) ||
+        a.TravelMinutes - b.TravelMinutes ||
+        a.TransferCount - b.TransferCount ||
+        a.DepartureMinute - b.DepartureMinute
+    }
+    if (mode === 'FewestTransfers') {
+      return (a, b) => a.TransferCount - b.TransferCount || a.ArrivalMinute - b.ArrivalMinute
+    }
+    return null
+  }
 
   /** 依「路由」分組，同一條走法的多班車集合在一起 */
   const routeGroups = computed(() => {
@@ -110,10 +142,26 @@ export const useSearchStore = defineStore('search', () => {
     return groups
   })
 
-  /** 依路由勾選過濾後要顯示的方案 */
-  const visibleJourneys = computed(() =>
-    journeys.value.filter((j) => !hiddenRoutes.value.has(j.route || j.RouteText)),
-  )
+  /**
+   * 依路由勾選過濾後要顯示的方案。
+   * quickSort 有值時再依該準則前端重新排序（不重新查詢、只作用於本次結果）。
+   */
+  const visibleJourneys = computed(() => {
+    const list = journeys.value.filter((j) => !hiddenRoutes.value.has(j.route || j.RouteText))
+    const mode = quickSort.value
+    if (!mode) return list
+    const cmp = quickCompare(mode, new Map(routeGroups.value.map((g) => [g.key, g.slow])))
+    if (!cmp) return list
+    // 準則有差異時就排序；都一樣（排序沒有意義）時改用過濾：只留下被標記的那個方案
+    const keys = list.map((j) =>
+      mode === 'Fastest' ? j.ArrivalMinute : mode === 'ShortestTime' ? j.TravelMinutes : j.TransferCount,
+    )
+    if (new Set(keys).size > 1) {
+      return list.slice().sort(cmp)
+    }
+    const tagged = list.filter((j) => (j.Tags || []).includes(mode))
+    return tagged.length ? tagged : list
+  })
 
   /** 只看最快的前 N 條路由（對應接軌時刻的 1 / 2 / 3 快速切換） */
   function showFastestRoutes(n) {
@@ -141,6 +189,7 @@ export const useSearchStore = defineStore('search', () => {
     searched.value = false
     hiddenRoutes.value = new Set()
     pickedRoutes.value = []
+    quickSort.value = ''
   }
 
   /**
@@ -198,6 +247,7 @@ export const useSearchStore = defineStore('search', () => {
     loading.value = true
     error.value = ''
     hiddenRoutes.value = new Set()
+    quickSort.value = ''
     const routed = pickedRoutes.value.length > 0
     const params = {
       from: form.from,
@@ -248,6 +298,7 @@ export const useSearchStore = defineStore('search', () => {
     searched,
     hiddenRoutes,
     pickedRoutes,
+    quickSort,
     canSearch,
     routeGroups,
     visibleJourneys,

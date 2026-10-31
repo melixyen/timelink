@@ -22,7 +22,7 @@ function formatDuration(minutes) {
   <div class="route-filter">
     <div class="route-filter-head">
       <span class="title">{{ t('route.title') }}</span>
-      <div class="quick">
+      <div v-if="groups.length > 4" class="quick">
         <train-button-group>
           <train-button v-for="n in 3" :key="n" size="small" @click="emit('fastest', n)">{{ n }}</train-button>
         </train-button-group>

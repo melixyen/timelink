@@ -1,14 +1,16 @@
 <script setup>
-import { onMounted } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import { config } from '@/config'
 import { usePublicInfoStore } from '@/stores/publicInfo'
 import { usePublicStationStore } from '@/stores/publicStation'
 import { usePublicLineStore } from '@/stores/publicLine'
+import { useIsMobile } from '@/utils/media'
 
 const { t } = useI18n()
+const route = useRoute()
 const publicInfo = usePublicInfoStore()
 const publicStation = usePublicStationStore()
 const publicLine = usePublicLineStore()
@@ -20,6 +22,17 @@ const navItems = [
   { to: '/lines', labelKey: 'nav.lines' },
 ]
 
+// 手機模式：導覽列與語言切換預設收合，點了才展開
+const isMobile = useIsMobile()
+const navOpen = ref(false)
+
+watch(
+  () => route.path,
+  () => {
+    navOpen.value = false
+  },
+)
+
 // 公共資料只載入一次，之後切路由不再重新請求
 onMounted(() => {
   publicInfo.ensureLoaded().catch(() => {})
@@ -30,13 +43,22 @@ onMounted(() => {
 
 <template>
   <div class="app">
-    <header class="app-header">
+    <header class="app-header" :class="{ 'is-open': navOpen }">
       <div class="brand">
         <router-link to="/" class="brand-link">
           {{ config.appName }} <span class="sub">{{ config.appSubtitle }}</span>
         </router-link>
       </div>
-      <train-menu class="app-nav">
+      <train-button
+        class="nav-toggle"
+        size="small"
+        round
+        icon="menu"
+        :aria-expanded="navOpen"
+        @click="navOpen = !navOpen"
+      >
+        {{ navOpen ? t('nav.close') : t('nav.menu') }}
+      </train-button>      <train-menu class="app-nav">
         <train-menu-item v-for="item in navItems" :key="item.to" :to="item.to">
           {{ t(item.labelKey) }}
         </train-menu-item>

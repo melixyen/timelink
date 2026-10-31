@@ -1,14 +1,16 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import StationSelect from '@/components/StationSelect.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
 import RouteFilter from '@/components/RouteFilter.vue'
 import RoutePicker from '@/components/RoutePicker.vue'
+import QuickSort from '@/components/QuickSort.vue'
 import { usePublicStationStore } from '@/stores/publicStation'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { byOptions, sortOptions, useSearchStore, weekNames } from '@/stores/search'
+import { useIsMobile } from '@/utils/media'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +21,16 @@ const search = useSearchStore()
 
 const form = search.form
 const pickerOpen = ref(false)
+
+/**
+ * 手機模式：查詢結果出來後，查詢面板收成一行（起訖站）＋左上角的展開鈕；
+ * 點展開鈕才把整塊面板滑出來。
+ */
+const isMobile = useIsMobile()
+const panelOpen = ref(true)
+const panelCollapsed = computed(() => isMobile.value && search.searched && !panelOpen.value)
+const fromName = computed(() => stationStore.stationName(form.from) || form.from)
+const toName = computed(() => stationStore.stationName(form.to) || form.to)
 
 const isNoExpress = computed({
   get: () => (form.extra & 1) === 1,
@@ -67,6 +79,8 @@ function syncUrl() {
 async function doSearch() {
   await search.run()
   syncUrl()
+  // 手機模式：查出結果後把查詢面板收起來，只留一行起訖站
+  if (isMobile.value) panelOpen.value = false
 }
 
 /** 以「選擇路由」視窗勾選的路由重新查詢（空陣列＝回到全部路由） */
@@ -131,59 +145,83 @@ onMounted(async () => {
 
 <template>
   <div class="page search-page">
-    <train-card :title="t('search.title')" class="control">
-      <div class="control-grid">
-        <StationSelect v-model="form.from" label-key="search.from" />
-        <StationSelect v-model="form.to" label-key="search.to" />
-      </div>
+    <!-- 手機模式：查出結果後查詢面板收成一列（起訖站）＋左上角展開鈕 -->
+    <div class="query-panel" :class="{ 'is-collapsed': panelCollapsed }">
+      <transition name="panel-slide">
+        <train-card v-if="!panelCollapsed" :title="t('search.title')" class="control">
+          <template #extra>
+            <train-button v-if="isMobile" size="small" round icon="caret-up" @click="panelOpen = false">
+              {{ t('search.collapse') }}
+            </train-button>
+          </template>
+          <div class="control-grid">
+            <StationSelect v-model="form.from" label-key="search.from" />
+            <StationSelect v-model="form.to" label-key="search.to" />
+          </div>
 
-      <div class="control-row">
-        <train-button round icon="swap" @click="exchange">{{ t('search.exchange') }}</train-button>
-      </div>
+          <div class="control-row">
+            <train-button round icon="swap" @click="exchange">{{ t('search.exchange') }}</train-button>
+          </div>
 
-      <div class="control-grid time-grid">
-        <train-form-item :label="t('search.startFrom')">
-          <train-time-select v-model="form.start" />
-          <train-button size="small" round icon="clock" @click="setNow">{{ t('search.setNow') }}</train-button>
-        </train-form-item>
+          <div class="control-grid time-grid">
+            <train-form-item :label="t('search.startFrom')">
+              <train-time-select v-model="form.start" />
+              <train-button size="small" round icon="clock" @click="setNow">{{ t('search.setNow') }}</train-button>
+            </train-form-item>
 
-        <train-form-item :label="t('search.endAt')">
-          <train-time-select v-model="form.end" />
-        </train-form-item>
+            <train-form-item :label="t('search.endAt')">
+              <train-time-select v-model="form.end" />
+            </train-form-item>
 
-        <train-form-item :label="t('search.week')">
-          <train-select v-model="form.week" :options="weekOptions" />
-        </train-form-item>
+            <train-form-item :label="t('search.week')">
+              <train-select v-model="form.week" :options="weekOptions" />
+            </train-form-item>
 
-        <train-form-item :label="t('search.by')">
-          <train-radio-group v-model="form.by" :options="byList" />
-        </train-form-item>
+            <train-form-item :label="t('search.by')">
+              <train-radio-group v-model="form.by" :options="byList" />
+            </train-form-item>
 
-        <train-form-item :label="t('search.sort')">
-          <train-select v-model="form.sort" :options="sortList" />
-        </train-form-item>
+            <train-form-item :label="t('search.sort')">
+              <train-select v-model="form.sort" :options="sortList" />
+            </train-form-item>
 
-        <train-form-item :label="t('search.extra')">
-          <train-checkbox v-model="isNoExpress">{{ t('search.extra.noExpress') }}</train-checkbox>
-          <train-checkbox v-model="isNoHighSpeed">{{ t('search.extra.noHighSpeed') }}</train-checkbox>
-        </train-form-item>
-      </div>
+            <train-form-item :label="t('search.extra')">
+              <train-checkbox v-model="isNoExpress">{{ t('search.extra.noExpress') }}</train-checkbox>
+              <train-checkbox v-model="isNoHighSpeed">{{ t('search.extra.noHighSpeed') }}</train-checkbox>
+            </train-form-item>
+          </div>
 
-      <div class="control-row">
+          <div class="control-row">
+            <train-button
+              type="primary"
+              size="large"
+              round
+              icon="search"
+              :loading="search.loading"
+              :disabled="!search.canSearch"
+              @click="doSearch"
+            >
+              {{ search.loading ? t('search.loading') : t('search.button') }}
+            </train-button>
+            <train-alert v-if="search.error" type="error" simple>{{ search.error }}</train-alert>
+          </div>
+        </train-card>
+      </transition>
+
+      <!-- 收合狀態：左上角展開鈕＋一行起訖站 -->
+      <div v-if="panelCollapsed" class="query-collapsed">
         <train-button
-          type="primary"
-          size="large"
+          size="small"
           round
-          icon="search"
-          :loading="search.loading"
-          :disabled="!search.canSearch"
-          @click="doSearch"
-        >
-          {{ search.loading ? t('search.loading') : t('search.button') }}
-        </train-button>
-        <train-alert v-if="search.error" type="error" simple>{{ search.error }}</train-alert>
+          icon="caret-down"
+          class="collapsed-toggle"
+          :aria-label="t('search.expand')"
+          :title="t('search.expand')"
+          @click="panelOpen = true"
+        />
+        <span class="collapsed-route">{{ fromName }} → {{ toName }}</span>
       </div>
-    </train-card>
+    </div>
 
     <train-card v-if="search.searched" class="result">
       <template #header>
@@ -219,6 +257,12 @@ onMounted(async () => {
           </train-button>
         </span>
       </train-alert>
+
+      <QuickSort
+        v-model="search.quickSort"
+        class="quick-sort-bar"
+        :disabled="search.loading || !search.journeys.length"
+      />
 
       <RouteFilter
         v-if="search.routeGroups.length"
