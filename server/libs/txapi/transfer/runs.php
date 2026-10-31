@@ -5,7 +5,8 @@
  *   有真實站別時刻表的路線（北捷文湖線以外、高捷、新北捷運、機捷、各輕軌）：
  *     從每一班發車起，沿營運路線逐站「前一站的時刻＋兩站間行駛時間（有直接資料用直接資料，否則一站一站加）」，
  *     到下一站真實時刻表找同路線、同方向、同終點、同車種、相差 ±1.5 分鐘內最接近、還沒被別班車用掉的一班（有真實到站時間的比到站；
- *     至少要比前一站晚最短行車時間 transferRunMinDep，TDX 站別時刻表有相鄰兩站同一分鐘的錯誤資料時不採用），
+ *     至少要比前一站晚最短行車時間 transferRunMinDep，TDX 站別時刻表有相鄰兩站同一分鐘的錯誤資料時不採用；
+ *     不採用的那一班視為這班車的錯誤複本標成已用掉 transferRunConsumeEarly，第二輪不會從它串出不存在的車），
  *     對到就用時刻表的時刻並從那裡接著推，一直串到這班車的終點站。每一站的時刻：
  *       timetable     對到時刻表
  *       interpolated  沒對到，但前後都有對到：按兩站間行駛時間的比例分配前後兩個時刻表時刻之間的時間（兩端都是真實時刻，誤差不累積）
@@ -188,6 +189,8 @@ function transferChainRun(array &$d, array $p, $j0, array $dep, array &$used)
     $gids = [$dep[1]];
     $cur = $dep[0];
     $curReal = true;
+    $lastReal = $dep[0];   // 最後一個對到時刻表的站的時刻
+    $sinceReal = 0;        // 從那一站起累計的行駛時間（含停站）
     for ($j = $j0 + 1; $j <= $end; $j++) {
         $u = $p['st'][$j];
         $seg = transferPatternTravel($d, $p, $j - 1, $j)[0];
@@ -196,6 +199,7 @@ function transferChainRun(array &$d, array $p, $j0, array $dep, array &$used)
         $estArr = $from + $seg;
         $estDep = $estArr + $dwell;
         $hit = null;
+        $sinceReal += $seg + $dwell;
         $minDep = transferRunMinDep($cur, $seg + $dwell);
         if ($j < $end || $g0['ending'] !== $u) {
             $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, $estArr, $estDep, $used, 90, false, $minDep);
@@ -212,6 +216,11 @@ function transferChainRun(array &$d, array $p, $j0, array $dep, array &$used)
                 $hit = transferRunMatch($d, $u, $p, $g0, $code, $tol, $cur, $estArr, $estDep, $used, 600, true, $minDep);
             }
         }
+        // 對不到時：這一站時刻表裡比最後對到的站還不可能早到的那一班（站別時刻表的錯誤複本，例如中和＝景安、十四張＝秀朗橋＝大坪林同一分鐘），
+        // 視為這班車的時刻標成已用掉，免得第二輪從它串出一班不存在的車（例如從十四張出發、其實是大坪林那班的重複）
+        if ($hit === null && ($j < $end || $g0['ending'] !== $u)) {
+            transferRunConsumeEarly($d, $u, $p, $g0, $code, $lastReal, transferRunMinDep($lastReal, $sinceReal), $used);
+        }
         $st[] = $u;
         if ($hit !== null) {
             list($x, $gid) = $hit;
@@ -222,6 +231,8 @@ function transferChainRun(array &$d, array $p, $j0, array $dep, array &$used)
             $gids[] = $gid;
             $cur = $x[0];
             $curReal = true;
+            $lastReal = $x[0];
+            $sinceReal = 0;
         } else {
             $arr[] = $estArr;
             $dp[] = $estDep;
@@ -286,6 +297,40 @@ const TRANSFER_RUN_MIN_TRAVEL_RATIO = 0.6;
 function transferRunMinDep($cur, $travel)
 {
     return (int) ceil($cur + TRANSFER_RUN_MIN_TRAVEL_RATIO * $travel) - 59;
+}
+
+/**
+ * $u 站時刻表（同路線、同方向、同終點或同方向、同車種）裡還沒被用掉、時刻落在 [$lastReal 那一分鐘, $minDep) 的一班：
+ * 比最後對到的站加上最短行車時間還早、不可能是別班車，是站別時刻表的錯誤複本；最接近 $lastReal 的一班標成已用掉
+ */
+function transferRunConsumeEarly(array &$d, $u, array $p, array $g0, $code, $lastReal, $minDep, array &$used)
+{
+    $best = null;
+    $floor = intdiv($lastReal, 60) * 60;
+    foreach ($d['stationDep'][$u] ?? [] as $gid => $list) {
+        $g = $d['groupInfo'][$gid];
+        if ($g['source'] !== 'timetable' || $g['line'] !== $p['line'] || ($g['dir'] !== '' && $g0['dir'] !== '' && $g['dir'] !== $g0['dir'])
+            || ($g0['ending'] !== '' && $g['ending'] !== '' && $g['ending'] !== $g0['ending'])) {
+            continue;
+        }
+        foreach ($list as $x) {
+            if ($x[0] < $floor) {
+                continue;
+            }
+            if ($x[0] >= $minDep) {
+                break;
+            }
+            if (($code !== '' && $x[1] !== '' && $x[1] !== $code) || isset($used[$u . '|' . $gid . '|' . $x[0]])) {
+                continue;
+            }
+            if ($best === null || $x[0] < $best[0]) {
+                $best = [$x[0], $gid];
+            }
+        }
+    }
+    if ($best !== null) {
+        $used[$u . '|' . $best[1] . '|' . $best[0]] = true;
+    }
 }
 
 /**
