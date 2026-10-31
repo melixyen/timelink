@@ -72,22 +72,44 @@ export const useSearchStore = defineStore('search', () => {
   const canSearch = computed(() => !!form.from && !!form.to)
 
   /**
+   * 慢方案的門檻（與後端 journey.php 的 _slow 相同，逐一方案判斷、不是整條路由）：
+   * 以行車時間最短的方案（同分取轉乘少的）為準，超過它的 1.5 倍再多 30 分就算慢。
+   * 用全部方案計算（不受路由勾選影響），與後端一致。
+   */
+  const slowOver = computed(() => {
+    let short = null
+    journeys.value.forEach((j) => {
+      if (typeof j.TravelMinutes !== 'number') return
+      if (
+        !short ||
+        j.TravelMinutes < short.TravelMinutes ||
+        (j.TravelMinutes === short.TravelMinutes && j.TransferCount < short.TransferCount)
+      ) {
+        short = j
+      }
+    })
+    return short ? short.TravelMinutes * 1.5 + 30 : Infinity
+  })
+
+  /**
    * 快速排序的比較器（與後端 journey.php 的排序一致）：
    * Fastest         → [_slow, ArrivalMinute, TransferCount, -DepartureMinute]
    * ShortestTime    → [_slow, TravelMinutes, TransferCount, DepartureMinute]
-   * FewestTransfers → [TransferCount, ArrivalMinute]（不看慢不慢：慢的路線也可能是轉乘最少的）
+   * FewestTransfers → [TransferCount, ArrivalMinute]
+   *   不看慢不慢：轉乘最少的常常正是慢的那個（例如高鐵為主時的臺鐵直達），不能因為慢被排到後面
    */
-  function quickCompare(mode, slow) {
+  function quickCompare(mode, over) {
+    const slow = (j) => (j.TravelMinutes > over ? 1 : 0)
     if (mode === 'Fastest') {
       return (a, b) =>
-        (slow.get(a.route || a.RouteText) ? 1 : 0) - (slow.get(b.route || b.RouteText) ? 1 : 0) ||
+        slow(a) - slow(b) ||
         a.ArrivalMinute - b.ArrivalMinute ||
         a.TransferCount - b.TransferCount ||
         b.DepartureMinute - a.DepartureMinute
     }
     if (mode === 'ShortestTime') {
       return (a, b) =>
-        (slow.get(a.route || a.RouteText) ? 1 : 0) - (slow.get(b.route || b.RouteText) ? 1 : 0) ||
+        slow(a) - slow(b) ||
         a.TravelMinutes - b.TravelMinutes ||
         a.TransferCount - b.TransferCount ||
         a.DepartureMinute - b.DepartureMinute
@@ -150,7 +172,7 @@ export const useSearchStore = defineStore('search', () => {
     const list = journeys.value.filter((j) => !hiddenRoutes.value.has(j.route || j.RouteText))
     const mode = quickSort.value
     if (!mode) return list
-    const cmp = quickCompare(mode, new Map(routeGroups.value.map((g) => [g.key, g.slow])))
+    const cmp = quickCompare(mode, slowOver.value)
     if (!cmp) return list
     // 一律只排序、不過濾：主要準則都一樣時（例如全部直達）仍依次要準則排；
     // 完全並列時，後端標記為該準則代表的方案排在最前面
