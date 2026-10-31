@@ -896,6 +896,7 @@ td.time .stops-trigger {
   list-style: none;
   margin: 0;
   padding: 0;
+  container-type: inline-size;
 }
 
 .train-stops-row {
@@ -1040,11 +1041,16 @@ td.time .stops-trigger {
   padding: 4px 8px;
 }
 
+/*
+ * 時刻：寬度夠時排成一行，到站固定在左欄、離站固定在右欄（每列同一欄上下對齊；只有離站的列空出左欄）；
+ * 清單寬度不足（≤ 320px）時才換行，到站在上、離站在下
+ */
 .train-stops-row .times {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5.5em, max-content));
+  column-gap: 14px;
+  justify-items: end;
+  align-items: baseline;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1052,6 +1058,29 @@ td.time .stops-trigger {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
+  white-space: nowrap;
+}
+
+.train-stops-row .time.is-arr {
+  grid-column: 1;
+}
+
+.train-stops-row .time.is-dep {
+  grid-column: 2;
+}
+
+.train-stops-row .times .pass {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+
+@container (max-width: 320px) {
+  .train-stops-row .times {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+  }
 }
 
 .train-stops-row .time-label {

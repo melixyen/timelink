@@ -155,18 +155,18 @@ const hasOutside = computed(() => rows.value.some((r) => !r.inRide))
 const hasPass = computed(() => rows.value.some((r) => r.pass))
 const hasEstimate = computed(() => rows.value.some((r) => r.estimate))
 
-/** 時刻：到站、離站都有且不同時分開顯示；只有一個時只顯示那一個 */
+/**
+ * 時刻：到站、離站都有且不同時分開顯示；只有一個時只顯示那一個。
+ * kind＝arr／dep：寬度夠時到站固定在左欄、離站固定在右欄（同一欄上下對齊），寬度不足才上下換行
+ */
 function times(r) {
   if (r.pass) return []
-  if (r.arr && r.dep && r.arr !== r.dep) {
-    return [
-      { label: t('stops.arr'), value: r.arr },
-      { label: t('stops.dep'), value: r.dep },
-    ]
-  }
-  if (r.alight && r.arr) return [{ label: t('stops.arr'), value: r.arr }]
-  if (r.dep) return [{ label: t('stops.dep'), value: r.dep }]
-  if (r.arr) return [{ label: t('stops.arr'), value: r.arr }]
+  const arr = { kind: 'arr', label: t('stops.arr'), value: r.arr }
+  const dep = { kind: 'dep', label: t('stops.dep'), value: r.dep }
+  if (r.arr && r.dep && r.arr !== r.dep) return [arr, dep]
+  if (r.alight && r.arr) return [arr]
+  if (r.dep) return [dep]
+  if (r.arr) return [arr]
   return []
 }
 
@@ -252,7 +252,12 @@ const rideText = computed(() => {
             </span>
             <span class="times">
               <span v-if="r.pass" class="pass">{{ t('stops.pass') }}</span>
-              <span v-for="x in times(r)" :key="x.label" class="time" :class="{ estimate: r.estimate }">
+              <span
+                v-for="x in times(r)"
+                :key="x.kind"
+                class="time"
+                :class="[`is-${x.kind}`, { estimate: r.estimate }]"
+              >
                 <span class="time-label">{{ x.label }}</span>
                 <span class="time-value">{{ x.value }}</span>
               </span>
