@@ -26,10 +26,22 @@ const navOpen = ref(false)
 const headerEl = ref(null)
 const navToggleEl = ref(null)
 
+/**
+ * 手機模式：標題列與底部列固定，只有中間 .app-scroll 捲動（桌面版仍是整頁捲動）。
+ * 捲動容器設了 CSS scroll-behavior: smooth，回到頂端不指定 behavior，交給 CSS 滑順捲動。
+ */
+const scrollEl = ref(null)
+
+function scrollToTop() {
+  scrollEl.value?.scrollTo({ top: 0 })
+}
+
 watch(
   () => route.path,
   () => {
     navOpen.value = false
+    // 換頁直接回到頂端（不要滑動動畫）；桌面版由 router 的 scrollBehavior 處理整頁捲動
+    scrollEl.value?.scrollTo({ top: 0, behavior: 'instant' })
   },
 )
 
@@ -43,28 +55,14 @@ function onPointerDown(e) {
   if (navOpen.value && headerEl.value && !headerEl.value.contains(e.target)) navOpen.value = false
 }
 
-// 標題列實際高度寫到 CSS 變數 --app-header-height，讓下方 sticky 元素（例如收合的查詢列）貼齊，
-// 選單展開後標題列變高也會跟著更新
-let headerObserver = null
-function syncHeaderHeight() {
-  if (!headerEl.value) return
-  document.documentElement.style.setProperty('--app-header-height', `${headerEl.value.offsetHeight}px`)
-}
-
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
   document.addEventListener('pointerdown', onPointerDown)
-  syncHeaderHeight()
-  if (typeof ResizeObserver !== 'undefined') {
-    headerObserver = new ResizeObserver(syncHeaderHeight)
-    headerObserver.observe(headerEl.value)
-  }
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
   document.removeEventListener('pointerdown', onPointerDown)
-  headerObserver?.disconnect()
 })
 
 // 公共資料只載入一次，之後切路由不再重新請求
@@ -105,29 +103,38 @@ onMounted(() => {
       </div>
     </header>
 
-    <main class="app-main">
-      <RouterView />
-    </main>
+    <div ref="scrollEl" class="app-scroll">
+      <main class="app-main">
+        <RouterView />
+      </main>
 
-    <footer class="app-footer">
-      <i18n-t keypath="footer.notice" tag="p">
-        <template #tdx>
-          <train-link :href="config.dataSourceUrl" target="_blank">{{ config.dataSourceName }}</train-link>
-        </template>
-        <template #license>
-          <train-link :href="config.licenseUrl" target="_blank">{{ config.licenseName }}</train-link>
-        </template>
-      </i18n-t>
-      <p class="meta">
-        <train-link v-if="config.homepageUrl" :href="config.homepageUrl" target="_blank">{{ config.appName }}</train-link>
-        <span v-else>{{ config.appName }}</span>
-        <span v-if="config.orgName">・{{ config.orgName }}</span>
-        <span>・{{ config.appSubtitle }}</span>
-        <span>・v{{ config.appVersion }}</span>
-        <span v-if="config.contactEmail">
-          ・<train-link :href="`mailto:${config.contactEmail}`">{{ config.contactEmail }}</train-link>
-        </span>
-      </p>
-    </footer>
+      <footer class="app-footer">
+        <i18n-t keypath="footer.notice" tag="p">
+          <template #tdx>
+            <train-link :href="config.dataSourceUrl" target="_blank">{{ config.dataSourceName }}</train-link>
+          </template>
+          <template #license>
+            <train-link :href="config.licenseUrl" target="_blank">{{ config.licenseName }}</train-link>
+          </template>
+        </i18n-t>
+        <p class="meta">
+          <train-link v-if="config.homepageUrl" :href="config.homepageUrl" target="_blank">{{ config.appName }}</train-link>
+          <span v-else>{{ config.appName }}</span>
+          <span v-if="config.orgName">・{{ config.orgName }}</span>
+          <span>・{{ config.appSubtitle }}</span>
+          <span>・v{{ config.appVersion }}</span>
+          <span v-if="config.contactEmail">
+            ・<train-link :href="`mailto:${config.contactEmail}`">{{ config.contactEmail }}</train-link>
+          </span>
+        </p>
+      </footer>
+    </div>
+
+    <!-- 手機模式才顯示：固定在最下方的底部列，回到頂端 -->
+    <div class="app-bottom-bar">
+      <train-button size="small" round icon="caret-up" class="back-to-top" @click="scrollToTop">
+        {{ t('footer.backToTop') }}
+      </train-button>
+    </div>
   </div>
 </template>

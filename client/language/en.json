@@ -15,6 +15,7 @@
   "footer.notice": "Data source: {tdx} of the Ministry of Transportation, provided under the {license}. Results are calculated by this site for reference only; please follow the official announcements of each operator.",
   "footer.tdxLink": "TDX Transportation Data eXchange Service Platform",
   "footer.licenseLink": "Government Data Open License Terms",
+  "footer.backToTop": "Back to top",
   "home.title": "About",
   "home.intro": "TimeLink searches timetables and transfer routes across Taiwan's rail and metro operators (TRA, THSR, Taipei Metro, New Taipei Metro, Taoyuan Metro, Taichung Metro, Kaohsiung Metro and light rail). Pick a boarding time, a weekday, an origin and a destination, and the service finds every feasible combination from the offline network routes and timetables, listing the route and the times of each one.",
   "home.help.station.title": "Origin and destination:",

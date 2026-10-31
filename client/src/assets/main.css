@@ -47,6 +47,18 @@ code {
   flex-direction: column;
 }
 
+/* 主內容＋資料來源頁尾。桌面版跟著整頁捲動；手機版改成獨立的捲動區（見下方 @media） */
+.app-scroll {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 底部列（回到頂端）只在手機模式顯示 */
+.app-bottom-bar {
+  display: none;
+}
+
 .app-header {
   position: sticky;
   top: 0;
@@ -914,6 +926,48 @@ code {
     padding-right: 14px;
   }
 
+  /*
+   * 版面：標題列＋中間捲動區＋底部列（30px），整個 app 剛好一個視窗高，
+   * 只有中間 .app-scroll 捲動；捲動用 CSS smooth，回到頂端時會滑順捲上去
+   */
+  .app {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-header {
+    flex: 0 0 auto;
+  }
+
+  .app-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .app-bottom-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: calc(30px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    box-shadow: var(--train-ui-shadow-light);
+  }
+
+  .app-bottom-bar .back-to-top {
+    height: 24px;
+    padding: 0 12px;
+  }
+
   /* 標題列：品牌與切換鈕同一排，導覽與語言切換收合時不顯示 */
   .app-header {
     flex-wrap: nowrap;
@@ -961,12 +1015,19 @@ code {
     justify-content: flex-end;
   }
 
-  /* 查詢面板：收合時只留一行起訖站與左上角展開鈕（固定在畫面上方） */
-  .query-collapsed {
+  /*
+   * 查詢面板：收合時只留一行起訖站與左上角展開鈕（固定在捲動區上方）。
+   * sticky 要放在 .query-panel 上：它的父層是整個頁面，才有空間「黏住」；
+   * 放在 .query-collapsed 上時父層只跟它一樣高，捲動時會直接跟著捲走。
+   * 手機模式捲動的是 .app-scroll（在標題列下方），所以貼齊捲動區頂端即可
+   */
+  .query-panel.is-collapsed {
     position: sticky;
-    /* 標題列實際高度由 App.vue 量測後寫入（選單展開變高時也會更新） */
-    top: var(--app-header-height, 48px);
+    top: 0;
     z-index: 15;
+  }
+
+  .query-collapsed {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -996,4 +1057,11 @@ code {
 .panel-slide-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+/* 系統設定「減少動態效果」時不做滑順捲動 */
+@media (prefers-reduced-motion: reduce) {
+  .app-scroll {
+    scroll-behavior: auto;
+  }
 }
