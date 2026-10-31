@@ -1004,7 +1004,9 @@ function appTrainStopsMetro($code, array $mm)
         'Origin' => ['StationUID' => $list[0]['StationUID'], 'StationName' => $list[0]['StationName']],
         'Destination' => $ride['EndingStationUID'] ? ['StationUID' => $ride['EndingStationUID'], 'StationName' => $m['names'][$ride['EndingStationUID']] ?? null] : null,
         'Note' => $par[0] === 'pattern' ? '沒有真實站別時刻表的路線：從上車站起依發車與站間行駛時間推算'
-                                       : 'TDX 沒有捷運整列車時刻表：首末站是車站時刻表的時刻，中間各站依站間行駛時間比例推算',
+                                       : ('TDX 沒有捷運整列車時刻表：' . (end($list)['Source'] === 'timetable'
+                                          ? '首站與末站是車站時刻表的時刻，中間各站依站間行駛時間比例推算'
+                                          : '首站是車站時刻表的時刻，中間各站依站間行駛時間比例推算，末站（車站時刻表沒有到站時刻）也是推算')),
         'count' => count(array_filter($list, function ($s) { return empty($s['Pass']); })), 'Stops' => $list,
     ], ['week' => $week, 'weekday' => FINDER_WEEKDAYS[$week]]);
 }
