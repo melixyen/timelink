@@ -13,6 +13,8 @@
   --primary: var(--train-ui-color-primary);
   --primary-soft: var(--train-ui-color-primary-light-9);
   --radius: var(--train-ui-radius-large);
+  /* 語言切換的地球圖示顏色（預設為系統圖示主色，可覆蓋） */
+  --locale-icon-color: var(--train-ui-icon-color);
 }
 
 * {
@@ -114,6 +116,11 @@ code {
   gap: 6px;
   font-size: var(--train-ui-font-size-sm);
   color: var(--muted);
+}
+
+/* 語言切換：以單色地球圖示代替文字標籤（任何語言的使用者都認得） */
+.locale-switch .locale-icon {
+  color: var(--locale-icon-color);
 }
 
 .app-footer {

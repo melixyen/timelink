@@ -16,6 +16,8 @@
   --train-ui-color-primary-light-5: #a9c8f1;
   --train-ui-color-primary-light-8: #dbe8fa;
   --train-ui-color-primary-light-9: #edf4fd;
+  /* 扁平化單色圖示的主色（預設跟主色一致） */
+  --train-ui-icon-color: var(--train-ui-color-primary);
 
   /* 色彩：狀態 */
   --train-ui-color-success: #1f9d6b;
