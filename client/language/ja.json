@@ -84,6 +84,8 @@
   "route.title": "経路",
   "route.quickHint": "最速の 1～3 本の経路だけを表示",
   "route.meta": "乗換 {count} 回・最速 {time}",
+  "route.showAll": "全 {count} 経路を表示",
+  "route.showLess": "上位 3 経路のみ表示",
   "search.quickSort.title": "クイック並び替え",
   "search.quickSort.hint": "この検索結果のみ並べ替えます",
   "journey.no": "NO.",

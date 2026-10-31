@@ -84,6 +84,8 @@
   "route.title": "Routes",
   "route.quickHint": "Quickly show only the fastest 1-3 routes",
   "route.meta": "{count} transfer(s) · fastest {time}",
+  "route.showAll": "Show all {count} routes",
+  "route.showLess": "Show top 3 routes only",
   "search.quickSort.title": "Quick sort",
   "search.quickSort.hint": "Reorders the results of this search only",
   "journey.no": "NO.",

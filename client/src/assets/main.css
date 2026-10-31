@@ -500,6 +500,11 @@ code {
   overflow-y: auto;
 }
 
+/* 「顯示全部 N 條路徑」只在手機模式出現（見下方 @media） */
+.route-more {
+  display: none;
+}
+
 .route-item {
   display: flex;
   align-items: center;
@@ -1013,6 +1018,33 @@ code {
     order: 4;
     width: 100%;
     justify-content: flex-end;
+  }
+
+  /*
+   * 路徑清單：手機上不要自己捲動（在捲動區裡再包一層捲動，手指剛好在清單上時整個手勢會被清單吃掉），
+   * 改成全部攤開；超過 3 條時先只列前 3 條，按「顯示全部」再展開
+   */
+  .route-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .route-list.is-clamped .route-item:nth-child(n + 4) {
+    display: none;
+  }
+
+  .route-more {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px 0;
+    border: 0;
+    border-top: 1px dashed var(--border);
+    background: none;
+    color: var(--primary);
+    font: inherit;
+    font-size: var(--train-ui-font-size-sm);
+    cursor: pointer;
   }
 
   /*

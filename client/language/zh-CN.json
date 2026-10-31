@@ -84,6 +84,8 @@
   "route.title": "路径",
   "route.quickHint": "快速切换只看最快 1～3 条路径",
   "route.meta": "转乘 {count} 次・最快 {time}",
+  "route.showAll": "显示全部 {count} 条路径",
+  "route.showLess": "只显示前 3 条路径",
   "search.quickSort.title": "快速排序",
   "search.quickSort.hint": "只调整本次查询结果的排序",
   "journey.no": "NO.",
