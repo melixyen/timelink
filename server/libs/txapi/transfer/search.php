@@ -12,6 +12,7 @@
  */
 
 require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/../names.php';   // 補充名稱 txapiName()
 
 /** 字典（讀音、歸一）＋設定的額外歸一 */
 function transferHanzi()
@@ -96,7 +97,8 @@ function transferSearchIndex(SqliteDao $db)
     $enStrip = array_map('strtolower', $cfg['EnStripWords']);
     $lineInfo = [];
     foreach ($db->all('SELECT system, line_id, name, color FROM line') as $r) {
-        $lineInfo[$r['system'] . '-' . $r['line_id']] = ['name' => json_decode($r['name'], true), 'color' => $r['color']];
+        $lu = $r['system'] . '-' . $r['line_id'];
+        $lineInfo[$lu] = ['name' => txapiName(json_decode($r['name'], true), 'Line', $lu), 'color' => $r['color']];
     }
     $groups = transferLoadGroups();
     $groupOf = [];

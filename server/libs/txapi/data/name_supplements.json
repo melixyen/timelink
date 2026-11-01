@@ -1,0 +1,29 @@
+{
+    "_說明": {
+        "用途": "補充名稱（人工維護、受版控）：TDX 或本站寫死的靜態資料缺某個語言的名稱時，輸出前由 txapiName($原始值, 類別, key) 依這裡補上。只補空的語言，原始資料有值的語言不動。",
+        "格式": "{ 類別: { key: { 語言: 名稱 } } }。語言 key 分開：Zh_tw（繁體中文）、En（英文）、Ja（日文），各補各的；沒把握的語言不要寫（前端會依「選取的語系 → 英文 → 中文」退回）。",
+        "Operator": "營運單位，key＝營運單位代碼（FINDERDB_OPERATORS 的鍵，例如 TRTC）",
+        "Line": "路線，key＝LineUID（例如 THSR-HSRL）",
+        "TrainType": "捷運車種，key＝車種代碼（FINDER_TRAIN_TYPES 的鍵，例如 1）",
+        "新增資料": "新的靜態資料要檢查並補名稱時：在這裡加一個類別，在 PHP 撈取資料、輸出前呼叫 txapiName() 即可"
+    },
+    "Operator": {
+        "TRA": { "Zh_tw": "臺鐵", "En": "Taiwan Railway" },
+        "THSR": { "Zh_tw": "高鐵", "En": "Taiwan High Speed Rail", "Ja": "台湾高速鉄道" },
+        "TRTC": { "Zh_tw": "臺北捷運", "En": "Taipei Metro" },
+        "NTMC": { "Zh_tw": "新北捷運", "En": "New Taipei Metro" },
+        "TYMC": { "Zh_tw": "桃園捷運", "En": "Taoyuan Metro" },
+        "TMRT": { "Zh_tw": "臺中捷運", "En": "Taichung Metro" },
+        "KRTC": { "Zh_tw": "高雄捷運", "En": "Kaohsiung Metro" }
+    },
+    "Line": {
+        "THSR-HSRL": { "Zh_tw": "台灣高鐵線", "En": "Taiwan High Speed Rail", "Ja": "台湾高速鉄道" },
+        "KRTC-R": { "Zh_tw": "紅線", "En": "Red Line" },
+        "KRTC-O": { "Zh_tw": "橘線", "En": "Orange Line" },
+        "KLRT-C": { "Zh_tw": "環狀輕軌", "En": "Circular Light Rail" }
+    },
+    "TrainType": {
+        "1": { "Zh_tw": "普通車", "En": "Commuter Train" },
+        "2": { "Zh_tw": "直達車", "En": "Express Train" }
+    }
+}

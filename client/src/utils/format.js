@@ -1,13 +1,14 @@
 import { i18n } from '@/i18n'
 
 /**
- * 語言 → 資料名稱欄位。
- * 後端的名稱物件只提供 Zh_tw／En／Ja／Ko 四種欄位；
- * 泰、越、印尼、西文沒有對應欄位，一律用英文名稱。
+ * 語言 → 資料名稱欄位與退回順序。
+ * 後端的名稱物件只提供 Zh_tw／En／Ja／Ko 四種欄位；泰、越、印尼、西文沒有對應欄位，一律用英文名稱。
+ * 退回規則（使用者規則）：選取的語系有就用選取的語系，沒有就用英文，還是沒有才用中文（最後才是其他語言）。
+ * 後端缺的語言已依補充名稱（server/libs/txapi/data/name_supplements.json）補過。
  */
 const NAME_FIELDS = {
   zh: { primary: 'Zh_tw', order: ['Zh_tw', 'En', 'Ja', 'Ko'] },
-  ja: { primary: 'Ja', order: ['Ja', 'Zh_tw', 'En', 'Ko'] },
+  ja: { primary: 'Ja', order: ['Ja', 'En', 'Zh_tw', 'Ko'] },
   ko: { primary: 'Ko', order: ['Ko', 'En', 'Zh_tw', 'Ja'] },
   other: { primary: 'En', order: ['En', 'Zh_tw', 'Ja', 'Ko'] },
 }
@@ -32,7 +33,7 @@ export function isChineseLocale() {
 
 /**
  * 多語系名稱：依目前語言挑合適的欄位，取不到時依序往回找。
- * @param {object|string} obj StationName、TrainType.Name 等多語系物件
+ * @param {object|string} obj StationName、LineName、OperatorNames、TrainType.Name 等多語系物件
  */
 export function nameOf(obj) {
   if (!obj) return ''

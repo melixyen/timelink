@@ -331,6 +331,8 @@ GET https://{$host}/txapi/admin_cache/purge?purge=all|<路徑前綴>       清�
 - 成功：`{"ok": true, "action", "func", "data": …, "meta": {"dataUpdatedAt", …}}`（`app_` 的 meta 另有 `tier`）；
   失敗：`errorCode`、`errorName`、`errorMsg`（代碼 40020～40023、40420、50320 見 `/txapi/errors`）
 - 欄位名稱沿用 TDX 的大寫開頭寫法（`StationUID`、`LineUID`…）
+- 多語系名稱（`StationName`、`LineName`、`OperatorNames`、`TrainType.Name`）是 `{Zh_tw, En, Ja}` 物件；TDX 或本站寫死的資料缺某個語言時，
+  依補充名稱 `libs/txapi/data/name_supplements.json` 補上（例如高鐵、高捷路線與營運單位的英文）。營運單位另有中文字串 `OperatorName`（相容舊版）
 
 ### `public_` API
 

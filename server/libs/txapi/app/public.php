@@ -68,15 +68,17 @@ function appStationGroups(array $m, $uid)
     return $out;
 }
 
-/** 系統 → 營運單位代碼與名稱 */
+/**
+ * 系統 → 營運單位代碼與名稱：OperatorName＝中文名稱（字串，相容舊版）；OperatorNames＝多語系名稱（Zh_tw、En、Ja，缺的語言依補充名稱補上）
+ */
 function appSystemOperator($sys)
 {
     foreach (FINDERDB_OPERATORS as $id => $o) {
         if (in_array($sys, $o['systems'], true)) {
-            return ['Operator' => $id, 'OperatorName' => $o['name']];
+            return ['Operator' => $id, 'OperatorName' => $o['name'], 'OperatorNames' => txapiName(['Zh_tw' => $o['name']], 'Operator', $id)];
         }
     }
-    return ['Operator' => $sys, 'OperatorName' => $sys];
+    return ['Operator' => $sys, 'OperatorName' => $sys, 'OperatorNames' => txapiName(['Zh_tw' => $sys], 'Operator', $sys)];
 }
 
 /** 一個車站的基本欄位 */

@@ -20,6 +20,7 @@
  *   journey.php     組合：app_trip/routes、route_trains、journeys（串接與分類排序）
  */
 
+require_once __DIR__ . '/../names.php';   // 補充名稱 txapiName()
 require_once __DIR__ . '/trainclass.php';
 require_once __DIR__ . '/route.php';
 require_once __DIR__ . '/public.php';

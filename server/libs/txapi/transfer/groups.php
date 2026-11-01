@@ -20,6 +20,7 @@
  */
 
 require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/../names.php';   // 補充名稱 txapiName()
 
 define('TRANSFER_SEED_FILE', transferDataFile('Seed'));
 define('TRANSFER_GROUPS_FILE', transferDataFile('Groups'));
@@ -58,6 +59,12 @@ function transferLoadGroups()
         return null;
     }
     $j = json_decode((string) file_get_contents(TRANSFER_GROUPS_FILE), true);
+    if (is_array($j)) {
+        // 路線名稱缺的語言依補充名稱補上（appLineInfo、路網的 lineNames 都從這裡讀）
+        foreach ($j['Lines'] ?? [] as $i => $l) {
+            $j['Lines'][$i]['LineName'] = txapiName($l['LineName'] ?? null, 'Line', $l['LineUID']);
+        }
+    }
     return $cache = is_array($j) ? $j : null;
 }
 

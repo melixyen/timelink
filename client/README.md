@@ -156,8 +156,10 @@ cp .env .env.local   # 本機想覆蓋時另存 .env.local（.env.local 不進�
   `es` → 西班牙文，`ko` → 韓文）→ 都判斷不到時**預設英文**
 - 右上角有語言選單可即時切換，切換後會同步更新 `<html lang>` 與網頁標題
 - 元件用 `useI18n()` 的 `t()`；Pinia store 用 `src/i18n` 匯出的 `t()`（同樣會隨語言更新）
-- 資料欄位（車站名、路線名、車種）會依語言取 API 的 `Zh_tw`／`En`／`Ja`／`Ko` 欄位；
-  泰文、越南文、印尼文、西班牙文沒有對應欄位，一律使用英文名稱；
+- 資料欄位（車站名、路線名、營運單位、車種）用 `src/utils/format.js` 的 `nameOf()` 取 API 的 `Zh_tw`／`En`／`Ja`／`Ko` 欄位：
+  **選取的語系有就用選取的語系，沒有就用英文，還是沒有才用中文**；
+  泰文、越南文、印尼文、西班牙文沒有對應欄位，一律使用英文名稱。
+  後端缺的語言由後端的補充名稱（`server/libs/txapi/data/name_supplements.json`）補上，前端不另外翻譯資料名稱；
   後端只提供單一語言的欄位（例如路徑文字、轉乘教學標題）則保留原文
 - 新增語言：複製一份 `language/*.json`、在 `src/i18n/index.js` 的 `messages` 與 `SUPPORTED_LOCALES`
   加一筆即可

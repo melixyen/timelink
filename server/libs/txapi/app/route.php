@@ -258,7 +258,7 @@ function appRouteDescribe(array $r, array $m)
             // 系統直達段：LineUID＝業者代碼；經過的路線串在 Paths（第一條是主要的，其餘是其他路線的走法，例如北迴、南迴）
             $sys = $leg['System'] ?? $leg['LineUID'];
             $op = appSystemOperator($sys);
-            $x += ['System' => $sys, 'LineUID' => $sys, 'LineName' => ['Zh_tw' => $op['OperatorName'], 'En' => $sys], 'LineColor' => null,
+            $x += ['System' => $sys, 'LineUID' => $sys, 'LineName' => $op['OperatorNames'], 'LineColor' => null,
                    'Class' => $leg['Class'], 'ClassLabel' => appClassLabel($sys, $leg['Class']), 'Direct' => true];
             $paths = $leg['Paths'] ?? (isset($leg['Path']) ? [$leg['Path']] : []);
             $x['Paths'] = array_map(function ($p) use ($lines, $st) {

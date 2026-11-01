@@ -195,6 +195,12 @@ function appTrainCode(array &$d, array $par, $week)
     return $p['system'] . '-' . $p['line'] . '-P' . substr(sha1($par[1]), 0, APP_RUN_HASH_LEN) . '-' . $par[2] . '-' . $par[4][1] . '-' . $par[4][0] . '-w' . $week;
 }
 
+/** 捷運車種名稱（FINDER_TRAIN_TYPES 只有中文，其他語言依補充名稱 TrainType 補上） */
+function appMetroTrainTypeName($code)
+{
+    return txapiName(['Zh_tw' => FINDER_TRAIN_TYPES[(int) $code] ?? '', 'En' => ''], 'TrainType', (int) $code);
+}
+
 /** 搭乘段的輸出（核心 B、轉乘串接共用） */
 function appRideOut(array &$d, array $par, $arrSec, $week, $class = null)
 {
@@ -245,7 +251,7 @@ function appRideOut(array &$d, array $par, $arrSec, $week, $class = null)
         $out['Path'] = appTrainPath($m, $stops, $lineIds, (int) ($info['TripLine'] ?? 0));
     } else {
         if (!empty($r['TrainType']) && appClassHasSplit($sys)) {
-            $out['TrainType'] = ['Code' => (string) $r['TrainType'], 'Name' => ['Zh_tw' => FINDER_TRAIN_TYPES[$r['TrainType']] ?? '', 'En' => '']];
+            $out['TrainType'] = ['Code' => (string) $r['TrainType'], 'Name' => appMetroTrainTypeName($r['TrainType'])];
         }
         $out['Path'] = [['LineUID' => $r['LineUID'], 'LineName' => $m['lineNames'][$r['LineUID']] ?? null, 'From' => $out['From'], 'To' => $out['To']]];
     }
@@ -688,7 +694,7 @@ function appStationDepartureRows($uid, array $f)
             $class = appClassHasSplit($sys) ? ($tt === '2' ? APP_CLASS_EXPRESS : APP_CLASS_LOCAL) : APP_CLASS_LOCAL;
             $out[] = [
                 'Train' => null, 'RunCode' => null, 'System' => $sys, 'LineUIDs' => [$line], 'TrainNo' => null,
-                'TrainType' => $tt !== '' ? ['Code' => $tt, 'Name' => $patterns[$r['pattern_id']] ?? ['Zh_tw' => FINDER_TRAIN_TYPES[(int) $tt] ?? '', 'En' => '']] : null,
+                'TrainType' => $tt !== '' ? ['Code' => $tt, 'Name' => isset($patterns[$r['pattern_id']]) ? txapiName($patterns[$r['pattern_id']], 'TrainType', (int) $tt) : appMetroTrainTypeName($tt)] : null,
                 'Class' => appClassHasSplit($sys) ? $class : null, 'ClassLabel' => appClassHasSplit($sys) ? appClassLabel($sys, $class) : null,
                 'Direction' => (string) $r['direction'], 'HeadSign' => $info['TripHeadSign'] ?? '', 'RouteID' => $info['RouteID'] ?? '',
                 'Origin' => $st($info['StartingStationUID'] ?? ''), 'Destination' => $st($info['EndingStationUID'] ?? ''),
@@ -998,7 +1004,7 @@ function appTrainStopsMetro($code, array $mm)
     appSend([
         // 捷運沒有車次：Train、TrainNo 都是 null，班次代碼在 RunCode
         'Train' => null, 'RunCode' => $code, 'System' => $sys, 'TrainNo' => null,
-        'TrainType' => $ride['TrainType'] ? ['Code' => (string) $ride['TrainType'], 'Name' => ['Zh_tw' => FINDER_TRAIN_TYPES[$ride['TrainType']] ?? '', 'En' => '']] : null,
+        'TrainType' => $ride['TrainType'] ? ['Code' => (string) $ride['TrainType'], 'Name' => appMetroTrainTypeName($ride['TrainType'])] : null,
         'Class' => appClassHasSplit($sys) ? $class : null, 'ClassLabel' => appClassHasSplit($sys) ? appClassLabel($sys, $class) : null,
         'Direction' => (string) $ride['Direction'], 'RouteID' => $ride['RouteID'] ?? null, 'LineUIDs' => [$sys . '-' . $line],
         'Origin' => ['StationUID' => $list[0]['StationUID'], 'StationName' => $list[0]['StationName']],

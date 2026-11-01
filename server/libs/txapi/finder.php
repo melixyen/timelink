@@ -18,6 +18,8 @@
  * 臺鐵沒有的資訊另加欄位；所有欄位一律存在，沒有值時為空字串。
  */
 
+require_once __DIR__ . '/names.php';   // 補充名稱 txapiName()
+
 const FINDER_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];   // 0＝星期日
 const FINDER_TRAIN_SYSTEMS = ['TRA', 'THSR'];   // 有列車（車次）資料的系統
 
@@ -625,7 +627,7 @@ function finderRailStations(SqliteDao $db, array $tables)
     $operators = [];
     foreach (FINDERDB_OPERATORS as $id => $o) {
         if (!$ops || in_array($id, $ops, true)) {
-            $operators[$id] = ['Operator' => $id, 'OperatorName' => $o['name'], 'Systems' => $o['systems'],
+            $operators[$id] = ['Operator' => $id, 'OperatorName' => $o['name'], 'OperatorNames' => txapiName(['Zh_tw' => $o['name']], 'Operator', $id), 'Systems' => $o['systems'],
                                'LineCount' => 0, 'StationCount' => 0, 'Lines' => []];
         }
     }
@@ -654,7 +656,7 @@ function finderRailStations(SqliteDao $db, array $tables)
             $lines[$k] = ['op' => $op, 'line' => [
                 'System'          => $r['system'],
                 'LineID'          => $r['line_id'],
-                'LineName'        => json_decode($r['line_name'], true),
+                'LineName'        => txapiName(json_decode($r['line_name'], true), 'Line', $k),
                 'LineColor'       => $r['color'],
                 'LineColorSource' => $r['color_source'],
                 'IsBranch'        => (bool) $r['is_branch'],

@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/api/txapi'
 import { t } from '@/i18n'
+import { nameOf } from '@/utils/format'
 
 /**
  * 系統 / 營運單位等公共資訊（/txapi/public_info/）。
@@ -20,9 +21,10 @@ export const usePublicInfoStore = defineStore('publicInfo', () => {
     return map
   })
 
+  /** 營運單位名稱：多語系 OperatorNames 依目前語言取（舊版後端只有中文字串 OperatorName） */
   function systemName(uid) {
     const s = systemMap.value.get(uid)
-    return s ? s.OperatorName || s.System : uid
+    return s ? nameOf(s.OperatorNames) || s.OperatorName || s.System : uid
   }
 
   /** 載入一次即可；重複呼叫會共用同一個進行中的請求 */
