@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePublicLineStore } from '@/stores/publicLine'
-import { formatMinute2HM, isLatinLocale, nameOf, buildRouteText } from '@/utils/format'
+import { formatMinute2HM, isChineseLocale, nameOf, buildRouteText } from '@/utils/format'
 import TimeBox from '@/components/TimeBox.vue'
 import StationBox from '@/components/StationBox.vue'
 import TrainStopsModal from '@/components/TrainStopsModal.vue'
@@ -88,11 +88,11 @@ function trainTypeFull(leg) {
 
 /**
  * 列車等級（區間車／對號列車／各站停／直達車）：後端依車種代碼或停靠站分類後給的固定名稱。
- * 英文、日文語系沒有中文等級名，所以那兩種語系只顯示車種名稱。
+ * 這個名稱只有中文，其他語系不顯示（改以車種名稱表示）。
  */
 function classLabel(leg) {
   if (leg.Type !== 'ride') return ''
-  if (isLatinLocale()) return ''
+  if (!isChineseLocale()) return ''
   return leg.ClassLabel || ''
 }
 
@@ -108,7 +108,8 @@ function trainClassText(leg) {
 
 function headSign(leg) {
   if (leg.Type !== 'ride') return ''
-  if (isLatinLocale() && leg.Destination) {
+  // HeadSign 只有中文，其他語系改用終點站名稱表示方向
+  if (!isChineseLocale() && leg.Destination) {
     return `${t('journey.direction')} ${nameOf(leg.Destination.StationName)}`
   }
   if (leg.HeadSign) return leg.HeadSign

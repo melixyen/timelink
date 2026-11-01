@@ -1,9 +1,33 @@
 import { i18n } from '@/i18n'
 
-/** 目前語言是否為英文或日文（資料欄位的選擇依此切換） */
-export function isLatinLocale() {
-  const locale = i18n.global.locale.value || 'en'
-  return locale.startsWith('en') || locale.startsWith('ja')
+/**
+ * 語言 → 資料名稱欄位。
+ * 後端的名稱物件只提供 Zh_tw／En／Ja／Ko 四種欄位；
+ * 泰、越、印尼、西文沒有對應欄位，一律用英文名稱。
+ */
+const NAME_FIELDS = {
+  zh: { primary: 'Zh_tw', order: ['Zh_tw', 'En', 'Ja', 'Ko'] },
+  ja: { primary: 'Ja', order: ['Ja', 'Zh_tw', 'En', 'Ko'] },
+  ko: { primary: 'Ko', order: ['Ko', 'En', 'Zh_tw', 'Ja'] },
+  other: { primary: 'En', order: ['En', 'Zh_tw', 'Ja', 'Ko'] },
+}
+
+/** 目前的語言代碼前兩碼（zh／ja／ko／其餘） */
+function localeGroup() {
+  const locale = String(i18n.global.locale.value || 'en').toLowerCase()
+  if (locale.startsWith('zh')) return 'zh'
+  if (locale.startsWith('ja')) return 'ja'
+  if (locale.startsWith('ko')) return 'ko'
+  return 'other'
+}
+
+/**
+ * 目前語言是否為中文語系（zh-TW／zh-CN）。
+ * 後端有些欄位只有中文（列車等級中文名、行車方向的中文 HeadSign），
+ * 只有中文語系才顯示，其他語系改用可翻譯的說明。
+ */
+export function isChineseLocale() {
+  return localeGroup() === 'zh'
 }
 
 /**
@@ -13,9 +37,11 @@ export function isLatinLocale() {
 export function nameOf(obj) {
   if (!obj) return ''
   if (typeof obj === 'string') return obj
-  const locale = i18n.global.locale.value || 'en'
-  const field = locale.startsWith('ja') ? 'Ja' : locale.startsWith('en') ? 'En' : 'Zh_tw'
-  return obj[field] || obj.Zh_tw || obj.En || obj.Ja || obj.Ko || ''
+  const { order } = NAME_FIELDS[localeGroup()]
+  for (const field of order) {
+    if (obj[field]) return obj[field]
+  }
+  return ''
 }
 
 /**
@@ -72,6 +98,6 @@ export function textOn(hex) {
     c /= 255
     return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
   }
-  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
-  return (L + 0.05) / 0.05 >= 1.05 ? '#111' : '#fff'
+  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin(n >> 8 & 255) + 0.0722 * lin(n & 255)
+  return L + 0.05 >= 1.05 ? '#111' : '#fff'
 }

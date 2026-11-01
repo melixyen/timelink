@@ -148,17 +148,47 @@ cp .env .env.local   # 本機想覆蓋時另存 .env.local（.env.local 不進�
 ## 多語系（i18n）
 
 - 語言檔放在 `client/language/`，每個檔案都是**一層的 JSON，只有 key–value 配對**：
-  `zh-TW.json`、`zh-CN.json`、`en.json`、`ja.json`
+  `zh-TW.json`、`zh-CN.json`、`en.json`、`ja.json`、`th.json`、`vi.json`、`id.json`、`es.json`、`ko.json`
 - 使用 `vue-i18n`（composition 模式），在 `src/i18n/index.js` 集中註冊
 - 語言判斷順序：網址參數 `?lang=` → localStorage（使用者選過的語言）→ 瀏覽器標頭
   （`navigator.languages`；`zh-Hant`／`zh-TW`／`zh-HK` → 繁中，`zh-Hans`／`zh-CN` → 簡中，
-  `ja` → 日文，`en` → 英文）→ 都判斷不到時**預設英文**
+  `ja` → 日文，`en` → 英文，`th` → 泰文，`vi` → 越南文，`id`（舊碼 `in`）→ 印尼文，
+  `es` → 西班牙文，`ko` → 韓文）→ 都判斷不到時**預設英文**
 - 右上角有語言選單可即時切換，切換後會同步更新 `<html lang>` 與網頁標題
 - 元件用 `useI18n()` 的 `t()`；Pinia store 用 `src/i18n` 匯出的 `t()`（同樣會隨語言更新）
-- 資料欄位（車站名、路線名、車種）會依語言取 API 的 `Zh_tw`／`En`／`Ja` 欄位；後端只提供單一語言的
-  欄位（例如路徑文字、轉乘教學標題）則保留原文
+- 資料欄位（車站名、路線名、車種）會依語言取 API 的 `Zh_tw`／`En`／`Ja`／`Ko` 欄位；
+  泰文、越南文、印尼文、西班牙文沒有對應欄位，一律使用英文名稱；
+  後端只提供單一語言的欄位（例如路徑文字、轉乘教學標題）則保留原文
 - 新增語言：複製一份 `language/*.json`、在 `src/i18n/index.js` 的 `messages` 與 `SUPPORTED_LOCALES`
   加一筆即可
+
+### 新增／修改翻譯的規則
+
+- **每個語言檔都必須包含全部的 key**，且 key 集合與 `zh-TW.json` 完全一致：
+  新增 key 時要**同時翻譯並加進所有語言檔**，不能只加到部分檔案（漏翻的語系會直接顯示英文）
+- 語言檔之間的 `{placeholder}` 必須一致（例如 `{count}`、`{time}`），不可漏掉或多加
+- 語言選單的語言名稱（`app.lang.<代碼>`）在每個語言檔都要列出**所有**語言，
+  **只寫語言名稱本身**（`繁體中文`、`简体中文`、`English`、`日本語`、`ไทย`、`Tiếng Việt`、
+  `Bahasa Indonesia`、`Español`、`한국어`），不要加上國家
+- **翻譯時的用詞依據是該語言主要使用國家的用法**，也就是「用該國的話翻」，
+  而不是把同一句話照字面翻過去：
+
+  | 語言 | 翻譯依據 | 注意事項 |
+  | --- | --- | --- |
+  | `zh-TW` | 台灣 | 繁體中文，臺灣用語（如「捷運」「時刻表」） |
+  | `zh-CN` | 中國 | 簡體中文，中國大陸用語 |
+  | `en` | 美國 | 英文 |
+  | `ja` | 日本 | 日語，日本用語 |
+  | `th-TH` | 泰國 | 泰語，泰國用語 |
+  | `vi-VN` | 越南 | 越南語，越南用語 |
+  | `id-ID` | 印尼 | 印尼語，印尼用語（印尼與馬來西亞用詞不同） |
+  | `es-ES` | 西班牙 | 西班牙語，西班牙用語（與拉丁美洲用詞不同） |
+  | `ko-KR` | **南韓** | 韓文，**以大韓民國（南韓）的用語為準**，不可使用北韓用語 |
+
+  例：韓文的「時刻表」用南韓的 `시간표`（非 `시각표`）、輕軌用 `경전철`；
+  西班牙文的慢車用西班牙的 `Regional`（非拉美常見的 `Local`）
+- 可用 `client/language/` 底下的檔案互相比對 key 與 placeholder 是否一致
+
 
 ## 使用的 API
 
@@ -182,8 +212,9 @@ client/
 ├─ index.html
 ├─ vite.config.js
 ├─ .env                    所有配置類項目（後端網址、產品名稱、預設查詢條件…）
-├─ language/                語言檔（一層 JSON，key–value）
+├─ language/                語言檔（一層 JSON，key–value；每個檔案都要有全部的 key）
 │  ├─ zh-TW.json  zh-CN.json  en.json  ja.json
+│  ├─ th.json（泰文）vi.json（越南文）id.json（印尼文）es.json（西班牙文）ko.json（韓文）
 ├─ src/
 │  ├─ main.js              進入點（Pinia + Router + i18n）
 │  ├─ App.vue              框架、選單、語言切換、頁尾聲明
@@ -203,7 +234,7 @@ client/
 │  │  ├─ RouteFilter.vue   路徑勾選與最快 1／2／3 切換
 │  │  └─ LocaleSwitcher.vue 語言切換選單
 │  ├─ views/               HomeView / SearchView / StationsView / LinesView
-│  └─ utils/format.js      時間與顏色格式化
+│  └─ utils/format.js      時間、顏色格式化與多語系名稱欄位挑選
 └─ .gitignore              client/ 層次往下的忽略規則
 ```
 

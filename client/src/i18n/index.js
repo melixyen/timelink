@@ -3,12 +3,22 @@ import zhTW from '../../language/zh-TW.json'
 import zhCN from '../../language/zh-CN.json'
 import en from '../../language/en.json'
 import ja from '../../language/ja.json'
+import th from '../../language/th.json'
+import vi from '../../language/vi.json'
+import id from '../../language/id.json'
+import es from '../../language/es.json'
+import ko from '../../language/ko.json'
 
 export const SUPPORTED_LOCALES = [
   { code: 'zh-TW', labelKey: 'app.lang.zh-TW' },
   { code: 'zh-CN', labelKey: 'app.lang.zh-CN' },
   { code: 'en', labelKey: 'app.lang.en' },
   { code: 'ja', labelKey: 'app.lang.ja' },
+  { code: 'th-TH', labelKey: 'app.lang.th-TH' },
+  { code: 'vi-VN', labelKey: 'app.lang.vi-VN' },
+  { code: 'id-ID', labelKey: 'app.lang.id-ID' },
+  { code: 'es-ES', labelKey: 'app.lang.es-ES' },
+  { code: 'ko-KR', labelKey: 'app.lang.ko-KR' },
 ]
 
 const STORAGE_KEY = 'timelink.locale'
@@ -18,7 +28,25 @@ const messages = {
   'zh-CN': zhCN,
   en,
   ja,
+  'th-TH': th,
+  'vi-VN': vi,
+  'id-ID': id,
+  'es-ES': es,
+  'ko-KR': ko,
 }
+
+/** 瀏覽器標頭（語言部分）→ 系統語言代碼；找不到對應語言時回傳 null */
+const BROWSER_LANGUAGE_MAP = [
+  { prefix: 'zh', locale: 'zh-TW' },
+  { prefix: 'ja', locale: 'ja' },
+  { prefix: 'en', locale: 'en' },
+  { prefix: 'th', locale: 'th-TH' },
+  { prefix: 'vi', locale: 'vi-VN' },
+  { prefix: 'id', locale: 'id-ID' },
+  { prefix: 'in', locale: 'id-ID' }, // 舊版印尼語代碼
+  { prefix: 'es', locale: 'es-ES' },
+  { prefix: 'ko', locale: 'ko-KR' },
+]
 
 /** 依瀏覽器標頭（navigator.languages / navigator.language）判斷語言 */
 export function detectLocale() {
@@ -53,8 +81,8 @@ export function detectLocale() {
       if (/-(hans|cn|sg)\b/.test(tag) || /\b(hans)\b/.test(tag)) return 'zh-CN'
       return 'zh-TW'
     }
-    if (tag.startsWith('ja')) return 'ja'
-    if (tag.startsWith('en')) return 'en'
+    const hit = BROWSER_LANGUAGE_MAP.find((item) => item.prefix !== 'zh' && tag.startsWith(item.prefix))
+    if (hit) return hit.locale
   }
 
   // 判斷不到時預設英文

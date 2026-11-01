@@ -21,7 +21,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '@/api/txapi'
 import { usePublicLineStore } from '@/stores/publicLine'
-import { isLatinLocale, nameOf } from '@/utils/format'
+import { isChineseLocale, nameOf } from '@/utils/format'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -204,7 +204,7 @@ const trainTypeText = computed(() => {
   const leg = props.leg
   const name = leg?.TrainType ? nameOf(leg.TrainType.Name) : ''
   const short = name ? name.replace(/[（(].*$/, '').trim() || name : ''
-  const cls = isLatinLocale() ? '' : leg?.ClassLabel || ''
+  const cls = isChineseLocale() ? leg?.ClassLabel || '' : ''
   if (!short) return cls
   if (!cls || cls === short || cls.includes(short)) return cls || short
   return `${short}（${cls}）`
