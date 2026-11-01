@@ -333,6 +333,8 @@ GET https://{$host}/txapi/admin_cache/purge?purge=all|<路徑前綴>       清�
 - 欄位名稱沿用 TDX 的大寫開頭寫法（`StationUID`、`LineUID`…）
 - 多語系名稱（`StationName`、`LineName`、`OperatorNames`、`TrainType.Name`）是 `{Zh_tw, En, Ja}` 物件；TDX 或本站寫死的資料缺某個語言時，
   依補充名稱 `libs/txapi/data/name_supplements.json` 補上（例如高鐵、高捷路線與營運單位的英文）。營運單位另有中文字串 `OperatorName`（相容舊版）
+- 名稱物件依語言取哪個欄位、缺的時候怎麼退回：`/txapi/public_info/names`（`Orders[語言代碼前兩碼]`，沒有時 `Default`）。
+  預設「選取的語系 → 英文 → 中文」；日文「日文 → 中文 → 英文」（臺鐵、高捷站名多半沒有日文，用漢字）。規則在 `libs/txapi/names.php` 的 `TXAPI_NAME_FALLBACK`
 
 ### `public_` API
 
@@ -344,6 +346,7 @@ GET https://{$host}/txapi/public_line/list?system=TRA                         �
 GET https://{$host}/txapi/public_line/detail?line=TRA-WL                      路線站序、顯示區段、各站可轉乘的路線
 GET https://{$host}/txapi/public_info/systems                                 系統、時刻資料性質、慢車／快車分類
 GET https://{$host}/txapi/public_info/calendar                                營運日定義、資料更新時間
+GET https://{$host}/txapi/public_info/names                                   多語系名稱的欄位與退回順序
 GET https://{$host}/txapi/public_info/route?route=…&extra=0                   解析路由代碼
 ```
 

@@ -103,6 +103,8 @@ async function request(path, params = {}) {
 export const api = {
   // 系統、營運單位
   systems: () => request('/txapi/public_info/systems'),
+  // 多語系名稱的取用規則（各語言的欄位與退回順序）
+  nameRules: () => request('/txapi/public_info/names'),
 
   // 車站
   stations: (system) => request('/txapi/public_station/list', system ? { system } : {}),

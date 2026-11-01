@@ -157,7 +157,9 @@ cp .env .env.local   # 本機想覆蓋時另存 .env.local（.env.local 不進�
 - 右上角有語言選單可即時切換，切換後會同步更新 `<html lang>` 與網頁標題
 - 元件用 `useI18n()` 的 `t()`；Pinia store 用 `src/i18n` 匯出的 `t()`（同樣會隨語言更新）
 - 資料欄位（車站名、路線名、營運單位、車種）用 `src/utils/format.js` 的 `nameOf()` 取 API 的 `Zh_tw`／`En`／`Ja`／`Ko` 欄位：
-  **選取的語系有就用選取的語系，沒有就用英文，還是沒有才用中文**；
+  **選取的語系有就用選取的語系，沒有就用英文，還是沒有才用中文**；特定語言的例外（日文：日文 → 中文 → 英文）
+  由後端 `GET /txapi/public_info/names` 提供（表在 `server/libs/txapi/names.php` 的 `TXAPI_NAME_FALLBACK`），
+  前端啟動時載入（`src/i18n/nameRules.js`），不在前端寫死；
   泰文、越南文、印尼文、西班牙文沒有對應欄位，一律使用英文名稱。
   後端缺的語言由後端的補充名稱（`server/libs/txapi/data/name_supplements.json`）補上，前端不另外翻譯資料名稱；
   後端只提供單一語言的欄位（例如路徑文字、轉乘教學標題）則保留原文

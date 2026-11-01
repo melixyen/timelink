@@ -297,6 +297,8 @@ function actionPublicInfo()
                        txapiUrl('public_info', 'systems')],
         'calendar' => ['appPublicInfoCalendar', '營運日的定義、可查詢的日期寫法、各項離線資料的更新時間', [],
                        txapiUrl('public_info', 'calendar')],
+        'names'    => ['appPublicInfoNames', '多語系名稱的取用規則：各語言用名稱物件的哪個欄位、缺的時候依什麼順序退回（例如日文先退回中文）', [],
+                       txapiUrl('public_info', 'names')],
         'route'    => ['appPublicInfoRoute', '解析路由代碼 route：檢查寫法與資料、各段內容、顯示文字；帶 extra 時檢查等級是否允許',
                        ['route' => '路由代碼（必填）', 'extra' => '0～3（選填）'],
                        txapiUrl('public_info', 'route', ['route' => 'TRA-0950.TRA-WL.local.TRA-1000.TRA-WL.express.TRA-3300'])],
@@ -349,6 +351,14 @@ function appPublicInfoSystems()
                  ['bit' => APP_EXTRA_NO_EXPRESS, 'name' => '不搭臺鐵對號', 'desc' => '排除臺鐵莒光、自強以上（快車），只搭區間車、區間快'],
                  ['bit' => APP_EXTRA_NO_HSR, 'name' => '不搭高鐵', 'desc' => '排除高鐵'],
              ], 'note' => 'extra 是排除位元：0＝都可搭（預設），1＝不搭臺鐵對號，2＝不搭高鐵，3＝兩者都不搭。找路與時刻組合的 app_ API 依此排除列車；捷運、輕軌與臺鐵區間車一律可搭。單站、路線、列車時刻表不受 extra 影響']]);
+}
+
+/** 多語系名稱的取用規則（libs/txapi/names.php 的 TXAPI_NAME_FIELDS、TXAPI_NAME_FALLBACK） */
+function appPublicInfoNames()
+{
+    appSend(txapiNameOrders() + [
+        'Note' => '名稱物件（StationName、LineName、OperatorNames、TrainType.Name）依 Orders[語言代碼前兩碼]（沒有時 Default）的順序取第一個有值的欄位',
+    ]);
 }
 
 function appPublicInfoCalendar()

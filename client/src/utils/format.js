@@ -1,16 +1,24 @@
 import { i18n } from '@/i18n'
+import { nameRules } from '@/i18n/nameRules'
 
 /**
- * 語言 → 資料名稱欄位與退回順序。
- * 後端的名稱物件只提供 Zh_tw／En／Ja／Ko 四種欄位；泰、越、印尼、西文沒有對應欄位，一律用英文名稱。
- * 退回規則（使用者規則）：選取的語系有就用選取的語系，沒有就用英文，還是沒有才用中文（最後才是其他語言）。
+ * 資料名稱（名稱物件 Zh_tw／En／Ja／Ko）的取用順序由後端 /txapi/public_info/names 提供
+ * （server/libs/txapi/names.php：預設「選取的語系 → 英文 → 中文」，日文等特定語言另有規則）。
+ * 下面是規則還沒載入時的預設值：泰、越、印尼、西文沒有對應欄位，一律從英文開始。
  * 後端缺的語言已依補充名稱（server/libs/txapi/data/name_supplements.json）補過。
  */
-const NAME_FIELDS = {
-  zh: { primary: 'Zh_tw', order: ['Zh_tw', 'En', 'Ja', 'Ko'] },
-  ja: { primary: 'Ja', order: ['Ja', 'En', 'Zh_tw', 'Ko'] },
-  ko: { primary: 'Ko', order: ['Ko', 'En', 'Zh_tw', 'Ja'] },
-  other: { primary: 'En', order: ['En', 'Zh_tw', 'Ja', 'Ko'] },
+const DEFAULT_FIELDS = { zh: 'Zh_tw', ja: 'Ja', ko: 'Ko' }
+const DEFAULT_FALLBACK = ['En', 'Zh_tw', 'Ja', 'Ko']
+
+/** 目前語言的名稱欄位取用順序 */
+function nameOrder() {
+  const lang = String(i18n.global.locale.value || 'en').slice(0, 2).toLowerCase()
+  const rules = nameRules.value
+  if (rules) {
+    const order = rules.Orders?.[lang] || rules.Default
+    if (Array.isArray(order) && order.length) return order
+  }
+  return [...new Set([DEFAULT_FIELDS[lang] || 'En', ...DEFAULT_FALLBACK])]
 }
 
 /** 目前的語言代碼前兩碼（zh／ja／ko／其餘） */
@@ -32,14 +40,13 @@ export function isChineseLocale() {
 }
 
 /**
- * 多語系名稱：依目前語言挑合適的欄位，取不到時依序往回找。
+ * 多語系名稱：依目前語言的取用順序（nameOrder）取第一個有值的欄位。
  * @param {object|string} obj StationName、LineName、OperatorNames、TrainType.Name 等多語系物件
  */
 export function nameOf(obj) {
   if (!obj) return ''
   if (typeof obj === 'string') return obj
-  const { order } = NAME_FIELDS[localeGroup()]
-  for (const field of order) {
+  for (const field of nameOrder()) {
     if (obj[field]) return obj[field]
   }
   return ''
