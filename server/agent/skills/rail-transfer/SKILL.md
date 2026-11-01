@@ -171,7 +171,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 - **使用者規則（2026-10-31 改）：捷運沒有整列車時刻表，StopTimes 只有上車站、下車站用車站時刻表的時刻，中間各站不參考各站時刻表，
   依站間行駛時間比例內插（`transferRideStopsSpread`，Source＝interpolated），前端開頭明確標註推算。**
   起因：TDX 新北環狀線站別時刻表有相鄰站同一分鐘的錯誤（景安＝中和、大坪林＝十四張＝秀朗橋），逐站對時刻表會對到錯的班次。
-  舊規則（逐站推算這班車對到各站時刻表的哪一班、串成途中各站時刻）已停用；runs.php 的整列車串車仍用來決定下車站時刻與 RAPTOR 的到站。
+  舊規則（逐站推算這班車對到各站時刻表的哪一班、串成途中各站時刻）已停用；2026-11 起 runs.php 的整列車也不用於查詢（見「捷運整列車 runs」）。
   台高鐵給車次、捷運沒有車次給路線編號（`DisplayNo`／`DisplayNoType`）
 - 使用者規則（站間行駛時間）：**以兩站間直接的資料為主，沒有才用該路線一站一站加起來推算**（時刻表與推算的差異可能是有沒有算停站時間）。
   `transferPatternTravel()`：起訖矩陣系統（機捷、淡海、安坑）用 metro_travel_od 的直接秒數，其他（S2STravelTime 只有相鄰兩站）用 metro_travel 累加。
@@ -197,6 +197,15 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 - 驗證腳本（verify_accel.php）要帶管理密碼，才不受次數與範圍限制
 
 ### 捷運整列車 runs（2026-10 使用者要求：起訖站時間越接近正確值越好，依路線資料不同用不同演算法）
+
+- **2026-11 使用者規則：查詢不用整列車（`TRANSFER_USE_RUNS`＝false）。** 捷運查 A 站到 B 站時，班次一律取 A 站官方公告的車站時刻表
+  （營運路線 pattern＝發車＋站間行駛時間，下車站推算），除非是沒有公告各站時刻表的路線（文湖線、臺中捷運，車站時刻表本身是模擬的）。
+  理由：捷運的車可能從中間各站發車（首班車），不像火車都從起站出發；各站時刻表也有錯（環狀線景安＝中和），串車會串出不存在的車。
+  不要再提議用複本時刻表辨識或上下車站兩表配對修串車（使用者否決）。runs.php 保留但不用；app_line/timetable 的捷運因此改用營運路線首站發車推算（`app/line.php`）
+- 營運路線的短程車：`transferPatternReach()`（列車終點在營運路線上就只到終點站）。RAPTOR 順向依「能搭到第幾站」分組各掃一次
+  （`transferPatternReaches()`、`transferPatternDeparturesReach(..., true)`），反向與 follow 只取開得到下車站的車（`transferPatternDeparturesReach()`）。
+  模擬驗證：象山 07:00 往北投、07:05 往淡水，象山→淡水只會搭 07:05（原本 pattern 會算成搭 07:00 直達淡水）
+- 以下是整列車的做法（停用中）：
 
 - `libs/txapi/transfer/runs.php`：有真實站別時刻表的路線（`transferRunsRealLines()`：metro_group 有 source＝timetable）把各站時刻表串成整列車，再依停靠站序分組成路線（`$d['mroutes']`），
   RAPTOR 以路線掃描（`transferMRouteNext()` 二分搜尋；`fifo`＝各站時刻隨班次遞增）；只有模擬時刻的路線（文湖線、臺中捷運）仍用 pattern

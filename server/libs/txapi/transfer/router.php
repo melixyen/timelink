@@ -109,9 +109,15 @@ function transferRouterData(SqliteDao $db, $week)
             }
         }
     }
-    // 有真實站別時刻表的捷運、輕軌路線改用整列車（runs.php：每班車每一站的時刻都對到時刻表，列車在終點站結束）；
-    // 只有模擬時刻的路線（文湖線、臺中捷運）仍用營運路線（發車＋行駛時間推算）
-    transferBuildRuns($d);
+    // 捷運、輕軌一律用營運路線：上車站官方公告的車站時刻表的每一班發車＋站間行駛時間（下車站推算）。
+    // 自己把各站時刻表串成的整列車（runs.php）不用於查詢（TRANSFER_USE_RUNS，使用者規則 2026-11）：
+    // 捷運的車可能從中間各站發車，各站時刻表也有錯（例如新北環狀線景安＝中和同一分鐘），串出來的車會失真
+    if (TRANSFER_USE_RUNS) {
+        transferBuildRuns($d);
+    } else {
+        $d['mroutes'] = [];
+        $d['runLines'] = [];
+    }
     foreach ($d['patterns'] as $k => $p) {
         if (isset($d['runLines'][$p['system'] . '|' . $p['line']])) {
             continue;
@@ -201,6 +207,54 @@ function transferPatternTravel(array &$d, array $p, $i, $j)
         return $x;
     }
     return [$p['arr'][$j] - $p['dep'][$i], implode('+', array_values(array_unique(array_slice($p['src'], $i + 1, $j - $i))))];
+}
+
+/**
+ * 某營運路線第 j 站一班發車（時刻表群組 $gid）能搭到的最後一站在營運路線的索引：列車終點在本營運路線 j 站之後就是終點站，
+ * 否則（環狀線、沒有終點、終點不在本營運路線上）是營運路線的最後一站。短程車（例如象山→北投）不能搭到終點以後
+ */
+function transferPatternReach(array &$d, array $p, $j, $gid)
+{
+    $n = count($p['st']);
+    $e = $d['groupInfo'][$gid]['ending'] ?? '';
+    if ($e === '' || $p['st'][0] === $p['st'][$n - 1]) {
+        return $n - 1;
+    }
+    $k = array_search($e, array_slice($p['st'], $j + 1), true);
+    return $k === false ? $n - 1 : $j + 1 + $k;
+}
+
+/** 營運路線第 j 站的發車（transferPatternDepartures）中，能搭到第 $minReach 站以後的（$exact：剛好搭到第 $exact 站為止的） */
+function transferPatternDeparturesReach(array &$d, $patternKey, $j, $minReach, $exact = false)
+{
+    $ck = $patternKey . '#' . $j . ($exact ? '=' : '>') . $minReach;
+    if (isset($d['depCache'][$ck])) {
+        return $d['depCache'][$ck];
+    }
+    $p = $d['patterns'][$patternKey];
+    $out = [];
+    foreach (transferPatternDepartures($d, $patternKey, $j) as $dep) {
+        $r = transferPatternReach($d, $p, $j, $dep[1]);
+        if ($exact ? $r === $minReach : $r >= $minReach) {
+            $out[] = $dep;
+        }
+    }
+    return $d['depCache'][$ck] = $out;
+}
+
+/** 營運路線上這些車站（索引）的發車能搭到的最後一站（索引，不重複，由小到大） */
+function transferPatternReaches(array &$d, $patternKey, array $js)
+{
+    $p = $d['patterns'][$patternKey];
+    $out = [];
+    foreach ($js as $j) {
+        foreach (transferPatternDepartures($d, $patternKey, $j) as $dep) {
+            $out[transferPatternReach($d, $p, $j, $dep[1])] = true;
+        }
+    }
+    $out = array_keys($out);
+    sort($out);
+    return $out;
 }
 
 /**
@@ -492,35 +546,41 @@ function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRI
                 }
             }
         }
-        // 捷運營運路線：沿站序掃，隨時改搭更早的發車
+        // 捷運營運路線：沿站序掃，隨時改搭更早的發車。
+        // 發車依「能搭到第幾站」分組各掃一次（RAPTOR 的一條路線裡每班車都要開到同一站）：短程車只更新到它的終點站
         $startAt = [];
+        $boardAt = [];
         foreach ($marked as $u => $t) {
             foreach ($d['stationPatterns'][$u] ?? [] as list($pk, $j)) {
                 if (!isset($startAt[$pk]) || $j < $startAt[$pk]) {
                     $startAt[$pk] = $j;
                 }
+                $boardAt[$pk][] = $j;
             }
         }
         foreach ($startAt as $pk => $j0) {
             $p = $d['patterns'][$pk];
             $n = count($p['st']);
-            $base = $INF;   // 等同在首站的離站時刻（上車發車秒 − 上車站離站偏移）
-            $bj = null;
-            $bdep = null;
-            for ($j = $j0; $j < $n; $j++) {
-                $u = $p['st'][$j];
-                if ($base !== $INF && $j > $bj) {
-                    // 到站＝上車站發車＋兩站間行駛時間（有直接資料用直接資料，否則一站一站加）
-                    $improve($u, isset($p['od']) ? $bdep[0] + transferPatternTravel($d, $p, $bj, $j)[0] : $base + $p['arr'][$j],
-                             ['pattern', $pk, $bj, $j, $bdep]);
-                }
-                if (isset($marked[$u]) && $j < $n - 1) {
-                    $dep = transferNextDep(transferPatternDepartures($d, $pk, $j), $marked[$u]);
-                    if ($dep !== null && ($dep[0] - $p['dep'][$j] < $base
-                            || ($dep[0] - $p['dep'][$j] === $base && $marked[$u] < $marked[$p['st'][$bj]]))) {   // 同一班車時改從更早能候車的站上車
-                        $base = $dep[0] - $p['dep'][$j];
-                        $bj = $j;
-                        $bdep = $dep;
+            $js = array_values(array_filter($boardAt[$pk], function ($j) use ($n) { return $j < $n - 1; }));
+            foreach (transferPatternReaches($d, $pk, $js) as $reach) {
+                $base = $INF;   // 等同在首站的離站時刻（上車發車秒 − 上車站離站偏移）
+                $bj = null;
+                $bdep = null;
+                for ($j = $j0; $j <= $reach; $j++) {
+                    $u = $p['st'][$j];
+                    if ($base !== $INF && $j > $bj) {
+                        // 到站＝上車站發車＋兩站間行駛時間（有直接資料用直接資料，否則一站一站加）
+                        $improve($u, isset($p['od']) ? $bdep[0] + transferPatternTravel($d, $p, $bj, $j)[0] : $base + $p['arr'][$j],
+                                 ['pattern', $pk, $bj, $j, $bdep]);
+                    }
+                    if (isset($marked[$u]) && $j < $reach) {
+                        $dep = transferNextDep(transferPatternDeparturesReach($d, $pk, $j, $reach, true), $marked[$u]);
+                        if ($dep !== null && ($dep[0] - $p['dep'][$j] < $base
+                                || ($dep[0] - $p['dep'][$j] === $base && $marked[$u] < $marked[$p['st'][$bj]]))) {   // 同一班車時改從更早能候車的站上車
+                            $base = $dep[0] - $p['dep'][$j];
+                            $bj = $j;
+                            $bdep = $dep;
+                        }
                     }
                 }
             }
@@ -1003,7 +1063,7 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
                     if ($lim - ($lbFrom[$p['st'][$j]] ?? PHP_INT_MAX >> 1) <= $floor) {
                         continue;   // 起站到這站太遠，從這站上車不可能讓出發變晚（不必載入這站的時刻表）
                     }
-                    $dep = transferPrevDep(transferPatternDepartures($d, $pk, $j), $lim);
+                    $dep = transferPrevDep(transferPatternDeparturesReach($d, $pk, $j, $ix), $lim);   // 只看開得到 x 站的車
                     if ($dep === null || $dep[0] < $floor) {
                         continue;
                     }

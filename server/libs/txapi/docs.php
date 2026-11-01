@@ -267,7 +267,7 @@ GET https://{$host}/txapi/transfer/stations?q=台北                            
 ```
 
 轉乘群組是可互相步行轉乘的一組車站（StationUID，跨營運單位），以及可同站換車的車站；路線以「系統-LineID」表示。
-時刻表轉乘以 RAPTOR 逐輪展開臺鐵、高鐵車次與捷運整列車（各站時刻表串成），只讀 finder 資料庫與 `libs/txapi/transfer/data/*.json`。
+時刻表轉乘以 RAPTOR 逐輪展開臺鐵、高鐵車次與捷運營運路線（上車站官方公告的車站時刻表＋站間行駛時間），只讀 finder 資料庫與 `libs/txapi/transfer/data/*.json`。
 
 ### 查詢限制與錯誤代碼（`/txapi/transfer`、`/txapi/finder`、`public_`、`app_`）
 

@@ -155,7 +155,7 @@ function transferFollowLeg(array &$d, array $leg)
             }
         }
     } else {
-        // 整列車（有真實站別時刻表的路線）：這班車有停上車站、之後也停下車站
+        // 整列車（TRANSFER_USE_RUNS 開啟時才有）：這班車有停上車站、之後也停下車站
         foreach ($d['stationMRoutes'][$board] ?? [] as list($rk, $j)) {
             $mr = $d['mroutes'][$rk];
             if ($mr['system'] . '-' . $mr['line'] !== $lu) {
@@ -186,7 +186,7 @@ function transferFollowLeg(array &$d, array $leg)
             if ($k === null) {
                 continue;
             }
-            foreach (transferPatternDepartures($d, $pk, $j) as $dep) {
+            foreach (transferPatternDeparturesReach($d, $pk, $j, $k) as $dep) {   // 只看開得到下車站的車（短程車不算）
                 $arr = $dep[0] + transferPatternTravel($d, $p, $j, $k)[0];
                 // 同一班車（同一站的同一筆時刻）可能屬於幾條營運路線，留到得最早的
                 $vid = 'M:' . $dep[1] . '@' . $dep[0];
