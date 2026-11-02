@@ -115,6 +115,8 @@
   "journey.tag.ShortestTime": "Viaje más corto",
   "journey.tag.FewestTransfers": "Menos transbordos",
   "journey.tag.Direct": "Directo",
+  "journey.tag.FastestNoHSR": "Más rápido sin alta velocidad (THSR)",
+  "journey.tag.FastestNoExpress": "Más rápido sin trenes exprés de TRA",
   "journey.noTrainNo": "Sin número de tren",
   "journey.openStops": "Ver las paradas y los horarios de este tren",
   "stops.title": "Horario del tren",

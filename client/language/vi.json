@@ -115,6 +115,8 @@
   "journey.tag.ShortestTime": "Thời gian đi ngắn nhất",
   "journey.tag.FewestTransfers": "Ít chuyển tuyến nhất",
   "journey.tag.Direct": "Thẳng",
+  "journey.tag.FastestNoHSR": "Nhanh nhất không đi tàu tốc độ cao",
+  "journey.tag.FastestNoExpress": "Nhanh nhất không đi tàu tốc của Đường sắt Đài Loan",
   "journey.noTrainNo": "Không có thông tin số hiệu tàu",
   "journey.openStops": "Xem các ga dừng và giờ của chuyến tàu này",
   "stops.title": "Lịch trình tàu",

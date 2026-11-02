@@ -115,6 +115,8 @@
   "journey.tag.ShortestTime": "Shortest travel time",
   "journey.tag.FewestTransfers": "Fewest transfers",
   "journey.tag.Direct": "Direct",
+  "journey.tag.FastestNoHSR": "Fastest without THSR",
+  "journey.tag.FastestNoExpress": "Fastest without TRA express trains",
   "journey.noTrainNo": "No train number",
   "journey.openStops": "Show the stops and times of this train",
   "stops.title": "Train timetable",
