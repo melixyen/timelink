@@ -252,6 +252,7 @@ function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1)
             }
         }
     }
+    $regionRule = appRegionRule($from, $to);   // 生活圈幹線規則：不套用時 null
     $paths = [];
     $queue = [];
     foreach (array_keys($starts) as $l) {
@@ -335,8 +336,8 @@ function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1)
         }
         $last = count($p) - 1;
         foreach ($starts[$p[0]] as $s) {
-            // 已走部分的段落（起站步行＋搭乘＋轉乘步行），用來檢查排除規則
-            $st0 = appPrefixState();
+            // 已走部分的段落（起站步行＋搭乘＋轉乘步行），用來檢查排除規則；生活圈幹線規則（appRegionRule）也逐段檢查
+            $st0 = appPrefixState() + ['rg' => $regionRule, 'rgPrev' => null, 'rgWalk' => false];
             if ($s[0] !== $from) {
                 $st0 = appPrefixExtend($m, $st0, ['Type' => 'walk', 'From' => $from, 'To' => $s[0]]);
             }
@@ -658,6 +659,93 @@ function appLineJunctions(array $m, $lu)
     return $cache[$lu] = array_keys($out);
 }
 
+// ================================================================
+// 生活圈幹線規則（使用者規則 2026-11，transfer/data/transfer_regions.json）
+//
+// 起訖站的生活圈不同而且不相鄰（跨越兩個生活圈以上）時用幹線判斷：高鐵或臺鐵對號的轉乘只能在起點、終點的生活圈
+// 或與它們相鄰的生活圈（西部中途換幹線不列，例如五堵→愛河之心在新竹、苗栗、臺中換臺鐵或高鐵）；東部往來西部另外可以
+// 在北邊（北北基）或南邊（高雄）的生活圈轉乘。純區間車接區間車（例如區間車接力）、捷運之間的轉乘不受限制。
+// 生活圈車站表裡沒有的車站不檢查。指定路由（journeys 的 routes、route_trains）不套用
+
+/** 生活圈車站表：['of' => StationUID → 生活圈, 'adj' => 生活圈 → [相鄰 => true], 'east' => [東部 => true], 'gate' => [轉乘生活圈]] */
+function appRegions()
+{
+    static $r = null;
+    if ($r === null) {
+        $j = json_decode((string) @file_get_contents(TRANSFER_DATA_DIR . '/transfer_regions.json'), true);
+        $r = ['of' => [], 'adj' => [], 'east' => [], 'gate' => []];
+        if (is_array($j)) {
+            foreach ($j['Regions'] ?? [] as $k => $list) {
+                foreach ($list as $u) {
+                    $r['of'][$u] = $k;
+                }
+            }
+            foreach ($j['Adjacent'] ?? [] as $k => $list) {
+                $r['adj'][$k] = array_fill_keys($list, true);
+            }
+            $r['east'] = array_fill_keys($j['East'] ?? [], true);
+            $r['gate'] = $j['Gateways'] ?? [];
+        }
+    }
+    return $r;
+}
+
+/** 起訖站要不要套用幹線規則：套用時回傳允許高鐵／對號轉乘的生活圈 [生活圈 => true]，不套用（同一或相鄰生活圈、表裡沒有）回 null */
+function appRegionRule($from, $to)
+{
+    $R = appRegions();
+    $a = $R['of'][$from] ?? null;
+    $b = $R['of'][$to] ?? null;
+    if ($a === null || $b === null || $a === $b || isset($R['adj'][$a][$b])) {
+        return null;
+    }
+    $ok = [$a => true, $b => true] + ($R['adj'][$a] ?? []) + ($R['adj'][$b] ?? []);
+    if (isset($R['east'][$a]) !== isset($R['east'][$b])) {
+        foreach ($R['gate'] as $g) {
+            $ok[$g] = true;   // 東部往來西部：北邊或南邊轉乘
+        }
+    }
+    return $ok;
+}
+
+/** 搭乘段是不是幹線：高鐵，或可能搭到對號列車的臺鐵（車種不是 local；展開前不分車種的也算） */
+function appLegTrunk(array $l)
+{
+    $sys = $l['System'] ?? strtok($l['LineUID'], '-');
+    return $sys === 'THSR' || ($sys === 'TRA' && ($l['Class'] ?? null) !== APP_CLASS_LOCAL);
+}
+
+/** 一次轉乘（$prev 下車 → $next 上車）是否符合幹線規則 $ok：兩段都不是幹線不檢查；轉乘點以 $prev 的下車站判斷，表裡沒有的不檢查 */
+function appRegionTransferOk(array $ok, array $prev, array $next)
+{
+    if (!appLegTrunk($prev) && !appLegTrunk($next)) {
+        return true;
+    }
+    $R = appRegions();
+    $rg = $R['of'][$prev['To']] ?? ($R['of'][$next['From']] ?? null);
+    return $rg === null || isset($ok[$rg]);
+}
+
+/** 整條路由（系統直達段合併後、補充資料切開後）是否符合幹線規則 */
+function appRouteRegionOk($from, $to, array $legs)
+{
+    $ok = appRegionRule($from, $to);
+    if ($ok === null) {
+        return true;
+    }
+    $prev = null;
+    foreach ($legs as $l) {
+        if ($l['Type'] !== 'ride') {
+            continue;
+        }
+        if ($prev !== null && !appRegionTransferOk($ok, $prev, $l)) {
+            return false;
+        }
+        $prev = $l;
+    }
+    return true;
+}
+
 /** 逐段檢查排除規則的狀態（appPrefixExtend 用）；dp＝排除名單有沒有內容 */
 function appPrefixState()
 {
@@ -672,6 +760,22 @@ function appPrefixState()
  */
 function appPrefixExtend(array $m, array $st, array $l)
 {
+    // 生活圈幹線規則（appRegionRule）：上下兩段有一段是高鐵或臺鐵（展開前不分車種）時，轉乘點要在允許的生活圈。
+    // 同一鐵路系統在交會站換線（臺鐵西部幹線接宜蘭線）不是轉乘，最後會合成一段系統直達段，不檢查
+    if (!empty($st['rg'])) {
+        if ($l['Type'] === 'ride') {
+            $p = $st['rgPrev'];
+            $sameSystem = $p !== null && !$st['rgWalk'] && $p['System'] === $l['System'] && $p['To'] === $l['From']
+                && in_array($l['System'], FINDER_TRAIN_SYSTEMS, true);
+            if ($p !== null && !$sameSystem && !appRegionTransferOk($st['rg'], $p, $l)) {
+                return null;
+            }
+            $st['rgPrev'] = $l;
+            $st['rgWalk'] = false;
+        } else {
+            $st['rgWalk'] = true;
+        }
+    }
     if ($l['Type'] === 'ride') {
         // 不能直接搭（跨支線）
         if (appRideStations($m, $l) === null) {
@@ -1522,6 +1626,10 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
         $baseCode = appRouteFormat(['Legs' => $x[2]]);
         foreach (array_merge([['Name' => null, 'legs' => $x[2]]], appApplySupplements($m, $x[2], $extra)) as $variant) {
             $legs = $variant['legs'];
+            // 生活圈幹線規則：補充資料會在中途站切開（區間車到大站換對號、交會站換車），切開的轉乘點也要符合
+            if (!appRouteRegionOk($from, $to, $legs)) {
+                continue;
+            }
             // 路由層排除：extra 含 1 時不搭臺鐵快車
             $bad = false;
             foreach ($legs as $l) {

@@ -41,7 +41,7 @@ Claude 自己的比對工具、基準資料與重建指引（railtime 比對、�
 
 | 位置 | 內容 | 版控 |
 | --- | --- | --- |
-| `libs/` | 程式、`libs/config.json` 設定項目與預設值、`libs/txapi/transfer/data/` 人工維護的轉乘輸入與漢字字典、`libs/txapi/data/name_supplements.json` 補充名稱（靜態資料缺的語言，輸出前由 `libs/txapi/names.php` 的 `txapiName()` 補上）、`libs/html/panel/` 公開面板、`libs/html/admin_panel/` 後臺 | 是 |
+| `libs/` | 程式、`libs/config.json` 設定項目與預設值、`libs/txapi/transfer/data/` 人工維護的轉乘輸入與漢字字典、`libs/txapi/transfer/data/transfer_regions.json` 生活圈車站表（找路的幹線規則）、`libs/txapi/data/name_supplements.json` 補充名稱（靜態資料缺的語言，輸出前由 `libs/txapi/names.php` 的 `txapiName()` 補上）、`libs/html/panel/` 公開面板、`libs/html/admin_panel/` 後臺 | 是 |
 | `.htaccess`、`index.php` | 入口 | 是 |
 | `agent/` | 本資料夾：AI 代理的通則與腳本（`agent/claude/` 是 Claude 的工具與資料） | 是 |
 | `custom/libs/config.json` | 這個站的設定與私密值（金鑰、APP_SECRET_KEY、開放網域、SITE_HOST）；只放要覆蓋預設值的項目 | 否 |
