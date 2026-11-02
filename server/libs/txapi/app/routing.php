@@ -746,11 +746,43 @@ function appRouteRegionOk($from, $to, array $legs)
     return true;
 }
 
+/** 高鐵站與它轉乘群組裡的車站 → 高鐵站 StationUID（appPrefixExtend 的「高鐵下車後不再經過另一個高鐵站」用） */
+function appHsrStationOf(array $m)
+{
+    static $map = null;
+    if ($map === null) {
+        $map = [];
+        foreach ($m['groupOf'] as $u => $gids) {
+            if (strpos($u, 'THSR-') !== 0) {
+                continue;
+            }
+            $map[$u] = $u;
+            foreach ($gids as $gid) {
+                foreach ($m['groups'][$gid]['Stations'] ?? [] as $x) {
+                    $map[$x['StationUID']] = $map[$x['StationUID']] ?? $u;
+                }
+            }
+        }
+    }
+    return $map;
+}
+
+/** 在高鐵站 $hsrOff 下車後，這一段搭乘經過的車站 $stations 沒有經過另一個高鐵站（含它轉乘群組的車站） */
+function appHsrRideOk(array $hsrMap, $hsrOff, array $stations)
+{
+    foreach ($stations as $u) {
+        if (isset($hsrMap[$u]) && $hsrMap[$u] !== $hsrOff) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /** 逐段檢查排除規則的狀態（appPrefixExtend 用）；dp＝排除名單有沒有內容 */
 function appPrefixState()
 {
     return ['seen' => [], 'prevKey' => null, 'seg' => -1, 'segOf' => [], 'lastRide' => null, 'ban' => [],
-            'dp' => (bool) appDirectPartners()];
+            'dp' => (bool) appDirectPartners(), 'hsrOff' => null];
 }
 
 
@@ -778,7 +810,15 @@ function appPrefixExtend(array $m, array $st, array $l)
     }
     if ($l['Type'] === 'ride') {
         // 不能直接搭（跨支線）
-        if (appRideStations($m, $l) === null) {
+        $rideSt = appRideStations($m, $l);
+        if ($rideSt === null) {
+            return null;
+        }
+        // 高鐵下車後的轉乘路線不能再經過另一個高鐵站（含它轉乘群組裡的車站，例如臺鐵新左營＝高鐵左營）：
+        // 經過就表示留在高鐵上坐到那一站比較快，是多餘的繞路（例如高鐵台南下車轉沙崙線，再經新左營往高雄）
+        if ($l['System'] === 'THSR') {
+            $st['hsrOff'] = appHsrStationOf($m)[$l['To']] ?? $l['To'];
+        } elseif ($st['hsrOff'] !== null && !appHsrRideOk(appHsrStationOf($m), $st['hsrOff'], $rideSt)) {
             return null;
         }
         // 同一條路線同站換車（支線分岔站）：兩段合起來能直接搭到，就不必換
