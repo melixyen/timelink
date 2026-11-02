@@ -164,6 +164,44 @@ code {
   margin-top: 14px;
 }
 
+/* 起訖站：出發站｜交換鈕｜到達站。交換鈕對齊輸入框（40px）的中線，圖示轉成左右向 */
+.station-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 0 12px;
+}
+
+.station-pair .swap-btn {
+  margin-bottom: calc((var(--train-ui-height-large) - var(--train-ui-height-default)) / 2);
+}
+
+.station-pair .swap-btn .train-icon {
+  transform: rotate(90deg);
+}
+
+/* 查詢條件標題：手機的收合箭頭在最左邊，與標題文字垂直置中 */
+.control .train-card__title {
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  /* 手機：出發站、交換鈕、到達站上中下排列，交換鈕置中、圖示上下向 */
+  .station-pair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px 0;
+  }
+
+  .station-pair .swap-btn {
+    justify-self: center;
+    margin-bottom: 0;
+  }
+
+  .station-pair .swap-btn .train-icon {
+    transform: none;
+  }
+}
+
 .control-row {
   display: flex;
   align-items: center;

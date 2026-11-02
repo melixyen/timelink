@@ -156,19 +156,33 @@ onMounted(async () => {
     <!-- 手機模式：查出結果後查詢面板收成一列（起訖站）＋左上角展開鈕 -->
     <div class="query-panel" :class="{ 'is-collapsed': panelCollapsed }">
       <transition name="panel-slide">
-        <train-card v-if="!panelCollapsed" :title="t('search.title')" class="control">
-          <template #extra>
-            <train-button v-if="isMobile" size="small" round icon="caret-up" @click="panelOpen = false">
-              {{ t('search.collapse') }}
-            </train-button>
+        <train-card v-if="!panelCollapsed" class="control">
+          <!-- 手機：標題最左邊只放箭頭鈕收合（不顯示文字，說明放在 aria-label／title） -->
+          <template #header>
+            <train-button
+              v-if="isMobile"
+              size="small"
+              circle
+              icon="caret-up"
+              class="panel-toggle"
+              :aria-label="t('search.collapse')"
+              :title="t('search.collapse')"
+              @click="panelOpen = false"
+            />
+            {{ t('search.title') }}
           </template>
-          <div class="control-grid">
+          <!-- 起訖站：交換鈕只留圖示，放在兩站中間（桌面左中右、手機上中下） -->
+          <div class="station-pair">
             <StationSelect v-model="form.from" label-key="search.from" />
+            <train-button
+              circle
+              icon="swap"
+              class="swap-btn"
+              :aria-label="t('search.exchange')"
+              :title="t('search.exchange')"
+              @click="exchange"
+            />
             <StationSelect v-model="form.to" label-key="search.to" />
-          </div>
-
-          <div class="control-row">
-            <train-button round icon="swap" @click="exchange">{{ t('search.exchange') }}</train-button>
           </div>
 
           <div class="control-grid time-grid">
@@ -220,7 +234,7 @@ onMounted(async () => {
       <div v-if="panelCollapsed" class="query-collapsed">
         <train-button
           size="small"
-          round
+          circle
           icon="caret-down"
           class="collapsed-toggle"
           :aria-label="t('search.expand')"
