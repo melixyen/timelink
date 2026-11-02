@@ -56,7 +56,7 @@
   "search.by": "어느 시각을 기준으로 할까",
   "search.sort": "정렬 기준",
   "search.extra": "타지 않을 열차",
-  "search.extra.noExpress": "타이완철도 일반열차는 타지 않음",
+  "search.extra.noExpress": "타이완철도 특급열차는 타지 않음",
   "search.extra.noHighSpeed": "고속철도는 타지 않음",
   "search.button": "검색",
   "search.loading": "조회 중…",
