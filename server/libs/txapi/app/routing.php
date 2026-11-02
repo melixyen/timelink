@@ -673,7 +673,7 @@ function appRegions()
     static $r = null;
     if ($r === null) {
         $j = json_decode((string) @file_get_contents(TRANSFER_DATA_DIR . '/transfer_regions.json'), true);
-        $r = ['of' => [], 'adj' => [], 'east' => [], 'gate' => []];
+        $r = ['of' => [], 'adj' => [], 'east' => [], 'gate' => [], 'hsrCheck' => []];
         if (is_array($j)) {
             foreach ($j['Regions'] ?? [] as $k => $list) {
                 foreach ($list as $u) {
@@ -685,6 +685,7 @@ function appRegions()
             }
             $r['east'] = array_fill_keys($j['East'] ?? [], true);
             $r['gate'] = $j['Gateways'] ?? [];
+            $r['hsrCheck'] = array_fill_keys($j['HsrPassCheck'] ?? [], true);
         }
     }
     return $r;
@@ -781,9 +782,18 @@ function appRegionDiffer($a, $b)
     return $ra !== null && $rb !== null && $ra !== $rb;
 }
 
-/** 在高鐵站 $hsrOff 下車後，這一段搭乘經過的車站 $stations 沒有經過另一個生活圈的高鐵站（含它轉乘群組的車站） */
+/** 高鐵站經過規則要不要檢查這個上下車站（HsrPassCheck：桃園、新竹、苗栗、彰化、雲林、嘉義、台南；直達車多的南港、台北、板橋、台中、左營不檢查） */
+function appHsrPassChecked($h)
+{
+    return isset(appRegions()['hsrCheck'][$h]);
+}
+
+/** 在高鐵站 $hsrOff 下車後，這一段搭乘經過的車站 $stations 沒有經過另一個生活圈的高鐵站（含它轉乘群組的車站）；下車站不在 HsrPassCheck 時不檢查 */
 function appHsrRideOk(array $hsrMap, $hsrOff, array $stations)
 {
+    if (!appHsrPassChecked($hsrOff)) {
+        return true;
+    }
     foreach ($stations as $u) {
         if (isset($hsrMap[$u]) && appRegionDiffer($hsrMap[$u], $hsrOff)) {
             return false;
@@ -819,16 +829,21 @@ function appHsrLinked($h)
 }
 
 /**
- * 高鐵上車（$on 上車、$off 下車，$stations 是這段高鐵經過的車站）：
+ * 高鐵上車（$on 上車、$off 下車，$stations 是這段高鐵經過的車站）。上車站在 HsrPassCheck 時檢查：
  *   上車前經過的高鐵站 $passed 不能在 $on 以外的生活圈（先經過別的生活圈的高鐵站不搭）；
- *   這段高鐵中途經過起點生活圈（$fromRg）有接其他鐵路的高鐵站時，上車站要在起點生活圈（以自己生活圈的高鐵站上車）；
- *   中途經過終點生活圈（$toRg）有接其他鐵路的高鐵站時，下車站要在終點生活圈
+ *   這段高鐵中途經過起點生活圈（$fromRg）有接其他鐵路的高鐵站時，上車站要在起點生活圈（以自己生活圈的高鐵站上車）。
+ * 下車站在 HsrPassCheck 時檢查：中途經過終點生活圈（$toRg）有接其他鐵路的高鐵站時，下車站要在終點生活圈。
+ * 南港、台北、板橋、台中、左營不在清單內（直達車多），例如桃園、中壢經由板橋上高鐵可以
  */
 function appHsrBoardOk(array $passed, $on, $off, array $stations, $fromRg, $toRg)
 {
-    foreach (array_keys($passed) as $h) {
-        if (appRegionDiffer($h, $on)) {
-            return false;
+    $checkOn = appHsrPassChecked($on);
+    $checkOff = appHsrPassChecked($off);
+    if ($checkOn) {
+        foreach (array_keys($passed) as $h) {
+            if (appRegionDiffer($h, $on)) {
+                return false;
+            }
         }
     }
     $mid = array_slice($stations, 1, -1);
@@ -836,10 +851,10 @@ function appHsrBoardOk(array $passed, $on, $off, array $stations, $fromRg, $toRg
         if (!appHsrLinked($u) || ($rg = appRegionOf($u)) === null) {
             continue;
         }
-        if ($fromRg !== null && $rg === $fromRg && appRegionOf($on) !== $fromRg) {
+        if ($checkOn && $fromRg !== null && $rg === $fromRg && appRegionOf($on) !== $fromRg) {
             return false;
         }
-        if ($toRg !== null && $rg === $toRg && appRegionOf($off) !== $toRg) {
+        if ($checkOff && $toRg !== null && $rg === $toRg && appRegionOf($off) !== $toRg) {
             return false;
         }
     }
