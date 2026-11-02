@@ -337,7 +337,7 @@ function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1)
         $last = count($p) - 1;
         foreach ($starts[$p[0]] as $s) {
             // 已走部分的段落（起站步行＋搭乘＋轉乘步行），用來檢查排除規則；生活圈幹線規則（appRegionRule）也逐段檢查
-            $st0 = appPrefixState() + ['rg' => $regionRule, 'rgPrev' => null, 'rgWalk' => false];
+            $st0 = ['rg' => $regionRule, 'rgPrev' => null, 'rgWalk' => false, 'rgFrom' => appRegionOf($from), 'rgTo' => appRegionOf($to)] + appPrefixState();
             if ($s[0] !== $from) {
                 $st0 = appPrefixExtend($m, $st0, ['Type' => 'walk', 'From' => $from, 'To' => $s[0]]);
             }
@@ -767,11 +767,79 @@ function appHsrStationOf(array $m)
     return $map;
 }
 
-/** 在高鐵站 $hsrOff 下車後，這一段搭乘經過的車站 $stations 沒有經過另一個高鐵站（含它轉乘群組的車站） */
+/** 車站的生活圈（生活圈車站表；沒有回 null） */
+function appRegionOf($u)
+{
+    return appRegions()['of'][$u] ?? null;
+}
+
+/** 兩個車站是不是在不同的生活圈（任一個不在表裡時當成相同，不檢查） */
+function appRegionDiffer($a, $b)
+{
+    $ra = appRegionOf($a);
+    $rb = appRegionOf($b);
+    return $ra !== null && $rb !== null && $ra !== $rb;
+}
+
+/** 在高鐵站 $hsrOff 下車後，這一段搭乘經過的車站 $stations 沒有經過另一個生活圈的高鐵站（含它轉乘群組的車站） */
 function appHsrRideOk(array $hsrMap, $hsrOff, array $stations)
 {
     foreach ($stations as $u) {
-        if (isset($hsrMap[$u]) && $hsrMap[$u] !== $hsrOff) {
+        if (isset($hsrMap[$u]) && appRegionDiffer($hsrMap[$u], $hsrOff)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/** 上高鐵前經過的高鐵站（含轉乘群組）：加進 $passed（高鐵站 StationUID => true） */
+function appHsrPassed(array $hsrMap, array $passed, array $stations)
+{
+    foreach ($stations as $u) {
+        if (isset($hsrMap[$u])) {
+            $passed[$hsrMap[$u]] = true;
+        }
+    }
+    return $passed;
+}
+
+/** 有接其他鐵路的高鐵站（轉乘群組裡有其他車站；彰化、雲林、嘉義沒有，坐到那裡也轉不了車） */
+function appHsrLinked($h)
+{
+    static $linked = null;
+    if ($linked === null) {
+        $linked = [];
+        foreach (appHsrStationOf(appModel()) as $u => $hsr) {
+            if ($u !== $hsr) {
+                $linked[$hsr] = true;
+            }
+        }
+    }
+    return isset($linked[$h]);
+}
+
+/**
+ * 高鐵上車（$on 上車、$off 下車，$stations 是這段高鐵經過的車站）：
+ *   上車前經過的高鐵站 $passed 不能在 $on 以外的生活圈（先經過別的生活圈的高鐵站不搭）；
+ *   這段高鐵中途經過起點生活圈（$fromRg）有接其他鐵路的高鐵站時，上車站要在起點生活圈（以自己生活圈的高鐵站上車）；
+ *   中途經過終點生活圈（$toRg）有接其他鐵路的高鐵站時，下車站要在終點生活圈
+ */
+function appHsrBoardOk(array $passed, $on, $off, array $stations, $fromRg, $toRg)
+{
+    foreach (array_keys($passed) as $h) {
+        if (appRegionDiffer($h, $on)) {
+            return false;
+        }
+    }
+    $mid = array_slice($stations, 1, -1);
+    foreach ($mid as $u) {
+        if (!appHsrLinked($u) || ($rg = appRegionOf($u)) === null) {
+            continue;
+        }
+        if ($fromRg !== null && $rg === $fromRg && appRegionOf($on) !== $fromRg) {
+            return false;
+        }
+        if ($toRg !== null && $rg === $toRg && appRegionOf($off) !== $toRg) {
             return false;
         }
     }
@@ -782,7 +850,7 @@ function appHsrRideOk(array $hsrMap, $hsrOff, array $stations)
 function appPrefixState()
 {
     return ['seen' => [], 'prevKey' => null, 'seg' => -1, 'segOf' => [], 'lastRide' => null, 'ban' => [],
-            'dp' => (bool) appDirectPartners(), 'hsrOff' => null];
+            'dp' => (bool) appDirectPartners(), 'hsrOff' => null, 'hsrPre' => [], 'rgFrom' => null, 'rgTo' => null];
 }
 
 
@@ -814,12 +882,24 @@ function appPrefixExtend(array $m, array $st, array $l)
         if ($rideSt === null) {
             return null;
         }
-        // 高鐵下車後的轉乘路線不能再經過另一個高鐵站（含它轉乘群組裡的車站，例如臺鐵新左營＝高鐵左營）：
-        // 經過就表示留在高鐵上坐到那一站比較快，是多餘的繞路（例如高鐵台南下車轉沙崙線，再經新左營往高雄）
+        // 高鐵站經過規則（appHsrBoardOk、appHsrRideOk，以生活圈判斷，同一生活圈不檢查）：
+        //   下車後的轉乘路線不能再經過另一個生活圈的高鐵站（含它轉乘群組的車站，例如臺鐵新左營＝高鐵左營）——
+        //   經過就表示留在高鐵上坐到那一站比較快（例如高鐵台南下車轉沙崙線，再經新左營往高雄）；
+        //   上車前也不能先經過另一個生活圈的高鐵站不搭；高鐵會經過起點（終點）生活圈的高鐵站時，要從那一站上車（下車）
         if ($l['System'] === 'THSR') {
-            $st['hsrOff'] = appHsrStationOf($m)[$l['To']] ?? $l['To'];
-        } elseif ($st['hsrOff'] !== null && !appHsrRideOk(appHsrStationOf($m), $st['hsrOff'], $rideSt)) {
-            return null;
+            $hsr = appHsrStationOf($m);
+            $on = $hsr[$l['From']] ?? $l['From'];
+            $off = $hsr[$l['To']] ?? $l['To'];
+            if (!appHsrBoardOk($st['hsrPre'], $on, $off, $rideSt, $st['rgFrom'], $st['rgTo'])) {
+                return null;
+            }
+            $st['hsrOff'] = $off;
+        } elseif ($st['hsrOff'] !== null) {
+            if (!appHsrRideOk(appHsrStationOf($m), $st['hsrOff'], $rideSt)) {
+                return null;
+            }
+        } else {
+            $st['hsrPre'] = appHsrPassed(appHsrStationOf($m), $st['hsrPre'], $rideSt);   // 上高鐵前經過的高鐵站生活圈
         }
         // 同一條路線同站換車（支線分岔站）：兩段合起來能直接搭到，就不必換
         $pr = $st['lastRide'] ?? null;
