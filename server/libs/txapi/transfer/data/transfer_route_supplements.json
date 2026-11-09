@@ -5,9 +5,9 @@
         "Classes": "會用到的車種等級陣列（local／express，選填）：extra 排除其中任何一種就不套用",
         "From/To": "搭乘段上車站、下車站條件（選填）：車站代碼陣列，或範圍 [{Line, StationRange?}]，可以混寫",
         "ViaLines/ViaStations": "搭乘段要經過的路線、車站（選填，任一個即可）",
-        "Logic": "處理函式：TRA.LocalRelay（區間車接力）、TRA.ExpressTransfer（區間車轉對號）、TRA.ChangeAt（指定車站換車）、ClassChange（高鐵、機捷換快慢車）；業者前綴的只看得懂該業者的 Meta",
+        "Logic": "處理函式：TRA.LocalRelay（區間車接力）、TRA.HubTransfer（中長途經生活圈大站轉對號）、TRA.ExpressTransfer（區間車轉對號，中長途不套用）、TRA.ChangeAt（指定車站換車）、ClassChange（高鐵、機捷換快慢車）；業者前綴的只看得懂該業者的 Meta",
         "Meta": "給 Logic 的參數",
-        "Rule": "一條補充資料符合時只多一條路由；一條路由裡所有符合條件的搭乘段一起改寫"
+        "Rule": "一條補充資料符合時只多一條路由（TRA.HubTransfer 例外：每個大站組合各一條）；一條路由裡所有符合條件的搭乘段一起改寫"
     },
     "Supplements": [
         {
@@ -47,6 +47,19 @@
             },
             "Source": "manual",
             "Note": "全程搭區間車：沿途在接力站換下一班區間車（沒有接力站時用其他同站換車站）"
+        },
+        {
+            "Name": "臺鐵生活圈大站轉對號",
+            "Operators": [
+                "TRA"
+            ],
+            "Classes": [
+                "local",
+                "express"
+            ],
+            "Logic": "TRA.HubTransfer",
+            "Source": "manual",
+            "Note": "中長途（搭乘段起訖的生活圈不相鄰）：除了起訖站直達，也經由生活圈大站（transfer_regions.json 的 TraHubs）轉對號列車；上車端用起點生活圈內往行進方向的大站，沒有時沿車站順序往下找第一個大站，下車端對稱。中長途不套用下面四條「區間車轉對號」"
         },
         {
             "Name": "臺鐵區間車轉對號（第一個大站上、最後一個大站下）",

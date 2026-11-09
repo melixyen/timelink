@@ -307,7 +307,11 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 - **系統直達段**（使用者 2026-10 設計）：臺鐵、高鐵的連續搭乘在 appNetworkRoute 組好後由 appCollapseSystemLegs 合成一段，LineUID＝業者代碼（`TRA`），點對點查站到站直達（八堵不停的 402 次也查得到，不必再合併 Through 單元）；經過的路線串放 `Path`（[{LineUID, From, To}...]），同代碼的路由去重時聯集成 `Paths`，主要的（`Path`）取里程最短（appPathKm）。DFS 剪枝仍用合併前逐路線的段落（RouteBans、DirectPairs、重複經過都照舊）。appLegMinutes 對業者代碼用系統站到站最短；沒有直達車時估計用 Path 各段加總。核心 B 對 TRA／THSR 不分路線（line＝null）。前端顯示用 `Paths`（appRouteDescribe 帶 OperatorName、Direct）。
 - **補充資料**（`libs/txapi/transfer/data/transfer_route_supplements.json`，人工維護、受版控；`app/supplement.php`）：自動找完、估計排序後，對取出的每條基本路由逐一比對 `Supplements` 陣列，條件百分之百符合的各多一條路由（一條補充只多一條；同一路由裡所有符合的搭乘段一起改寫）。條件都是陣列：`Operators`（必填，["TRA"]，跨業者 ["TRA","TRTC"]）、`Classes`（會用到的等級，extra 排除其中任何一種就不套用）、`From`／`To`（車站代碼或 [{Line, StationRange?}] 範圍，可混寫）、`ViaLines`／`ViaStations`。`Logic` 指定處理函式（APP_SUPPLEMENT_LOGIC），業者前綴的只讀自己的 `Meta`：
   - `TRA.LocalRelay`：全程區間車，在 Meta.RelayStations 分切，每小段能直達就一段，不能就在其他同站換車站再切
-  - `TRA.ExpressTransfer`：Meta.Board／Alight（big 大站＝快車每日停靠 ≥10 且有同站換車；major 主要站＝快車停靠次數 ≥ 沿途最多那站 × MajorRatio）四種組合，區間車到上快車站、對號到下快車站、區間車到終點
+  - `TRA.HubTransfer`（2026-11 使用者規則）：中長途（搭乘段起訖的生活圈不相鄰，appTraHubLeg）的臺鐵段，除了起訖站直達，也經由生活圈大站轉對號（transfer_regions.json 的 `TraHubs`，參考 railtime tra.station_ary 的 big，南港另外加 e；`TraTrunks` 定義 e 東部幹線樹林—臺東、w 西部幹線基隆—潮州含海線、s 南迴新左營—臺東，共用區段兩條都算）。
+    上車端：起站是這條幹線的大站就從起站上；不是時試起點生活圈內往行進方向的每個大站，生活圈內往前已經沒有大站（鶯歌、鳳鳴往南）就沿站序找第一個大站（桃園）；起站有對號停靠時也保留起站上車。下車端對稱。
+    幹線：上車端看起站往前第一個只屬於一條幹線的車站（五堵往南 w、往宜蘭 e），下車端從終點往回看。一段可以有好幾種改法（回 `Alternatives`，每種各一條路由，名稱帶「松山上、新左營下」），中長途不再套用 ExpressTransfer，起訖站是捷運、輕軌時臺鐵段也用同一規則。
+    有轉乘、臺鐵段又沒有直達車的基本路由（五堵→新左營＋高雄捷運），原本在套用補充資料前就被丟掉（只留不轉乘的），現在用大站轉乘後最好的估計（appRouteHubEstimate）排進展開清單，展開時只套用大站轉乘。修正前五堵、內壢往高雄捷運不搭高鐵時，只剩機捷繞路（五堵→臺北→機捷→老街溪→中壢轉對號），汐止只有汐止直接上的對號
+  - `TRA.ExpressTransfer`（中長途不套用）：Meta.Board／Alight（big 大站＝快車每日停靠 ≥10 且有同站換車；major 主要站＝快車停靠次數 ≥ 沿途最多那站 × MajorRatio）四種組合，區間車到上快車站、對號到下快車站、區間車到終點
   - `TRA.ChangeAt`：在 Meta.Stations（路線交會站）換車；OnlyLineChange＝只在路線串真的換線的地方切，切出的後段標 Through（同一班車繼續坐也串得到，不算轉乘）
   - `ClassChange`：高鐵台中、機捷 A8 換快車或慢車（起訖一端快車很少停時）
   補充路由帶 `Supplement`（名稱）與 `BaseRoute`（基本路由代碼），routes API 也輸出。journeys 用 `variants`：取前 limit 條基本路由，它們的補充路由全部帶上（補充路由段數多，照排序會被擠出去）；本身沒有直達車、不在清單的直達路由（枋山→東海）它的補充路由也帶上。

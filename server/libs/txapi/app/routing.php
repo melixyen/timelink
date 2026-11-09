@@ -673,7 +673,7 @@ function appRegions()
     static $r = null;
     if ($r === null) {
         $j = json_decode((string) @file_get_contents(TRANSFER_DATA_DIR . '/transfer_regions.json'), true);
-        $r = ['of' => [], 'adj' => [], 'east' => [], 'gate' => [], 'hsrCheck' => []];
+        $r = ['of' => [], 'adj' => [], 'east' => [], 'gate' => [], 'hsrCheck' => [], 'hubs' => [], 'trunks' => []];
         if (is_array($j)) {
             foreach ($j['Regions'] ?? [] as $k => $list) {
                 foreach ($list as $u) {
@@ -686,6 +686,12 @@ function appRegions()
             $r['east'] = array_fill_keys($j['East'] ?? [], true);
             $r['gate'] = $j['Gateways'] ?? [];
             $r['hsrCheck'] = array_fill_keys($j['HsrPassCheck'] ?? [], true);
+            foreach ($j['TraHubs'] ?? [] as $u => $x) {
+                $r['hubs'][$u] = array_fill_keys($x['Trunks'] ?? [], true);
+            }
+            foreach ($j['TraTrunks'] ?? [] as $k => $x) {
+                $r['trunks'][$k] = $x['Stations'] ?? [];
+            }
         }
     }
     return $r;
@@ -780,6 +786,53 @@ function appRegionDiffer($a, $b)
     $ra = appRegionOf($a);
     $rb = appRegionOf($b);
     return $ra !== null && $rb !== null && $ra !== $rb;
+}
+
+/** 臺鐵車站屬於哪幾條幹線（TraTrunks）：StationUID → [e／w／s => true]；不在幹線上的（支線）沒有 */
+function appTraTrunkOf(array $m)
+{
+    static $map = null;
+    if ($map === null) {
+        $map = [];
+        foreach (appRegions()['trunks'] as $k => $ranges) {
+            foreach (appRouteBanScope($m, $ranges) as $u => $_) {
+                $map[$u][$k] = true;
+            }
+        }
+    }
+    return $map;
+}
+
+/** 臺鐵對號轉乘大站（TraHubs）：StationUID → [幹線 => true] */
+function appTraHubs()
+{
+    return appRegions()['hubs'];
+}
+
+/** 基本路由經生活圈大站轉乘（TRA.HubTransfer）後最好的估計分鐘；沒有中長途臺鐵段或都估不出回 null */
+function appRouteHubEstimate(array $m, array $legs, $extra)
+{
+    $hit = false;
+    foreach ($legs as $l) {
+        $hit = $hit || ($l['Type'] === 'ride' && appTraHubLeg($l));
+    }
+    if (!$hit) {
+        return null;
+    }
+    $best = null;
+    foreach (appApplySupplements($m, $legs, $extra, ['TRA.HubTransfer']) as $v) {
+        $e = appRouteEstimate($m, $v['legs']);
+        if ($e !== null && ($best === null || $e < $best)) {
+            $best = $e;
+        }
+    }
+    return $best;
+}
+
+/** 臺鐵搭乘段要不要用生活圈大站轉乘：搭乘段起訖的生活圈不同而且不相鄰（中長途），而且有大站表 */
+function appTraHubLeg(array $leg)
+{
+    return ($leg['System'] ?? null) === 'TRA' && appTraHubs() && appRegionRule($leg['From'], $leg['To']) !== null;
 }
 
 /** 高鐵站經過規則要不要檢查這個上下車站（HsrPassCheck：桃園、新竹、苗栗、彰化、雲林、嘉義、台南；直達車多的南港、台北、板橋、台中、左營不檢查） */
@@ -1729,6 +1782,10 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
         $est = appRouteEstimate($m, $legs);
         if ($est !== null) {
             $scored[] = [appRouteTransfers($legs), $est, $legs];
+        } elseif (appRouteTransfers($legs) > 0 && ($hubEst = appRouteHubEstimate($m, $legs, $extra)) !== null) {
+            // 有轉乘、臺鐵段沒有直達車（五堵→新左營＋高雄捷運）：中長途的臺鐵段經生活圈大站轉對號串得出來，用最好的那種估計排序，
+            // 展開時只套用大站轉乘（其他補充資料不套，避免多轉乘的路由大量增加）
+            $scored[] = [appRouteTransfers($legs), $hubEst, $legs, ['TRA.HubTransfer']];
         } else {
             $noEst[] = $legs;   // 沒有直達車（例如枋山→東海）：本身串不出班次，但補充資料（區間車接力）可能可以
         }
@@ -1759,7 +1816,8 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     foreach ($pick as $x) {
         // 基本路由本身＋補充資料（transfer_route_supplements.json，人工經驗：區間車接力、轉對號、快慢車換車…）每條符合的多一條
         $baseCode = appRouteFormat(['Legs' => $x[2]]);
-        foreach (array_merge([['Name' => null, 'legs' => $x[2]]], appApplySupplements($m, $x[2], $extra)) as $variant) {
+        $variants = isset($x[3]) ? appApplySupplements($m, $x[2], $extra, $x[3]) : array_merge([['Name' => null, 'legs' => $x[2]]], appApplySupplements($m, $x[2], $extra));
+        foreach ($variants as $variant) {
             $legs = $variant['legs'];
             // 生活圈幹線規則：補充資料會在中途站切開（區間車到大站換對號、交會站換車），切開的轉乘點也要符合
             if (!appRouteRegionOk($from, $to, $legs)) {
@@ -1791,7 +1849,7 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             $dist = appRouteDistance($m, $legs);
             $out[$code] = ['route' => $code, 'legs' => $legs, 'TransferCount' => $tc, 'EstimatedMinutes' => $est,
                            'DistanceKm' => $dist[0] ?? null, 'DistanceSource' => $dist[1] ?? null,
-                           'Supplement' => $variant['Name'], 'BaseRoute' => $baseCode];
+                           'Supplement' => $variant['Name'], 'BaseRoute' => $baseCode, 'Rescued' => isset($x[3])];
         }
     }
     $out = array_values($out);
@@ -1833,14 +1891,27 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
         return $sel;
     }
     // journeys 用：取前 limit 條基本路由（同樣做業者保底），它們的補充路由一律帶上（補充路由轉乘段數多，照排序會被擠出去）
-    $baseList = array_values(array_filter($out, function ($r) { return $r['Supplement'] === null; }));
+    // 靠生活圈大站轉乘救回來的基本路由（Rescued：有轉乘、臺鐵段沒有直達車）本身不在 $out：用它最好的一條補充路由代表，跟其他基本路由一起取前 limit 條
+    $stand = [];
+    foreach ($out as $i => $r) {
+        if (!empty($r['Rescued']) && (!isset($stand[$r['BaseRoute']]) || $better($r, $out[$stand[$r['BaseRoute']]]) < 0)) {
+            $stand[$r['BaseRoute']] = $i;
+        }
+    }
+    $standIdx = array_flip($stand);
+    $baseList = [];
+    foreach ($out as $i => $r) {
+        if ($r['Supplement'] === null || isset($standIdx[$i])) {
+            $baseList[] = $r;
+        }
+    }
     $bases = [];
     $present = [];
     foreach ($baseList as $r) {
-        $present[$r['route']] = true;
+        $present[$r['BaseRoute']] = true;
     }
     foreach (appRouteCoverPick($baseList, $limit, $legsOf, $better) as $i) {
-        $bases[$baseList[$i]['route']] = true;
+        $bases[$baseList[$i]['BaseRoute']] = true;
     }
     // 本身串不出班次的直達路由（不在 $out）：它的補充路由一律帶上，跟「直達一律保留」一致
     foreach ($out as $r) {

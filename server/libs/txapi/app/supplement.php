@@ -17,11 +17,16 @@
  *   Meta        給 Logic 的參數
  *   Disabled    停用
  * 一條路由裡所有符合條件的搭乘段都交給 Logic 改寫；Logic 回 null 的段不改；一段都沒改就不產生。
+ * Logic 也可以回 ['Alternatives' => [[段落, 名稱後綴], ...]]：同一段有好幾種改法（生活圈大站轉乘），每一種各多一條路由
+ * （一條路由裡有好幾段時取組合，最多 APP_SUPPLEMENT_MAX_COMBOS 條）。
  */
+
+const APP_SUPPLEMENT_MAX_COMBOS = 16;
 
 const APP_SUPPLEMENT_LOGIC = [
     'TRA.LocalRelay'      => 'appSupTraLocalRelay',       // 臺鐵全程區間車：在接力站換車
     'TRA.ExpressTransfer' => 'appSupTraExpressTransfer',  // 臺鐵區間車轉對號列車再轉區間車
+    'TRA.HubTransfer'     => 'appSupTraHubTransfer',      // 臺鐵中長途：經由生活圈大站轉對號列車（一個搭乘段可以有好幾種）
     'TRA.ChangeAt'        => 'appSupTraChangeAt',         // 臺鐵在指定車站換車（不限車種）
     'ClassChange'         => 'appSupClassChange',         // 高鐵、機捷在換車站換快車／慢車
 ];
@@ -109,24 +114,41 @@ function appSupplementMatch(array $m, array $x, array $leg, $extra)
 }
 
 /** 基本路由套用補充資料：每條符合的補充資料多一條路由，回傳 [['Name' => 補充資料名稱, 'legs' => 段落], ...] */
-function appApplySupplements(array $m, array $legs, $extra)
+function appApplySupplements(array $m, array $legs, $extra, $onlyLogic = null)
 {
     $out = [];
     foreach (appRouteSupplements() as $x) {
+        if ($onlyLogic !== null && !in_array($x['Logic'], $onlyLogic, true)) {
+            continue;
+        }
         $fn = APP_SUPPLEMENT_LOGIC[$x['Logic']];
-        $new = [];
+        $combos = [[[], []]];   // [段落, 名稱後綴]
         $changed = false;
         foreach ($legs as $leg) {
             $rep = appSupplementMatch($m, $x, $leg, $extra) ? $fn($m, $leg, $x['Meta'] ?? [], $extra) : null;
-            if ($rep) {
-                $changed = true;
-                $new = array_merge($new, $rep);
-            } else {
-                $new[] = $leg;
+            $alts = $rep ? ($rep['Alternatives'] ?? [[$rep, null]]) : [];
+            if (!$alts) {
+                foreach ($combos as &$c) {
+                    $c[0][] = $leg;
+                }
+                unset($c);
+                continue;
             }
+            $changed = true;
+            $next = [];
+            foreach ($combos as $c) {
+                foreach ($alts as $a) {
+                    if (count($next) < APP_SUPPLEMENT_MAX_COMBOS) {
+                        $next[] = [array_merge($c[0], $a[0]), $a[1] !== null ? array_merge($c[1], [$a[1]]) : $c[1]];
+                    }
+                }
+            }
+            $combos = $next;
         }
         if ($changed) {
-            $out[] = ['Name' => $x['Name'], 'legs' => $new];
+            foreach ($combos as $c) {
+                $out[] = ['Name' => $x['Name'] . ($c[1] ? '（' . implode('；', $c[1]) . '）' : ''), 'legs' => $c[0]];
+            }
         }
     }
     return $out;
@@ -232,6 +254,9 @@ function appSupTraLocalRelay(array $m, array $leg, array $meta, $extra)
  */
 function appSupTraExpressTransfer(array $m, array $leg, array $meta, $extra)
 {
+    if (appTraHubLeg($leg)) {
+        return null;   // 中長途改用生活圈大站轉乘（TRA.HubTransfer），轉乘站的選法一致
+    }
     $path = appSegmentPath($m, appLegPath($leg));
     $st = $path['stations'];
     $n = count($st) - 1;
@@ -278,6 +303,87 @@ function appSupTraExpressTransfer(array $m, array $leg, array $meta, $extra)
         $out = array_merge($out, $post);
     }
     return $out;
+}
+
+/**
+ * TRA.HubTransfer：中長途（搭乘段起訖的生活圈不相鄰）的臺鐵段，除了起訖站自己直達，也經由生活圈大站（transfer_regions.json 的 TraHubs）
+ * 轉對號列車：區間車到上車大站、對號列車到下車大站、再換區間車。
+ *   上車端：起站本身是這條幹線的大站就從起站上；不是時，用起點生活圈內、往行進方向的大站（每一個都試），
+ *          生活圈內往行進方向已經沒有大站時（鶯歌、鳳鳴往南），沿車站順序往下找第一個大站（桃園）；起站有對號停靠時也保留從起站上車。
+ *   下車端：對稱（終點生活圈內、到達終點前的大站；沒有時往回找最後一個大站）。
+ *   幹線：上車端看起站往前第一個只屬於一條幹線的車站（五堵往南是 w，往宜蘭是 e），下車端從終點往回看；大站要是這條幹線的大站。
+ * 起訖站是捷運、輕軌的路由，臺鐵段（經轉乘群組接上）也用同一個規則。回傳 ['Alternatives' => [[段落, 名稱後綴], ...]]
+ */
+function appSupTraHubTransfer(array $m, array $leg, array $meta, $extra)
+{
+    if (!appTraHubLeg($leg)) {
+        return null;
+    }
+    $path = appSegmentPath($m, appLegPath($leg));
+    $st = $path['stations'];
+    $n = count($st) - 1;
+    if ($n < 2) {
+        return null;
+    }
+    $hubs = appTraHubs();
+    $trunkOf = appTraTrunkOf($m);
+    $exp = array_flip(appExpressStations('TRA'));
+    // 這一端的幹線：從端點往內第一個只屬於一條幹線的車站；都是共用區段時用端點所屬的全部幹線
+    $side = function ($order) use ($st, $trunkOf) {
+        foreach ($order as $i) {
+            if (count($trunkOf[$st[$i]] ?? []) === 1) {
+                return $trunkOf[$st[$i]];
+            }
+        }
+        return $trunkOf[$st[$order[0]]] ?? [];
+    };
+    $isHub = function ($i, $tr) use ($st, $hubs) {
+        return isset($hubs[$st[$i]]) && array_intersect_key($hubs[$st[$i]], $tr);
+    };
+    $pick = function ($order, $tr, $end) use ($st, $isHub, $exp) {
+        if ($isHub($end, $tr)) {
+            return [$end];
+        }
+        $rg = appRegionOf($st[$end]);
+        $in = [];
+        $first = null;
+        foreach ($order as $i) {
+            if ($i === $end || !$isHub($i, $tr)) {
+                continue;
+            }
+            if ($rg !== null && appRegionOf($st[$i]) === $rg) {
+                $in[] = $i;
+            } elseif ($first === null) {
+                $first = $i;
+            }
+        }
+        if (!$in && $first !== null) {
+            $in = [$first];
+        }
+        return array_merge(isset($exp[$st[$end]]) ? [$end] : [], $in);
+    };
+    $fwd = range(0, $n);
+    $back = array_reverse($fwd);
+    $boards = $pick($fwd, $side($fwd), 0);
+    $alights = $pick($back, $side($back), $n);
+    $relay = array_flip(appSupplementMeta('TRA.LocalRelay', 'TRA')['RelayStations'] ?? []);
+    $name = function ($i) use ($m, $st) { $x = $m['names'][$st[$i]] ?? null; return is_array($x) ? ($x['Zh_tw'] ?? $st[$i]) : ($x ?? $st[$i]); };
+    $alts = [];
+    foreach ($boards as $b1) {
+        foreach ($alights as $b2) {
+            if ($b2 <= $b1 || ($b1 === 0 && $b2 === $n) || appLegMinutes('TRA', $st[$b1], $st[$b2], APP_CLASS_EXPRESS) === null) {
+                continue;
+            }
+            $pre = $b1 > 0 ? appSupTraLocalLegs($m, $path, 0, $b1, $relay) : [];
+            $post = $b2 < $n ? appSupTraLocalLegs($m, $path, $b2, $n, $relay) : [];
+            if ($pre === null || $post === null) {
+                continue;
+            }
+            $tag = array_filter([$b1 > 0 ? $name($b1) . '上' : null, $b2 < $n ? $name($b2) . '下' : null]);
+            $alts[] = [array_merge($pre, appSupPiece($path, $b1, $b2, APP_CLASS_EXPRESS, 'TRA'), $post), implode('、', $tag)];
+        }
+    }
+    return $alts ? ['Alternatives' => $alts] : null;
 }
 
 /** TRA.ChangeAt：在沿途的指定車站（Meta.Stations；Meta.OnlyLineChange＝只在路線串換線的站）分切，各段不限車種；沿途沒有就不產生 */
