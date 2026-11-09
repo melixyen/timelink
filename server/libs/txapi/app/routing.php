@@ -183,10 +183,12 @@ function appTraExpressCounts()
 /**
  * 路線連結圖搜尋（同 transferNetworkSearch，另可排除路線）。回傳基本路由（段落陣列）的清單
  */
-function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1)
+function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1, array $systems = null)
 {
-    $lineOk = function ($l) use ($extra) {
-        return appSystemAllowed($extra, substr($l, 0, strpos($l, '-')));
+    // $systems：只用這些系統的路線（中長途分解的幹線段只搭臺鐵、高鐵）；null＝不限
+    $lineOk = function ($l) use ($extra, $systems) {
+        $sys = substr($l, 0, strpos($l, '-'));
+        return appSystemAllowed($extra, $sys) && ($systems === null || in_array($sys, $systems, true));
     };
     // 起訖：車站本身的路線，以及同群組車站的路線（先步行）
     $noTransfer = appNoTransferStations();
@@ -816,11 +818,14 @@ function appRouteHubEstimate(array $m, array $legs, $extra)
     foreach ($legs as $l) {
         $hit = $hit || ($l['Type'] === 'ride' && appTraHubLeg($l));
     }
-    if (!$hit) {
-        return null;
-    }
+    return $hit ? appRouteSupEstimate($m, $legs, $extra, ['TRA.HubTransfer']) : null;
+}
+
+/** 基本路由套用補充資料（$only＝只用這些 Logic；null＝全部）後最好的估計分鐘；都估不出回 null */
+function appRouteSupEstimate(array $m, array $legs, $extra, $only)
+{
     $best = null;
-    foreach (appApplySupplements($m, $legs, $extra, ['TRA.HubTransfer']) as $v) {
+    foreach (appApplySupplements($m, $legs, $extra, $only) as $v) {
         $e = appRouteEstimate($m, $v['legs']);
         if ($e !== null && ($best === null || $e < $best)) {
             $best = $e;
@@ -1742,9 +1747,12 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     if ($from === $to) {
         return [];
     }
+    // 中長途（起訖生活圈不相鄰）：分解成「生活圈端＋幹線＋生活圈端」組合（app/trunk.php）；不套用時一般找路
+    $trunk = empty($opt['via']) && empty($opt['noTrunk']) ? appTrunkBaseRoutes($m, $from, $to, $opt) : null;
+    $trunkMode = $trunk !== null && $trunk['routes'];   // 分解組不出路由時退回整段搜尋
     // 基本路由：系統直達段不分路線，經不同路線的同一走法（臺鐵北迴、南迴）合成一條，各自的路線串放進 Paths
     $byCode = [];
-    foreach (appNetworkRoutes($m, $from, $to, $extra, $opt['deeper'] ?? $cfg['Deeper']) as $legs) {
+    foreach ($trunkMode ? $trunk['routes'] : appNetworkRoutes($m, $from, $to, $extra, $opt['deeper'] ?? $cfg['Deeper']) as $legs) {
         $code = appRouteFormat(['Legs' => $legs]);
         if (!isset($byCode[$code])) {
             foreach ($legs as &$l) {
@@ -1782,7 +1790,10 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
         $est = appRouteEstimate($m, $legs);
         if ($est !== null) {
             $scored[] = [appRouteTransfers($legs), $est, $legs];
-        } elseif (appRouteTransfers($legs) > 0 && ($hubEst = appRouteHubEstimate($m, $legs, $extra)) !== null) {
+        } elseif ($trunkMode && ($supEst = appRouteSupEstimate($m, $legs, $extra, null)) !== null) {
+            // 中長途分解：幹線段沒有直達車（區間車接力、交會站換車才串得出來），用補充資料改寫後最好的估計排序，展開時只用補充路由
+            $scored[] = [appRouteTransfers($legs), $supEst, $legs, ['*']];
+        } elseif (!$trunkMode && appRouteTransfers($legs) > 0 && ($hubEst = appRouteHubEstimate($m, $legs, $extra)) !== null) {
             // 有轉乘、臺鐵段沒有直達車（五堵→新左營＋高雄捷運）：中長途的臺鐵段經生活圈大站轉對號串得出來，用最好的那種估計排序，
             // 展開時只套用大站轉乘（其他補充資料不套，避免多轉乘的路由大量增加）
             $scored[] = [appRouteTransfers($legs), $hubEst, $legs, ['TRA.HubTransfer']];
@@ -1816,7 +1827,8 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     foreach ($pick as $x) {
         // 基本路由本身＋補充資料（transfer_route_supplements.json，人工經驗：區間車接力、轉對號、快慢車換車…）每條符合的多一條
         $baseCode = appRouteFormat(['Legs' => $x[2]]);
-        $variants = isset($x[3]) ? appApplySupplements($m, $x[2], $extra, $x[3]) : array_merge([['Name' => null, 'legs' => $x[2]]], appApplySupplements($m, $x[2], $extra));
+        $variants = isset($x[3]) ? appApplySupplements($m, $x[2], $extra, $x[3] === ['*'] ? null : $x[3])
+                                 : array_merge([['Name' => null, 'legs' => $x[2]]], appApplySupplements($m, $x[2], $extra));
         foreach ($variants as $variant) {
             $legs = $variant['legs'];
             // 生活圈幹線規則：補充資料會在中途站切開（區間車到大站換對號、交會站換車），切開的轉乘點也要符合
@@ -1846,6 +1858,10 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             if (isset($out[$code])) {
                 continue;
             }
+            foreach ($legs as &$l) {
+                unset($l['_part']);   // 中長途分解的段落標記（只給補充資料判斷用）
+            }
+            unset($l);
             $dist = appRouteDistance($m, $legs);
             $out[$code] = ['route' => $code, 'legs' => $legs, 'TransferCount' => $tc, 'EstimatedMinutes' => $est,
                            'DistanceKm' => $dist[0] ?? null, 'DistanceSource' => $dist[1] ?? null,

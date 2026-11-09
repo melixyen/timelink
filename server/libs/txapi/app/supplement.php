@@ -86,6 +86,9 @@ function appSupplementMatch(array $m, array $x, array $leg, $extra)
     if ($leg['Type'] !== 'ride' || !in_array($leg['System'], $x['Operators'], true)) {
         return false;
     }
+    if (isset($leg['_part']) && $leg['_part'] !== 'trunk') {
+        return false;   // 中長途分解的生活圈端：已在它自己的短程找路套用過補充資料
+    }
     foreach ($x['Classes'] ?? [] as $c) {
         if (!appClassAllowed($extra, $leg['System'], $c)) {
             return false;
@@ -246,7 +249,8 @@ function appSupTraLocalRelay(array $m, array $leg, array $meta, $extra)
         }
     }
     $points[] = $n;
-    if (count($points) <= 2 && appLegMinutes('TRA', $st[0], $st[$n], APP_CLASS_LOCAL) !== null) {
+    // 區間車能直達時：沿途沒有接力站，或不是中長途（起訖生活圈相同或相鄰，例如汐止→板橋不在臺北切開）就不產生
+    if ((count($points) <= 2 || appRegionRule($st[0], $st[$n]) === null) && appLegMinutes('TRA', $st[0], $st[$n], APP_CLASS_LOCAL) !== null) {
         return null;
     }
     $out = [];
@@ -335,7 +339,7 @@ const APP_HUB_PER_SIDE = 2;
 
 function appSupTraHubTransfer(array $m, array $leg, array $meta, $extra)
 {
-    if (!appTraHubLeg($leg)) {
+    if (isset($leg['_part']) || !appTraHubLeg($leg)) {   // 中長途分解（app/trunk.php）已經在大站切開
         return null;
     }
     $pieces = appLegPath($leg);

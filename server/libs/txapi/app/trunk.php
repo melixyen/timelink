@@ -1,0 +1,375 @@
+<?php
+/**
+ * 中長途「生活圈＋幹線」分解（使用者 2026-11 設計，transfer/data/transfer_regions.json 的 Trunk）。
+ *
+ * 起訖站的生活圈不同而且不相鄰（appRegionRule 套用）時，不再從起點一路搜到終點，改成三段組合：
+ *   1. 起點端：起點生活圈（與相鄰生活圈）的幹線站＝高鐵站、臺鐵對號大站（TraHubs），起站本身是臺鐵站或高鐵站也算。
+ *      對每個幹線站做一般的短程找路（appCoreRoutes，不搭高鐵），結果與單純查「起站→這個幹線站」一致。
+ *   2. 終點端：對稱（幹線站→終站）。
+ *   3. 幹線：起點端幹線站到終點端幹線站，只搭臺鐵、高鐵（appNetworkRoutes 只用鐵路系統）；東部往來西部可以在 Gateways 轉乘。
+ * 起點端、終點端各依「到幹線站＋幹線＋另一端」的估計挑出前幾名幹線站（每個系統各 Keep 個），再與幹線組合。
+ * 組合出的基本路由交回 appCoreRoutes 照一般流程估計、補充資料（只改寫幹線段）、排序。
+ * 這樣小站、捷運站出發的中長途，前段與單純查往臺鐵大站、高鐵站的路由一致；要調整時可以分開看生活圈端還是幹線端。
+ */
+
+const APP_TRUNK_DEFAULTS = [
+    'Enabled'          => true,
+    'Candidates'       => ['TRA' => 6, 'THSR' => 3],   // 每端先依距離取最近的幾個幹線站做短程找路（起站本身另外算）
+    'Keep'             => ['TRA' => 4, 'THSR' => 3],   // 每端依估計留下幾個幹線站（起站本身另外算）
+    'AccessPerStation' => 2,                           // 每個幹線站留幾條到達路由（轉乘最少的裡面，估計在最好的 AccessSlack 分內）
+    'AccessSlack'      => 10,
+    'TrunkPerPair'     => 2,                           // 每一對幹線站留幾條幹線路由
+    'MaxCombos'        => 48,                          // 組合後最多交出幾條基本路由（依估計，臺鐵幹線、高鐵幹線各至少一半）
+    'TransferMinutes'  => 10,                          // 估計排序時每次轉乘加幾分
+];
+
+/** 分解設定（transfer_regions.json 的 Trunk；沒寫的用預設） */
+function appTrunkConfig()
+{
+    static $c = null;
+    if ($c === null) {
+        $j = json_decode((string) @file_get_contents(TRANSFER_DATA_DIR . '/transfer_regions.json'), true);
+        $c = (is_array($j) && is_array($j['Trunk'] ?? null) ? $j['Trunk'] : []) + APP_TRUNK_DEFAULTS;
+    }
+    return $c;
+}
+
+/** 最近一次分解的資訊（依 extra），routes、journeys 的 meta 用 */
+function appTrunkMeta($set = null, $extra = null)
+{
+    static $meta = [];
+    if ($set !== null) {
+        $meta[$extra] = $set;
+    }
+    return $meta;
+}
+
+/** 車站的系統（StationUID 前綴） */
+function appTrunkSystemOf($u)
+{
+    return strtok($u, '-');
+}
+
+/** 兩站直線距離（公里）；沒有座標回 null */
+function appTrunkKm($a, $b)
+{
+    $pos = appStationPositions();
+    if (!isset($pos[$a], $pos[$b])) {
+        return null;
+    }
+    $la1 = deg2rad($pos[$a]['Lat']);
+    $la2 = deg2rad($pos[$b]['Lat']);
+    $dl = deg2rad($pos[$b]['Lon'] - $pos[$a]['Lon']);
+    $x = sin(($la2 - $la1) / 2) ** 2 + cos($la1) * cos($la2) * sin($dl / 2) ** 2;
+    return 6371 * 2 * asin(min(1, sqrt($x)));
+}
+
+/**
+ * 一端的幹線站候選：生活圈 $regions 內的高鐵站（extra 沒排除高鐵時）與臺鐵大站，依與 $u 的距離每個系統取前 Candidates 個；
+ * $u 本身是臺鐵站或高鐵站時也算（直接從起站上幹線）。回傳 [StationUID => 系統]
+ */
+function appTrunkCandidates(array $m, $u, array $regions, $extra)
+{
+    $cfg = appTrunkConfig();
+    $R = appRegions();
+    $by = ['TRA' => [], 'THSR' => []];
+    foreach ($R['of'] as $x => $rg) {
+        if (!isset($regions[$rg]) || $x === $u) {
+            continue;
+        }
+        $sys = appTrunkSystemOf($x);
+        if ($sys === 'THSR' && appSystemAllowed($extra, 'THSR')) {
+            $by['THSR'][$x] = appTrunkKm($u, $x) ?? INF;
+        } elseif ($sys === 'TRA' && isset($R['hubs'][$x])) {
+            $by['TRA'][$x] = appTrunkKm($u, $x) ?? INF;
+        }
+    }
+    $out = [];
+    $self = appTrunkSystemOf($u);
+    if ($self === 'TRA' || ($self === 'THSR' && appSystemAllowed($extra, 'THSR'))) {
+        $out[$u] = $self;
+    }
+    foreach ($by as $sys => $list) {
+        asort($list);
+        foreach (array_slice(array_keys($list), 0, $cfg['Candidates'][$sys] ?? 0) as $x) {
+            $out[$x] = $sys;
+        }
+    }
+    return $out;
+}
+
+/**
+ * 生活圈端的路由：$u（起站或終站）與幹線站 $x 之間的一般短程找路（不搭高鐵），$toTrunk＝true 是 $u→$x，false 是 $x→$u。
+ * 回傳轉乘最少的裡面、估計在最好的 AccessSlack 分內的前 AccessPerStation 條 [['legs', 'est', 'tc'], ...]；$u＝$x 時回一條空路由
+ */
+function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
+{
+    static $cache = [];
+    $cfg = appTrunkConfig();
+    $extra = ($opt['extra'] ?? 0) | APP_EXTRA_NO_HSR;
+    $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra;
+    if (isset($cache[$k])) {
+        return $cache[$k];
+    }
+    if ($u === $x) {
+        return $cache[$k] = [['legs' => [], 'est' => 0.0, 'tc' => -1]];
+    }
+    $sub = ['extra' => $extra, 'deeper' => $opt['deeper'] ?? null, 'limit' => 20, 'noTrunk' => true];
+    $routes = $toTrunk ? appCoreRoutes($m, $u, $x, $sub) : appCoreRoutes($m, $x, $u, $sub);
+    $minTc = null;
+    $best = null;
+    foreach ($routes as $r) {
+        if ($minTc === null || $r['TransferCount'] < $minTc) {
+            $minTc = $r['TransferCount'];
+        }
+    }
+    $list = [];
+    foreach ($routes as $r) {
+        if ($r['TransferCount'] === $minTc) {
+            $list[] = ['legs' => $r['legs'], 'est' => (float) $r['EstimatedMinutes'], 'tc' => $r['TransferCount']];
+        }
+    }
+    usort($list, function ($a, $b) { return $a['est'] <=> $b['est']; });
+    $out = [];
+    foreach ($list as $r) {
+        if (count($out) < $cfg['AccessPerStation'] && $r['est'] <= $list[0]['est'] + $cfg['AccessSlack']) {
+            $out[] = $r;
+        }
+    }
+    return $cache[$k] = $out;
+}
+
+/** 幹線估計（篩選、排序用）：同系統直達的最短分鐘；東部往來西部跨系統時，經 Gateways 生活圈的同站轉乘估計；做不到回 null */
+function appTrunkQuick(array $m, $s, $t, $extra, $eastWest)
+{
+    static $cache = [];
+    $k = $s . '|' . $t . '|' . $extra . '|' . (int) $eastWest;
+    if (array_key_exists($k, $cache)) {
+        return $cache[$k];
+    }
+    $cls = ($extra & APP_EXTRA_NO_EXPRESS) ? APP_CLASS_LOCAL : null;
+    $ss = appTrunkSystemOf($s);
+    $ts = appTrunkSystemOf($t);
+    $direct = function ($sys, $a, $b) use ($cls) { return appLegMinutes($sys, $a, $b, $sys === 'TRA' ? $cls : null); };
+    $v = $ss === $ts ? $direct($ss, $s, $t) : null;
+    if ($eastWest) {
+        // 經轉乘生活圈（北北基、高雄）的車站換車：同系統兩段，或換系統（臺鐵↔高鐵，同轉乘群組）
+        $R = appRegions();
+        foreach ($R['of'] as $g => $rg) {
+            if (!in_array($rg, $R['gate'], true) || !in_array(appTrunkSystemOf($g), ['TRA', 'THSR'], true)) {
+                continue;
+            }
+            if (appTrunkSystemOf($g) !== $ss || ($a = $direct($ss, $s, $g)) === null) {
+                continue;
+            }
+            $partners = [$g => true];
+            foreach ($m['groupOf'][$g] ?? [] as $gid) {
+                foreach ($m['groups'][$gid]['Stations'] as $y) {
+                    $partners[$y['StationUID']] = true;
+                }
+            }
+            foreach (array_keys($partners) as $y) {
+                if (appTrunkSystemOf($y) === $ts && $y !== $t && ($b = $direct($ts, $y, $t)) !== null) {
+                    $e = $a + $b + appTrunkConfig()['TransferMinutes'];
+                    $v = $v === null ? $e : min($v, $e);
+                }
+            }
+        }
+    }
+    return $cache[$k] = $v;
+}
+
+/**
+ * 幹線路由：$s→$t 只搭臺鐵、高鐵（appNetworkRoutes 限鐵路系統）；第一段從 $s 上車、最後一段在 $t 下車，系統與兩站相同。
+ * 同系統只取直達一段（臺鐵是系統直達段，沒有直達車時由補充資料在交會站換車）；東部往來西部可以多一次轉乘。依估計取前 TrunkPerPair 條
+ */
+function appTrunkLegs(array $m, $s, $t, $extra, $eastWest)
+{
+    static $cache = [];
+    $k = $s . '|' . $t . '|' . $extra . '|' . (int) $eastWest;
+    if (isset($cache[$k])) {
+        return $cache[$k];
+    }
+    $ss = appTrunkSystemOf($s);
+    $ts = appTrunkSystemOf($t);
+    $systems = $ss === $ts && !$eastWest ? [$ss] : ['TRA', 'THSR'];
+    $maxRides = $ss === $ts ? 1 : 2;
+    $list = [];
+    $seen = [];
+    foreach (appNetworkRoutes($m, $s, $t, $extra, $ss === $ts ? 0 : 1, $systems) as $legs) {
+        $rides = array_values(array_filter($legs, function ($l) { return $l['Type'] === 'ride'; }));
+        if (!$rides || $legs[0]['Type'] !== 'ride' || end($legs)['Type'] !== 'ride' || count($rides) > $maxRides
+            || $rides[0]['System'] !== $ss || end($rides)['System'] !== $ts) {
+            continue;
+        }
+        $code = appRouteFormat(['Legs' => $legs]);
+        if (isset($seen[$code])) {
+            continue;
+        }
+        $seen[$code] = true;
+        foreach ($legs as &$l) {
+            $l['_part'] = 'trunk';
+        }
+        unset($l);
+        $tmp = $legs;
+        $est = appRouteEstimate($m, $tmp);
+        $list[] = ['legs' => $legs, 'est' => $est ?? INF];
+    }
+    usort($list, function ($a, $b) { return $a['est'] <=> $b['est']; });
+    return $cache[$k] = array_slice($list, 0, appTrunkConfig()['TrunkPerPair']);
+}
+
+/**
+ * 組合後的路由是否符合高鐵站經過規則（與 appPrefixExtend 相同的判斷：高鐵下車後不再經過另一個生活圈的高鐵站、
+ * 上車前不先經過另一個生活圈的高鐵站不搭、高鐵經過起點／終點生活圈有接其他鐵路的高鐵站時從那一站上下車）
+ */
+function appTrunkHsrOk(array $m, $from, $to, array $legs)
+{
+    $hsr = appHsrStationOf($m);
+    $off = null;
+    $pre = [];
+    foreach ($legs as $l) {
+        if ($l['Type'] !== 'ride') {
+            continue;
+        }
+        foreach ($l['Path'] ?? [$l] as $p) {
+            $st = appRideStations($m, $p);
+            if ($st === null) {
+                continue;
+            }
+            if ($l['System'] === 'THSR') {
+                $on = $hsr[$p['From']] ?? $p['From'];
+                $o = $hsr[$p['To']] ?? $p['To'];
+                if (!appHsrBoardOk($pre, $on, $o, $st, appRegionOf($from), appRegionOf($to))) {
+                    return false;
+                }
+                $off = $o;
+            } elseif ($off !== null) {
+                if (!appHsrRideOk($hsr, $off, $st)) {
+                    return false;
+                }
+            } else {
+                $pre = appHsrPassed($hsr, $pre, $st);
+            }
+        }
+    }
+    return true;
+}
+
+/**
+ * 中長途分解的基本路由：不套用（同一或相鄰生活圈、表裡沒有、設定關掉）回 null；
+ * 套用時回 ['routes' => [段落陣列, ...], 'meta' => 分解資訊]
+ */
+function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
+{
+    $cfg = appTrunkConfig();
+    $rule = appRegionRule($from, $to);
+    if (empty($cfg['Enabled']) || $rule === null) {
+        return null;
+    }
+    $t0 = microtime(true);
+    $extra = $opt['extra'] ?? 0;
+    $R = appRegions();
+    $ra = appRegionOf($from);
+    $rb = appRegionOf($to);
+    $eastWest = isset($R['east'][$ra]) !== isset($R['east'][$rb]);
+    $sideA = [$ra => true] + ($R['adj'][$ra] ?? []);
+    $sideB = [$rb => true] + ($R['adj'][$rb] ?? []);
+    $tc = $cfg['TransferMinutes'];
+
+    // 1、2. 兩端的幹線站與生活圈端路由
+    $ends = [];
+    foreach (['A' => [$from, $sideA, true], 'B' => [$to, $sideB, false]] as $side => list($u, $regions, $toTrunk)) {
+        $ends[$side] = [];
+        foreach (appTrunkCandidates($m, $u, $regions, $extra) as $x => $sys) {
+            $acc = appTrunkAccess($m, $u, $x, $toTrunk, $opt);
+            if ($acc) {
+                $ends[$side][$x] = ['sys' => $sys, 'acc' => $acc, 'best' => $acc[0]['est'] + ($acc[0]['tc'] >= 0 ? $tc * ($acc[0]['tc'] + 1) : 0)];
+            }
+        }
+    }
+    $pairOk = function ($s, $t) use ($eastWest) {
+        return $s !== $t && (appTrunkSystemOf($s) === appTrunkSystemOf($t) || $eastWest);
+    };
+    // 3. 每端依「生活圈端＋幹線＋另一端最好」挑前 Keep 個（每個系統；起站／終站本身另外留）
+    $keep = [];
+    foreach (['A' => 'B', 'B' => 'A'] as $side => $other) {
+        $score = [];
+        foreach ($ends[$side] as $x => $e) {
+            $bestPair = null;
+            foreach ($ends[$other] as $y => $f) {
+                list($s, $t) = $side === 'A' ? [$x, $y] : [$y, $x];
+                if (!$pairOk($s, $t) || ($q = appTrunkQuick($m, $s, $t, $extra, $eastWest)) === null) {
+                    continue;
+                }
+                $v = $q + $f['best'];
+                $bestPair = $bestPair === null ? $v : min($bestPair, $v);
+            }
+            if ($bestPair !== null) {
+                $score[$x] = $e['best'] + $bestPair;
+            }
+        }
+        asort($score);
+        $self = $side === 'A' ? $from : $to;
+        $count = [];
+        $keep[$side] = [];
+        foreach ($score as $x => $v) {
+            $sys = $ends[$side][$x]['sys'];
+            if ($x === $self || ($count[$sys] = ($count[$sys] ?? 0) + 1) <= ($cfg['Keep'][$sys] ?? 0)) {
+                $keep[$side][$x] = $v;
+            }
+        }
+    }
+    // 4. 組合：生活圈端路由 × 幹線 × 生活圈端路由
+    $combos = [];
+    foreach ($keep['A'] as $s => $_) {
+        foreach ($keep['B'] as $t => $__) {
+            if (!$pairOk($s, $t)) {
+                continue;
+            }
+            foreach (appTrunkLegs($m, $s, $t, $extra, $eastWest) as $tr) {
+                foreach ($ends['A'][$s]['acc'] as $a) {
+                    foreach ($ends['B'][$t]['acc'] as $b) {
+                        $legs = array_merge(array_map(function ($l) { return $l + ['_part' => 'access']; }, $a['legs']), $tr['legs'],
+                                            array_map(function ($l) { return $l + ['_part' => 'egress']; }, $b['legs']));
+                        if (!appTrunkHsrOk($m, $from, $to, $legs)) {
+                            continue;
+                        }
+                        $rides = count(array_filter($legs, function ($l) { return $l['Type'] === 'ride' && empty($l['Through']); }));
+                        $combos[] = ['legs' => $legs, 'score' => $a['est'] + $tr['est'] + $b['est'] + $tc * max(0, $rides - 1),
+                                     'sys' => $tr['legs'][0]['System']];
+                    }
+                }
+            }
+        }
+    }
+    usort($combos, function ($a, $b) { return $a['score'] <=> $b['score']; });
+    // 依估計取前 MaxCombos 條；臺鐵幹線、高鐵幹線各至少保留一半（高鐵很快時臺鐵幹線不會全被擠掉）
+    $half = intdiv($cfg['MaxCombos'], 2);
+    $pickA = [];
+    $bySys = [];
+    foreach ($combos as $i => $c) {
+        if (($bySys[$c['sys']] = ($bySys[$c['sys']] ?? 0) + 1) <= $half) {
+            $pickA[$i] = true;
+        }
+    }
+    foreach ($combos as $i => $c) {
+        if (count($pickA) >= $cfg['MaxCombos']) {
+            break;
+        }
+        $pickA[$i] = true;
+    }
+    ksort($pickA);
+    $routes = [];
+    foreach (array_keys($pickA) as $i) {
+        $routes[] = $combos[$i]['legs'];
+    }
+    $meta = [
+        'From' => array_keys($keep['A']), 'To' => array_keys($keep['B']),
+        'Candidates' => ['From' => count($ends['A']), 'To' => count($ends['B'])],
+        'Combos' => count($combos), 'Routes' => count($routes), 'EastWest' => $eastWest,
+        'seconds' => round(microtime(true) - $t0, 3),
+    ];
+    appTrunkMeta($meta, $extra);
+    return ['routes' => $routes, 'meta' => $meta];
+}

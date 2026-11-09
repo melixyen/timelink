@@ -7,6 +7,7 @@
         "East": "東部的生活圈：一端在東部、另一端在西部時算東部往來西部",
         "Gateways": "東部往來西部時可以轉乘的生活圈（北邊、南邊）",
         "產生方式": "臺鐵依 TDX v3/Rail/TRA/Station 的 StationAddress 縣市、高鐵依 v2/Rail/THSR/Station 的 LocationCity；捷運、輕軌依系統（機捷 A1～A6 在北北基，其餘（含林口 A9，使用者指定）在桃園）。2026-11-02 產生",
+        "Trunk": "中長途分解（app/trunk.php，使用者 2026-11 設計）：起訖生活圈不相鄰時，拆成「起點端（起站→幹線站）＋幹線（只搭臺鐵、高鐵）＋終點端（幹線站→終站）」組合。幹線站＝起點（終點）生活圈與相鄰生活圈的高鐵站、TraHubs 大站，起站（終站）本身是臺鐵站或高鐵站也算。Enabled＝開關（false 回到整段搜尋）；Candidates＝每端每個系統先依直線距離取最近幾個幹線站做短程找路；Keep＝依「生活圈端＋幹線＋另一端」估計每個系統留幾個；AccessPerStation、AccessSlack＝每個幹線站留幾條生活圈端路由（轉乘最少、估計在最好的幾分內）；TrunkPerPair＝每對幹線站留幾條幹線；MaxCombos＝組合後最多幾條基本路由（臺鐵幹線、高鐵幹線各至少一半）；TransferMinutes＝估計排序時每次轉乘加幾分",
         "TraTrunks": "臺鐵幹線（對號列車轉乘大站用）：e＝東部幹線（樹林—八堵—宜蘭線—北迴—臺東線）、w＝西部幹線（基隆—潮州，含海線）、s＝南迴（新左營—屏東線—南迴線—臺東）。Stations 是車站範圍（[{Line, StationRange?}]，同 RouteBans）；共用的區段（樹林—八堵、新左營—潮州）同時屬於兩條",
         "TraHubs": "臺鐵各生活圈的對號列車轉乘大站（參考 railtime 的 tra.station_ary big，南港另外加 e、新左營另外加 w）：Trunks＝是哪幾條幹線的大站。中長途（搭乘段起訖的生活圈不相鄰）需要搭對號時，除了起訖站自己直達，也查經由大站的轉乘：上車端取起點生活圈內離起站最近的大站，往行進方向、往反方向各最多兩個（五堵往南：松山、臺北，反方向七堵；汐科往花蓮：七堵、八堵，反方向南港、松山），生活圈內往行進方向已經沒有大站時（例如鶯歌、鳳鳴往南），沿車站順序往下找第一個大站（桃園）；下車端對稱（到達前、越過終點各兩個），經由幹線的組合最多 4×4。不論起訖站是臺鐵還是捷運、輕軌（經轉乘群組接到臺鐵），臺鐵幹線段都用同一個規則",
         "HsrPassCheck": "高鐵站經過規則只對這些上下車站檢查（使用者規則）：在這些站上車、下車時，才排除重複經過其他生活圈高鐵站的走法；南港、台北、板橋、台中、左營停靠的直達車較多，不在清單內、不檢查。目前是桃園、新竹、苗栗、彰化、雲林、嘉義、台南"
@@ -46,6 +47,16 @@
     "East": ["yilan", "hualien", "taitung"],
     "Gateways": ["taipei", "kaohsiung"],
     "HsrPassCheck": ["THSR-1020", "THSR-1030", "THSR-1035", "THSR-1043", "THSR-1047", "THSR-1050", "THSR-1060"],
+    "Trunk": {
+        "Enabled": true,
+        "Candidates": { "TRA": 6, "THSR": 3 },
+        "Keep": { "TRA": 4, "THSR": 3 },
+        "AccessPerStation": 2,
+        "AccessSlack": 10,
+        "TrunkPerPair": 2,
+        "MaxCombos": 48,
+        "TransferMinutes": 10
+    },
     "TraTrunks": {
         "e": { "Name": "東部幹線（樹林—臺東）", "Stations": [{ "Line": "TRA-WL", "StationRange": ["TRA-0920", "TRA-1040"] }, { "Line": "TRA-EL" }] },
         "w": { "Name": "西部幹線（基隆—潮州）", "Stations": [{ "Line": "TRA-WL" }, { "Line": "TRA-WL-C" }, { "Line": "TRA-SL", "StationRange": ["TRA-5000", "TRA-5050"] }] },

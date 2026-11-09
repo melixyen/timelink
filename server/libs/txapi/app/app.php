@@ -16,6 +16,7 @@
  *   timetable.php   核心 B（點對點時刻表）與 app_trip/direct、app_station、app_train
  *   line.php        app_line/timetable（路線時刻表）
  *   supplement.php  路由補充資料（transfer_route_supplements.json：區間車接力、轉對號、快慢車換車）
+ *   trunk.php       中長途分解：生活圈端（到高鐵站、臺鐵大站）＋幹線＋生活圈端（transfer_regions.json 的 Trunk）
  *   routing.php     核心 A（路由演算法：路網層＋同系統快慢車展開）
  *   journey.php     組合：app_trip/routes、route_trains、journeys（串接與分類排序）
  */
@@ -27,6 +28,7 @@ require_once __DIR__ . '/public.php';
 require_once __DIR__ . '/timetable.php';
 require_once __DIR__ . '/routing.php';
 require_once __DIR__ . '/supplement.php';
+require_once __DIR__ . '/trunk.php';
 require_once __DIR__ . '/journey.php';
 require_once __DIR__ . '/line.php';
 

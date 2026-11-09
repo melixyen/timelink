@@ -497,7 +497,7 @@ function appTripRoutes()
         'To' => ['StationUID' => $to, 'StationName' => $m['names'][$to] ?? null],
         'count' => count($routes), 'routes' => array_map(function ($r) use ($m) { return appRouteItemOut($m, $r); }, $routes),
         'note' => $routes ? null : '找不到可走的路由',
-    ], appExtraInfo($opt['extra']) + array_filter(['max_transfers' => $opt['max_transfers'], 'via' => $opt['via']], function ($v) { return $v !== null; })
+    ], appExtraInfo($opt['extra']) + array_filter(['max_transfers' => $opt['max_transfers'], 'via' => $opt['via'], 'trunk' => appTrunkMeta() ?: null], function ($v) { return $v !== null; })
        + ['seconds' => round(microtime(true) - $t0, 3)]);
 }
 
@@ -801,7 +801,8 @@ function appJourneysCompute(array $q)
        + appTimeWindowMeta($back ? 'arr' : 'dep', $start, $end)
        + ($back ? ['arrive_from' => appHM($start), 'arrive' => appHM($end)] : ['depart' => appHM($start)])
        + ['sort' => $sort]
-       + appExtraInfo($extra) + ['routes' => count($jobs)] + ($fixed !== null ? ['fixed' => true] : [])
+       + appExtraInfo($extra) + ['routes' => count($jobs), 'routesUnique' => count(array_unique(array_map(function ($j) { return $j[0]['route'] . '|' . ($j[0]['Supplement'] ?? ''); }, $jobs)))]
+       + (appTrunkMeta() ? ['trunk' => appTrunkMeta()] : []) + ($fixed !== null ? ['fixed' => true] : [])
        + ($diversity ? ['diversity' => array_keys($diverse)] : [])
        + ['seconds' => round(microtime(true) - $t0, 3)]];
 }
