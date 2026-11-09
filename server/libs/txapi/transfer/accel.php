@@ -80,7 +80,7 @@ function transferAccelStationRegions(array &$d)
 }
 
 /**
- * 加速清單的輸入雜湊：轉乘群組檔、transfer_accel.json、transfer_seed.json 的排除記號（查詢時直接讀）任一改變，算出來的清單就過期
+ * 加速清單的輸入雜湊：轉乘群組檔、transfer_accel.json、transfer_seed.json 的排除記號（查詢時直接讀）。只用來標示 Fresh（算好之後輸入有沒有改過），不影響使用
  */
 function transferInputsHash()
 {
@@ -89,7 +89,12 @@ function transferInputsHash()
                 . '|' . sha1(json_encode($seed['Bypass'] ?? [])));
 }
 
-/** 由 func=learn 算出的加速清單（transfer_accel_learned.json）；沒有回 null。另帶 Fresh：資料庫建置時間與輸入雜湊（轉乘群組檔、transfer_accel.json）都沒變 */
+/**
+ * 由 func=learn 算出的加速清單（transfer_accel_learned.json）；沒有回 null。
+ * 另帶 Fresh（只供參考）：資料庫建置時間與輸入雜湊（轉乘群組檔、transfer_accel.json）都沒變。
+ * 使用者規則（2026-11）：加速清單只是輔助，不因資料庫或轉乘群組更新而過期——有就一直用，要手動撤銷（admin_transfer/restore）
+ * 或重算（func=learn force=1）才改動；原本的轉乘路由失效時，清單裡相關的內容只是派不上用場
+ */
 function transferAccelLearned(array &$d)
 {
     if (array_key_exists('accelLearned', $d)) {
@@ -198,7 +203,7 @@ function transferAccelPlan(array &$d, $from, $to)
     ];
 }
 
-/** accel 參數：'1' 一律套用、'0' 不套用、省略＝有算好且未過期的 transfer_accel_learned.json 才套用 */
+/** accel 參數：'1' 一律套用、'0' 不套用、省略＝有算好的 transfer_accel_learned.json 就套用（不看 Fresh，見 transferAccelLearned） */
 function transferAccelWanted(array &$d, $param)
 {
     if ($param === '1') {
@@ -207,6 +212,5 @@ function transferAccelWanted(array &$d, $param)
     if ($param === '0') {
         return false;
     }
-    $l = transferAccelLearned($d);
-    return $l !== null && $l['Fresh'];
+    return transferAccelLearned($d) !== null;
 }

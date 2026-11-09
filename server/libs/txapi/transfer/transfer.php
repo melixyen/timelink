@@ -112,7 +112,7 @@ function actionTransfer()
     $runs = $end === null ? max(1, min(12, (int) ($_GET['runs'] ?? 6))) : max(1, min(600, (int) ($_GET['runs'] ?? 600)));
     $r = transferRoute($db, $from['StationUID'], $to['StationUID'], $week, $start * 60, $runs, $endEff === null ? null : $endEff * 60,
                        TRANSFER_ROUTE_BUDGET, ($_GET['jump'] ?? '1') !== '0', ($_GET['prune'] ?? '1') !== '0',   // jump=0、prune=0：關掉優化（比對用）
-                       isset($_GET['accel']) ? $_GET['accel'] === '1' : null,    // accel=1 套用、accel=0 不套用、省略＝有算好未過期的清單才套用
+                       isset($_GET['accel']) ? $_GET['accel'] === '1' : null,    // accel=1 套用、accel=0 不套用、省略＝有算好的清單就套用（不會過期）
                        ($_GET['stops'] ?? '1') !== '0');                         // stops=0：不附途中各站時刻
     $net = transferNetworkSearch($db, $from['StationUID'], $to['StationUID'], 0, 3);
     $picks = [];
@@ -399,7 +399,7 @@ const TRANSFER_AUTO_REBUILD_RETRY = 600;
  *   - 用雜湊比對，不看檔案時間（佈署方式保留或不保留修改時間都可以）
  *   - 檔案鎖：同時只有一個請求重建；其他請求有舊群組就直接用舊的，沒有群組檔才等它做完
  *   - 失敗時用舊群組、寫入錯誤紀錄（error_log），同一份 seed 在 TRANSFER_AUTO_REBUILD_RETRY 秒內不再重試
- * 加速清單（func=learn）不會自動重算：群組內容變了，加速清單就過期（不使用），要再手動跑 func=learn
+ * 加速清單（func=learn）不受影響：它不會因群組更新而過期，照樣使用；要更新清單才手動 func=learn force=1
  */
 function transferEnsureGroups()
 {
@@ -518,7 +518,7 @@ function transferFuncAccel()
     $l = transferAccelLearned($d);
     $state = is_file(TRANSFER_LEARN_STATE_FILE) ? json_decode((string) file_get_contents(TRANSFER_LEARN_STATE_FILE), true) : null;
     sendJson(200, ['ok' => true, 'action' => 'transfer', 'func' => 'accel',
-                   'default' => $l && $l['Fresh'] ? 'on（已算好且未過期）' : 'off（' . ($l ? '已過期（資料庫重建過，或轉乘群組、transfer_accel.json 改過），請重跑 func=learn' : '還沒算過，請跑 func=learn') . '）',
+                   'default' => $l ? 'on（已算好；不因資料或轉乘群組更新而過期' . ($l['Fresh'] ? '' : '，算好之後資料庫或輸入有改過，要更新請 func=learn force=1') . '）' : 'off（還沒算過，請跑 func=learn）',
                    'learned' => $l, 'learning' => $state ? ['progress' => $state['Next'] . '/' . count($state['Tasks']), 'seconds' => round($state['Seconds'], 1)] : null,
                    'input' => transferAccelData(), 'generatedFiles' => transferGeneratedFiles()]);
 }
@@ -677,7 +677,7 @@ GET https://{$host}/txapi/transfer/route?from=TRA-7000&to=TRA-3300&date=2026-10-
   最佳方案用到走廊外地區的比例達 `Learn.CorridorMinShare`（0.1%）就放寬，例如中部往南部，先北上新竹轉高鐵南下占 1.4%，所以 C↔S 放寬加入 N；
   低於門檻的維持排除，結果記下 `LossShare`（例如北部往南部繞花東只占 0.02%，維持排除）
 
-資料庫重建後清單會過期（`Fresh=false`），預設改為不套用，直到重新執行 `/txapi/admin_transfer/learn`。驗證（2026-10）：73 組固定查詢、197 組隨機起訖，
+清單不因資料庫重建或轉乘群組更新而過期（使用者規則 2026-11）：有算好就一直預設套用，`Fresh=false` 只表示算好之後輸入有改過；要更新清單用 `/txapi/admin_transfer/learn` 加 `force=1`，要撤銷用 `restore`。驗證（2026-10）：73 組固定查詢、197 組隨機起訖，
 套用與不套用的方案完全相同，伺服器時間少約 4～5%。
 
 | action／func | 說明 |

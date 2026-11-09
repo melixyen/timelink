@@ -299,12 +299,12 @@ function transferLearnRun(SqliteDao $db, $seconds, $reset = false, $force = fals
 {
     $state = (!$reset && is_file(TRANSFER_LEARN_STATE_FILE)) ? json_decode((string) file_get_contents(TRANSFER_LEARN_STATE_FILE), true) : null;
     if (!$state && !$reset && !$force) {
-        // 沒有進行中的分析、清單也還新：不必重算
+        // 沒有進行中的分析、已經有加速清單：不自動重算（加速清單不會過期，使用者規則 2026-11；要重算請加 force=1）
         $d = ['db' => $db];
         $l = transferAccelLearned($d);
-        if ($l && $l['Fresh']) {
-            return ['done' => true, 'skipped' => true, 'reason' => '加速清單未過期（資料庫與輸入都沒變），不必重算；要重算請加 force=1',
-                    'learnedAt' => $l['GeneratedAt']];
+        if ($l) {
+            return ['done' => true, 'skipped' => true, 'reason' => '已有加速清單，不自動重算（加速清單不因資料或轉乘群組更新而過期）；要重算請加 force=1',
+                    'learnedAt' => $l['GeneratedAt'], 'inputsChanged' => !$l['Fresh']];
         }
     }
     if (!$state || ($state['DbBuiltAt'] ?? null) !== transferLearnDbBuiltAt($db) || ($state['InputsHash'] ?? null) !== transferLearnInputsHash()) {

@@ -1189,7 +1189,7 @@ function transferShiftLongWait(array &$d, $from, $to, array $j)
 function transferRoute(SqliteDao $db, $from, $to, $week, $t0, $runs = 6, $end = null, $budget = TRANSFER_ROUTE_BUDGET, $jump = true, $prune = true, $accel = null, $stops = true)
 {
     $d = transferRouterData($db, $week);
-    // 加速清單：$accel = true／false，或 null（有算好、未過期的 transfer_accel_learned.json 才套用）
+    // 加速清單：$accel = true／false，或 null（有算好的 transfer_accel_learned.json 就套用，不會過期）
     $d['accel'] = transferAccelWanted($d, $accel === null ? null : ($accel ? '1' : '0')) ? transferAccelPlan($d, $from, $to) : null;
     $all = [];
     $t = $t0;

@@ -2107,5 +2107,5 @@ function actionAdminDownloadToSqlite()
         sendJson(500, ['ok' => false, 'action' => 'admin_download_to_sqlite', 'error' => $e->getMessage()]);
     }
     sendJson(200, ['ok' => true, 'action' => 'admin_download_to_sqlite', 'func' => 'build', 'rebuilt' => $report, 'status' => finderDbStatus(null, true),
-                   'next' => '資料庫重建後轉乘加速清單會過期（預設改為不套用）：轉乘資料有變時先跑 /txapi/admin_transfer/build_groups，再重複呼叫 /txapi/admin_transfer/learn?reset=1（之後不帶 reset）直到 done=true，見 agent/skills/rail-transfer-learn']);
+                   'next' => '轉乘群組會在下一次查詢時自動重建（transfer_seed.json 改過時）；轉乘加速清單不因資料庫重建而過期，照常使用，要依新資料更新才重複呼叫 /txapi/admin_transfer/learn?force=1&reset=1（之後不帶 reset）直到 done=true，見 agent/skills/rail-transfer-learn']);
 }

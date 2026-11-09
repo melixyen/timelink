@@ -71,7 +71,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 4. 改 seed 後部署 seed，再跑 `pipeline.php learn`（或 `func=build_groups` 後 `func=learn`）
    **自動重建（2026-11 使用者要求）**：部署 seed 後不必手動 build_groups——查詢讀群組時（transferLoadGroups → transferEnsureGroups）比對 seed 的 sha1 與
    `custom/…/transfer_groups_stamp.json` 記錄的不同，就自動跑一次（transferRebuildGroups，與 func=build_groups 共用；檔案鎖同時只有一個請求重建，
-   有舊群組時其他請求不等；失敗用舊群組、同一份 seed 600 秒內不重試）。群組內容變了加速清單會過期，仍要手動 func=learn
+   有舊群組時其他請求不等；失敗用舊群組、同一份 seed 600 秒內不重試）。加速清單不因群組更新而過期（見 rail-transfer-learn）
 5. 驗證：`func=groups&station=<UID>`、`func=network`、`func=route` 幾組代表路線（見下方）
 
 ## 路網結構搜尋（func=network）

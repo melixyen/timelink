@@ -196,13 +196,11 @@ function adminSetupChecklist()
             $learned = null;
         }
     }
-    $fresh = $learned && !empty($learned['Fresh']);
-    $add('transfer_accel', '轉乘加速清單', $fresh ? 'ok' : ($groupsOk ? ($learned ? 'warn' : 'todo') : 'wait'),
-        $fresh ? '已算好且是最新（' . ($learned['GeneratedAt'] ?? '') . '）'
-               : ($groupsOk ? ($learned ? '已過期（資料庫或轉乘群組改過），轉乘查詢暫時不套用加速，請重算'
-                                       : '還沒算過：重複呼叫直到 done=true（每次最多算 20 秒）；沒算好前轉乘查詢照常可用，只是比較慢')
-                            : '要先產生轉乘群組'),
-        $fresh || !$groupsOk ? [] : ['api' => '/txapi/admin_transfer/learn', 'cli' => $pipeline . ' learn']);
+    // 加速清單不因資料庫或轉乘群組更新而過期（使用者規則 2026-11）：有算好就是 ok，Fresh 只附在說明裡供參考
+    $add('transfer_accel', '轉乘加速清單', $learned ? 'ok' : ($groupsOk ? 'todo' : 'wait'),
+        $learned ? '已算好（' . ($learned['GeneratedAt'] ?? '') . '）' . (empty($learned['Fresh']) ? '；之後資料庫或轉乘群組有改過，清單照常使用，要更新才用 force=1 重算' : '')
+                 : ($groupsOk ? '還沒算過：重複呼叫直到 done=true（每次最多算 20 秒）；沒算好前轉乘查詢照常可用，只是比較慢' : '要先產生轉乘群組'),
+        $learned || !$groupsOk ? [] : ['api' => '/txapi/admin_transfer/learn', 'cli' => $pipeline . ' learn']);
 
     $count = ['ok' => 0, 'todo' => 0, 'warn' => 0, 'wait' => 0];
     foreach ($items as $it) {

@@ -24,7 +24,7 @@ TDX_BASE=https://<本站> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/sc
 | `--base=URL` | 網站，預設環境變數 `TDX_BASE`，再沒有用 `http://localhost` |
 | `--key=PAT` | 後臺 PAT；建議用環境變數 `TDX_PAT`，不留在命令列歷史 |
 | `--verify=N` | learn 完成後抽 N 組起訖，比對加速開與關的結果 |
-| `--force` | learn：加速清單沒過期也重算 |
+| `--force` | learn：已有加速清單也重算（加速清單不會過期，不加 force 時 learn 一律跳過） |
 | `--reset` | learn：捨棄沒算完的進度，從頭算 |
 | `--max-minutes=N` | 整個流程最多跑幾分鐘，預設 180；超過就停，進度留在網站上，下次接著做 |
 
@@ -64,9 +64,9 @@ GET /txapi/admin_transfer/build_groups（Authorization: Bearer <PAT>）
 
 | 情況 | 指令 |
 | --- | --- |
-| 定期更新資料 | `download learn`（下載沒變時 learn 會自動跳過） |
-| 改了 `transfer_seed.json`（人工轉乘群組、步行分鐘） | `learn` |
-| 改了 `transfer_accel.json`（地區、走廊、分析設定） | `learn --verify=60` |
+| 定期更新資料 | `download`（轉乘群組在下一次查詢時自動重建；加速清單不會過期，已有就照常使用，要依新資料更新才 `learn --force`） |
+| 改了 `transfer_seed.json`（人工轉乘群組、步行分鐘） | 部署即可，第一次查詢自動重建轉乘群組 |
+| 改了 `transfer_accel.json`（地區、走廊、分析設定） | `learn --force --verify=60` |
 | 改了演算法程式，想確認加速清單仍正確 | `learn --force --verify=60` |
 
 ## 排程（不需要 AI 代理）

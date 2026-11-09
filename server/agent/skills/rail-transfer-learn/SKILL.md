@@ -24,10 +24,12 @@ description: 離線時刻表更新後，重新演算轉乘加速清單（推薦�
    - 它會先呼叫 `/txapi/admin_transfer/build_groups`（轉乘群組與里程；內容沒變不重寫檔案），再重複呼叫 `/txapi/admin_transfer/learn`
      直到 `done=true`。每次最多算 `Learn.ChunkSeconds` 秒並把進度存在 `download/tdx_proxy_files/transfer/transfer_learn_state.json`（暫存，不進版控），下一次接著算；
      完成後寫出 `custom/libs/txapi/transfer/data/transfer_accel_learned.json`（舊版留在 `history/`）並刪除進度檔
-   - 清單未過期（資料庫建置時間、轉乘群組檔、`transfer_accel.json` 都沒變）時 `func=learn` 直接回 `skipped`，不重算；`--force` 照樣重算，`--reset` 捨棄沒算完的進度
+   - **加速清單不會過期（使用者規則 2026-11）**：它只是輔助，資料庫重建、轉乘群組或 `transfer_accel.json` 改過都照樣使用；原本的轉乘路由失效時，相關內容只是派不上用場。
+     已有清單時 `func=learn` 直接回 `skipped`（附 `inputsChanged`：算好之後輸入有沒有改過，只供參考），不自動重算；要更新清單才加 `--force`（`force=1`），
+     要撤銷用 `/txapi/admin_transfer/restore` 換回舊版；`--reset` 捨棄沒算完的進度
    - 有 shell 的機器也可以直接 `php libs/txapi/transfer/learn.php [--force] [--reset]`，一次算完（約 15 分鐘）
    - 摘要的 `changedFiles` 列出這次有變動的產生檔；轉車出問題時 `/txapi/admin_transfer/history` 看舊版、`func=restore` 換回
-3. 檢查 `/txapi/transfer/accel`：`default` 要是 on、`learned.Fresh` 要是 true；看 `LearnedHubs`（推薦換車站與使用次數）、
+3. 檢查 `/txapi/transfer/accel`：`default` 要是 on（`learned.Fresh` 只供參考，false 表示算好之後輸入有改過，不影響使用）；看 `LearnedHubs`（推薦換車站與使用次數）、
    `EffectiveCorridors[].Added`／`Evidence`（被最佳方案證明要放寬的走廊與例子）、`ManualHubsUnused`（手寫但沒用到的站）
 4. 驗證（`--verify=60` 已包含；也可單獨跑）：`TDX_BASE=https://<本站> TDX_PAT=<後臺 PAT> php agent/skills/rail-transfer-learn/scripts/verify_accel.php --pairs=60`（帶後臺 PAT 不受查詢次數限制），
    比對 accel=1 與 accel=0 的方案集合；不同的組數應該是 0 或很少，列出的例子要合理
@@ -51,7 +53,7 @@ description: 離線時刻表更新後，重新演算轉乘加速清單（推薦�
 
 ## 查詢時怎麼用（libs/txapi/transfer/accel.php）
 
-- `accel` 省略：有算好且未過期的 `transfer_accel_learned.json` 就套用，否則不套用
+- `accel` 省略：有算好的 `transfer_accel_learned.json` 就套用（不看是否過期），沒有才不套用
 - `accel=1`：一律套用（沒有算好的清單時用手寫備用清單）；`accel=0`：不套用（完整搜尋）
 - 套用時：起訖地區組合的 `EffectiveCorridors` 以外的地區車站不展開；臺鐵同站換車只在 `LearnedHubs` 或起訖站附近
   （`Settings.LocalMinutes` 分鐘內）的車站

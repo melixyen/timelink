@@ -445,7 +445,7 @@ TRA-0950.TRA.local.TRA-1000.TRA.express.TRA-3300                                
 | `admin_cache` | `summary`、`purge` | 見上方 |
 | `admin_download` | `sync`、`prune`、`refresh` | 見 `/txapi/download` 說明 |
 | `admin_download_to_sqlite` | `status`、`build` | 見上方 |
-| `admin_transfer` | `build_groups`、`learn`、`history`、`restore` | 轉乘群組產生、加速清單演算、產生檔舊版與換回。`transfer_seed.json` 改過（雜湊與上次重建不同）時，第一次查詢會自動重建轉乘群組與里程（不必手動 `build_groups`）；加速清單仍要手動 `learn` |
+| `admin_transfer` | `build_groups`、`learn`、`history`、`restore` | 轉乘群組產生、加速清單演算、產生檔舊版與換回。`transfer_seed.json` 改過（雜湊與上次重建不同）時，第一次查詢會自動重建轉乘群組與里程（不必手動 `build_groups`）。加速清單不因資料或轉乘群組更新而過期，有就一直使用；要更新才 `learn` 加 `force=1`，要撤銷用 `restore` |
 | `admin_finder` | `status`；其餘同 `/txapi/finder` 的查詢 | 面板「查詢功能」（`admin_finder`）、「查詢測試」（`admin_finder_try`） |
 | `admin_traffic` | `list`、`ip`、`blocks`；`block`、`unblock`（POST） | 各 IP 的請求頻率與總量（保留 {$trafficDays} 天）、封鎖與解鎖；被封鎖的 IP 回 403（40303），已登入或帶 PAT 的請求除外 |
 
