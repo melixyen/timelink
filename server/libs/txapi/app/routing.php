@@ -1787,8 +1787,14 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     $noEst = [];
     foreach ($base as $legs) {
         // 基本路由在 appNetworkRoutes 逐段組合時已經過排除規則（重複經過、排除名單），這裡不必再檢查
-        $est = appRouteEstimate($m, $legs);
-        if ($est !== null) {
+        $relayOnly = $trunkMode && array_filter($legs, function ($l) { return !empty($l['_relayOnly']); });
+        $est = $relayOnly ? null : appRouteEstimate($m, $legs);
+        if ($relayOnly) {
+            // 中長途分解的全程區間車（相連臺鐵段合成一段）：只用區間車接力
+            if (($supEst = appRouteSupEstimate($m, $legs, $extra, ['TRA.LocalRelay'])) !== null) {
+                $scored[] = [appRouteTransfers($legs), $supEst, $legs, ['TRA.LocalRelay']];
+            }
+        } elseif ($est !== null) {
             $scored[] = [appRouteTransfers($legs), $est, $legs];
         } elseif ($trunkMode && ($supEst = appRouteSupEstimate($m, $legs, $extra, null)) !== null) {
             // 中長途分解：幹線段沒有直達車（區間車接力、交會站換車才串得出來），用補充資料改寫後最好的估計排序，展開時只用補充路由
@@ -1859,7 +1865,7 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
                 continue;
             }
             foreach ($legs as &$l) {
-                unset($l['_part']);   // 中長途分解的段落標記（只給補充資料判斷用）
+                unset($l['_part'], $l['_relayOnly']);   // 中長途分解的段落標記（只給補充資料判斷用）
             }
             unset($l);
             $dist = appRouteDistance($m, $legs);

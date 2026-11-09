@@ -121,6 +121,18 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     if ($u === $x) {
         return $cache[$k] = [['legs' => [], 'est' => 0.0, 'tc' => -1, 'score' => 0.0]];
     }
+    // 起訖站與幹線站在同一個轉乘群組（台北車站→臺鐵臺北）：直接步行。一般找路至少要搭一段車，找不到只步行的走法
+    $same = false;
+    foreach ($m['groupOf'][$u] ?? [] as $gid) {
+        foreach ($m['groups'][$gid]['Stations'] as $y) {
+            $same = $same || $y['StationUID'] === $x;
+        }
+    }
+    $w = $same ? ($toTrunk ? transferWalk($m, $u, $x, true) : transferWalk($m, $x, $u, true)) : null;
+    if ($w !== null) {
+        $legs = [['Type' => 'walk', 'From' => $toTrunk ? $u : $x, 'To' => $toTrunk ? $x : $u, 'Minutes' => null, 'MinutesGiven' => false]];
+        return $cache[$k] = [['legs' => $legs, 'est' => (float) $w['Minutes'], 'tc' => -1, 'score' => (float) $w['Minutes']]];
+    }
     // 短程找路一律用「不搭高鐵」找一次，各排除條件共用：基本路由的臺鐵段不分車種（串接時才依 extra 選班次），
     // 不搭臺鐵對號時只濾掉補充路由切出的對號段
     $rk = $u . '|' . $x . '|' . (int) $toTrunk . '|' . ($opt['deeper'] ?? '');
@@ -329,8 +341,12 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
                 $score[$x] = $e['best'] + $bestPair;
             }
         }
-        asort($score);
         $self = $side === 'A' ? $from : $to;
+        // 起站（終站）本身是臺鐵站時一定保留：沒有直達車（五堵往南）也要能從起站直接全程區間車接力，不必先到大站
+        if (isset($ends[$side][$self]) && $ends[$side][$self]['sys'] === 'TRA' && !isset($score[$self])) {
+            $score[$self] = INF;
+        }
+        asort($score);
         $count = [];
         $keep[$side] = [];
         foreach ($score as $x => $v) {
@@ -388,10 +404,29 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     foreach (array_keys($pickA) as $i) {
         $routes[] = $combos[$i]['legs'];
     }
+    // 全程區間車：不論起訖站，都不必先到大站——把幹線前後相連的臺鐵段合成一段（五堵→松山＋松山→高雄＝五堵→高雄、
+    // 臺北→豐原＋豐原→松竹＝臺北→松竹），只用這段產生區間車接力（_relayOnly）；沒有可合併的組合本身就能接力
+    $codes = [];
+    foreach ($routes as $legs) {
+        $codes[appRouteFormat(['Legs' => $legs])] = true;
+    }
+    $relay = 0;
+    foreach ($routes as $legs) {
+        $merged = appTrunkMergeTra($legs);
+        if ($merged === null) {
+            continue;
+        }
+        $code = appRouteFormat(['Legs' => $merged]);
+        if (!isset($codes[$code])) {
+            $codes[$code] = true;
+            $routes[] = $merged;
+            $relay++;
+        }
+    }
     $meta = [
         'From' => array_keys($keep['A']), 'To' => array_keys($keep['B']),
         'Candidates' => ['From' => count($ends['A']), 'To' => count($ends['B'])],
-        'Combos' => count($combos), 'Routes' => count($routes), 'EastWest' => $eastWest,
+        'Combos' => count($combos), 'Routes' => count($routes), 'RelayRoutes' => $relay, 'EastWest' => $eastWest,
         'seconds' => round(microtime(true) - $t0, 3),
     ];
     appTrunkMeta($meta, $extra);
@@ -426,4 +461,44 @@ function appTrunkBackHub(array $m, array $side, array $trunk, $x)
         }
     }
     return false;
+}
+
+/**
+ * 全程區間車用：幹線臺鐵段（只有一段）前後直接相連的臺鐵段（生活圈端）合成一段系統直達段，標 _relayOnly（只套用區間車接力）。
+ * 前後都沒有相連的臺鐵段時回 null（那個組合本身就能接力）
+ */
+function appTrunkMergeTra(array $legs)
+{
+    $ti = null;
+    foreach ($legs as $i => $l) {
+        if (($l['_part'] ?? null) === 'trunk') {
+            if ($ti !== null || $l['Type'] !== 'ride' || $l['System'] !== 'TRA') {
+                return null;   // 幹線不是單一一段臺鐵（高鐵、東部往來西部換車）
+            }
+            $ti = $i;
+        }
+    }
+    if ($ti === null) {
+        return null;
+    }
+    $a = $ti;
+    while ($a > 0 && $legs[$a - 1]['Type'] === 'ride' && $legs[$a - 1]['System'] === 'TRA' && $legs[$a - 1]['To'] === $legs[$a]['From']) {
+        $a--;
+    }
+    $b = $ti;
+    while ($b + 1 < count($legs) && $legs[$b + 1]['Type'] === 'ride' && $legs[$b + 1]['System'] === 'TRA' && $legs[$b + 1]['From'] === $legs[$b]['To']) {
+        $b++;
+    }
+    if ($a === $ti && $b === $ti) {
+        return null;
+    }
+    $path = [];
+    for ($i = $a; $i <= $b; $i++) {
+        foreach ($legs[$i]['Path'] ?? [] as $p) {
+            $path[] = $p;
+        }
+    }
+    $one = ['Type' => 'ride', 'From' => $legs[$a]['From'], 'To' => $legs[$b]['To'], 'LineUID' => 'TRA', 'Class' => null,
+            'System' => 'TRA', 'Through' => false, 'Path' => $path, '_part' => 'trunk', '_relayOnly' => true];
+    return array_merge(array_slice($legs, 0, $a), [$one], array_slice($legs, $b + 1));
 }

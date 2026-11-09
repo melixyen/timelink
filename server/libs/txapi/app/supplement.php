@@ -235,6 +235,10 @@ function appSupTraLocalLegs(array $m, array $path, $a, $b, array $relay)
  */
 function appSupTraLocalRelay(array $m, array $leg, array $meta, $extra)
 {
+    // 中長途分解的幹線段：全程區間車從起站直接接力到終點端，前面接臺鐵（先搭到大站）或後面接臺鐵（大站下車再搭區間車）的不產生
+    if (($leg['_part'] ?? null) === 'trunk' && (($leg['_PrevSystem'] ?? null) === 'TRA' || ($leg['_NextSystem'] ?? null) === 'TRA')) {
+        return null;
+    }
     $path = appSegmentPath($m, appLegPath($leg));
     $st = $path['stations'];
     $n = count($st) - 1;
