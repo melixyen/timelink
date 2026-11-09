@@ -116,7 +116,7 @@
   "journey.tag.FewestTransfers": "ต่อรถน้อยที่สุด",
   "journey.tag.Direct": "ตรง",
   "journey.tag.FastestNoHSR": "เร็วที่สุดโดยไม่ขึ้นรถไฟความเร็วสูง",
-  "journey.tag.FastestNoExpress": "เร็วที่สุดโดยไม่ขึ้นรถด่วนของการรถไฟไต้หวัน",
+  "journey.tag.FastestLocal": "เร็วที่สุดโดยนั่งรถไฟธรรมดาของการรถไฟไต้หวันเท่านั้น",
   "journey.noTrainNo": "ไม่มีข้อมูลหมายเลขรถ",
   "journey.openStops": "ดูสถานีที่จอดและเวลาของรถเท่านี้",
   "stops.title": "ตารางเวลารถ",

@@ -675,7 +675,7 @@ function appRegions()
     static $r = null;
     if ($r === null) {
         $j = json_decode((string) @file_get_contents(TRANSFER_DATA_DIR . '/transfer_regions.json'), true);
-        $r = ['of' => [], 'adj' => [], 'east' => [], 'gate' => [], 'hsrCheck' => [], 'hubs' => [], 'trunks' => []];
+        $r = ['of' => [], 'adj' => [], 'east' => [], 'gate' => [], 'hsrCheck' => [], 'hubs' => [], 'trunks' => [], 'junctions' => [], 'junctionAt' => []];
         if (is_array($j)) {
             foreach ($j['Regions'] ?? [] as $k => $list) {
                 foreach ($list as $u) {
@@ -693,6 +693,12 @@ function appRegions()
             }
             foreach ($j['TraTrunks'] ?? [] as $k => $x) {
                 $r['trunks'][$k] = $x['Stations'] ?? [];
+            }
+            foreach ($j['TraJunctions'] ?? [] as $x) {
+                $tr = $x['Trunks'] ?? [];
+                sort($tr);
+                $r['junctions'][implode('', $tr)] = $x['Station'];
+                $r['junctionAt'][$x['Station']] = true;
             }
         }
     }
@@ -731,6 +737,10 @@ function appRegionTransferOk(array $ok, array $prev, array $next)
         return true;
     }
     $R = appRegions();
+    // 臺鐵幹線跨線的換車站（TraJunctions：臺北、高雄、臺東）：臺鐵換臺鐵不受限制
+    if (($prev['System'] ?? null) === 'TRA' && ($next['System'] ?? null) === 'TRA' && $prev['To'] === $next['From'] && isset($R['junctionAt'][$prev['To']])) {
+        return true;
+    }
     $rg = $R['of'][$prev['To']] ?? ($R['of'][$next['From']] ?? null);
     return $rg === null || isset($ok[$rg]);
 }

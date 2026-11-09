@@ -116,7 +116,7 @@
   "journey.tag.FewestTransfers": "가장 적은 환승",
   "journey.tag.Direct": "직통",
   "journey.tag.FastestNoHSR": "고속철도 없이 가장 빠름",
-  "journey.tag.FastestNoExpress": "타이완철도 특급열차 없이 가장 빠름",
+  "journey.tag.FastestLocal": "타이완철도 완행열차만 타고 가장 빠름",
   "journey.noTrainNo": "열차 번호 정보 없음",
   "journey.openStops": "이 열차의 정차역과 시각 보기",
   "stops.title": "열차 시간표",

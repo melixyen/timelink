@@ -669,9 +669,11 @@ function transferJourney(array &$d, $k, array $end, array $arrPar, array $readyP
                     'TransferGroupID' => $w['TransferGroupID'] ?? null];
     }
     $u = $v;
+    $pars = [];   // 每段乘車的內部參數 [par, 下車秒]（依行進順序；journeys 的 RAPTOR 補充轉成方案格式用）
     for ($r = $k; $r >= 1; $r--) {
         $par = $arrPar[$r][$u];
         $ride = transferRideStep($d, $par, $arr[$r][$u]);
+        $pars[] = [$par, $arr[$r][$u]];
         $steps[] = $ride;
         $boardAt = $ride['FromStationUID'];
         $rp = $readyPar[$r - 1][$boardAt];
@@ -766,6 +768,7 @@ function transferJourney(array &$d, $k, array $end, array $arrPar, array $readyP
         '_dep'            => $depSec,
         '_arr'            => $tEnd,
         '_rides'          => $rideTimes,
+        '_pars'           => array_reverse($pars),
         '_sig'            => implode('>', array_map(function ($s) { return $s['Type'] === 'ride' ? ($s['TrainNo'] ?? $s['RouteID']) . '@' . $s['DepartureTime'] : $s['Type']; }, $steps)),
     ];
 }
@@ -1368,7 +1371,7 @@ function transferRoute(SqliteDao $db, $from, $to, $week, $t0, $runs = 6, $end = 
         // 路由組合（起站、路線、轉乘站、終點站）：原樣送回 func=follow 就能查同一組合的前後班次
         $j['Pattern'] = transferPatternFromSteps($from, $to, $j['Steps']);
         transferAddStops($d, $j['Steps'], $stops);
-        unset($j['_dep'], $j['_arr'], $j['_sig'], $j['_rides']);
+        unset($j['_dep'], $j['_arr'], $j['_sig'], $j['_rides'], $j['_pars']);
     }
     unset($j);
     $served = function ($u) use ($d) {

@@ -116,7 +116,7 @@
   "journey.tag.FewestTransfers": "最少转乘",
   "journey.tag.Direct": "直达",
   "journey.tag.FastestNoHSR": "不搭高铁最快",
-  "journey.tag.FastestNoExpress": "不搭台铁对号最快",
+  "journey.tag.FastestLocal": "只搭区间车最快",
   "journey.noTrainNo": "无车次信息",
   "journey.openStops": "查看这班车的停靠站与时刻",
   "stops.title": "列车时刻表",

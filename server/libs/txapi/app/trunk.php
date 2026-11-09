@@ -247,8 +247,48 @@ function appTrunkLegs(array $m, $s, $t, $extra, $eastWest)
         $est = appRouteEstimate($m, $tmp);
         $list[] = ['legs' => $legs, 'est' => $est ?? INF];
     }
+    // 臺鐵跨幹線（兩端的 TraTrunks 沒有共同的，例如花蓮在東部幹線、臺中在西部幹線）：多一個在交會站（TraJunctions）換車的版本
+    if ($ss === 'TRA' && $ts === 'TRA') {
+        foreach (appTrunkJunctions($m, $s, $t) as $j) {
+            $a = appTrunkLegs($m, $s, $j, $extra, false);
+            $b = appTrunkLegs($m, $j, $t, $extra, false);
+            if (!$a || !$b) {
+                continue;
+            }
+            $legs = array_merge($a[0]['legs'], $b[0]['legs']);
+            $code = appRouteFormat(['Legs' => $legs]);
+            if (!isset($seen[$code])) {
+                $seen[$code] = true;
+                $list[] = ['legs' => $legs, 'est' => $a[0]['est'] + $b[0]['est'] + appTrunkConfig()['TransferMinutes']];
+            }
+        }
+    }
     usort($list, function ($a, $b) { return $a['est'] <=> $b['est']; });
     return $cache[$k] = array_slice($list, 0, appTrunkConfig()['TrunkPerPair']);
+}
+
+/** 臺鐵兩站跨幹線時要換車的交會站（TraJunctions）：兩站所屬的幹線沒有共同的，每一種幹線組合對應一個交會站；不跨線、或交會站就是起訖站時不列 */
+function appTrunkJunctions(array $m, $s, $t)
+{
+    $R = appRegions();
+    $of = appTraTrunkOf($m);
+    $a = $of[$s] ?? [];
+    $b = $of[$t] ?? [];
+    if (!$a || !$b || array_intersect_key($a, $b)) {
+        return [];
+    }
+    $out = [];
+    foreach (array_keys($a) as $x) {
+        foreach (array_keys($b) as $y) {
+            $k = [$x, $y];
+            sort($k);
+            $j = $R['junctions'][implode('', $k)] ?? null;
+            if ($j !== null && $j !== $s && $j !== $t) {
+                $out[$j] = $j;
+            }
+        }
+    }
+    return array_values($out);
 }
 
 /**

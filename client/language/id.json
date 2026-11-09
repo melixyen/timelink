@@ -116,7 +116,7 @@
   "journey.tag.FewestTransfers": "Paling sedikit perpindahan",
   "journey.tag.Direct": "Tanpa perpindahan",
   "journey.tag.FastestNoHSR": "Tercepat tanpa Kereta Api Cepat Taiwan",
-  "journey.tag.FastestNoExpress": "Tercepat tanpa kereta ekspres Kereta Api Taiwan",
+  "journey.tag.FastestLocal": "Tercepat hanya dengan kereta lokal Kereta Api Taiwan",
   "journey.noTrainNo": "Tidak ada nomor kereta",
   "journey.openStops": "Lihat stasiun berhenti dan jadwal kereta ini",
   "stops.title": "Jadwal kereta",

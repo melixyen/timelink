@@ -116,7 +116,7 @@
   "journey.tag.FewestTransfers": "最も少ない乗換",
   "journey.tag.Direct": "直通",
   "journey.tag.FastestNoHSR": "高鉄に乗らない最速",
-  "journey.tag.FastestNoExpress": "台鉄の対号列車に乗らない最速",
+  "journey.tag.FastestLocal": "台鉄の区間車だけで最速",
   "journey.noTrainNo": "列車番号なし",
   "journey.openStops": "この列車の停車駅と時刻を表示",
   "stops.title": "列車時刻表",
