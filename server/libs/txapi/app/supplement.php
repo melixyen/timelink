@@ -21,7 +21,7 @@
  * （一條路由裡有好幾段時取組合，最多 APP_SUPPLEMENT_MAX_COMBOS 條）。
  */
 
-const APP_SUPPLEMENT_MAX_COMBOS = 16;
+const APP_SUPPLEMENT_MAX_COMBOS = 25;
 
 const APP_SUPPLEMENT_LOGIC = [
     'TRA.LocalRelay'      => 'appSupTraLocalRelay',       // 臺鐵全程區間車：在接力站換車
@@ -308,18 +308,23 @@ function appSupTraExpressTransfer(array $m, array $leg, array $meta, $extra)
 /**
  * TRA.HubTransfer：中長途（搭乘段起訖的生活圈不相鄰）的臺鐵段，除了起訖站自己直達，也經由生活圈大站（transfer_regions.json 的 TraHubs）
  * 轉對號列車：區間車到上車大站、對號列車到下車大站、再換區間車。
- *   上車端：起站本身是這條幹線的大站就從起站上；不是時，用起點生活圈內、往行進方向的大站（每一個都試），
- *          生活圈內往行進方向已經沒有大站時（鶯歌、鳳鳴往南），沿車站順序往下找第一個大站（桃園）；起站有對號停靠時也保留從起站上車。
- *   下車端：對稱（終點生活圈內、到達終點前的大站；沒有時往回找最後一個大站）。
+ *   上車端：起站本身是這條幹線的大站就只從起站上。不是時取起點生活圈內離起站最近的大站，往行進方向、往反方向各最多
+ *          APP_HUB_PER_SIDE 個（五堵往南：松山、臺北，反方向七堵；汐科往花蓮：七堵、八堵，反方向南港、松山）；往反方向的先搭
+ *          區間車回大站，再搭對號經過起站。生活圈內往行進方向沒有大站時（鶯歌、鳳鳴往南），沿車站順序往下找第一個大站（桃園）。
+ *          起站有對號停靠時也保留從起站上車。
+ *   下車端：對稱（到達前的大站、越過終點的大站，各最多 APP_HUB_PER_SIDE 個；到達前沒有時往回找最後一個大站）。
  *   幹線：上車端看起站往前第一個只屬於一條幹線的車站（五堵往南是 w，往宜蘭是 e），下車端從終點往回看；大站要是這條幹線的大站。
  * 起訖站是捷運、輕軌的路由，臺鐵段（經轉乘群組接上）也用同一個規則。回傳 ['Alternatives' => [[段落, 名稱後綴], ...]]
  */
+const APP_HUB_PER_SIDE = 2;
+
 function appSupTraHubTransfer(array $m, array $leg, array $meta, $extra)
 {
     if (!appTraHubLeg($leg)) {
         return null;
     }
-    $path = appSegmentPath($m, appLegPath($leg));
+    $pieces = appLegPath($leg);
+    $path = appSegmentPath($m, $pieces);
     $st = $path['stations'];
     $n = count($st) - 1;
     if ($n < 2) {
@@ -337,50 +342,104 @@ function appSupTraHubTransfer(array $m, array $leg, array $meta, $extra)
         }
         return $trunkOf[$st[$order[0]]] ?? [];
     };
-    $isHub = function ($i, $tr) use ($st, $hubs) {
-        return isset($hubs[$st[$i]]) && array_intersect_key($hubs[$st[$i]], $tr);
+    $isHub = function ($u, $tr) use ($hubs) {
+        return isset($hubs[$u]) && array_intersect_key($hubs[$u], $tr);
     };
-    $pick = function ($order, $tr, $end) use ($st, $isHub, $exp) {
-        if ($isHub($end, $tr)) {
-            return [$end];
+    // 端點所在路線上、往路由外側（上車端往反方向、下車端越過終點）同一生活圈內最近的大站
+    $outward = function ($piece, $end, $other, $tr) use ($m, $isHub) {
+        $seq = $m['lineStations'][$piece['LineUID']] ?? [];
+        $i0 = array_search($end, $seq, true);
+        $i1 = array_search($other, $seq, true);
+        if ($i0 === false || $i1 === false || $i0 === $i1) {
+            return [];
+        }
+        $step = $i1 > $i0 ? -1 : 1;
+        $rg = appRegionOf($end);
+        $out = [];
+        for ($j = $i0 + $step; $j >= 0 && $j < count($seq) && count($out) < APP_HUB_PER_SIDE; $j += $step) {
+            if ($rg === null || appRegionOf($seq[$j]) !== $rg) {
+                break;
+            }
+            if ($isHub($seq[$j], $tr)) {
+                $out[] = $seq[$j];
+            }
+        }
+        return $out;
+    };
+    // 一端的選項：['in', 路由上的索引] 或 ['out', 外側的大站]
+    $pick = function ($order, $end, $piece, $other) use ($st, $isHub, $exp, $side, $outward) {
+        $tr = $side($order);
+        if ($isHub($st[$end], $tr)) {
+            return [['in', $end]];
         }
         $rg = appRegionOf($st[$end]);
         $in = [];
         $first = null;
         foreach ($order as $i) {
-            if ($i === $end || !$isHub($i, $tr)) {
+            if ($i === $end || !$isHub($st[$i], $tr)) {
                 continue;
             }
             if ($rg !== null && appRegionOf($st[$i]) === $rg) {
-                $in[] = $i;
+                if (count($in) < APP_HUB_PER_SIDE) {
+                    $in[] = ['in', $i];
+                }
             } elseif ($first === null) {
-                $first = $i;
+                $first = ['in', $i];
             }
         }
         if (!$in && $first !== null) {
             $in = [$first];
         }
-        return array_merge(isset($exp[$st[$end]]) ? [$end] : [], $in);
+        $out = array_map(function ($u) { return ['out', $u]; }, $outward($piece, $st[$end], $other, $tr));
+        return array_merge(isset($exp[$st[$end]]) ? [['in', $end]] : [], $in, $out);
     };
     $fwd = range(0, $n);
     $back = array_reverse($fwd);
-    $boards = $pick($fwd, $side($fwd), 0);
-    $alights = $pick($back, $side($back), $n);
+    $firstP = $pieces[0];
+    $lastP = $pieces[count($pieces) - 1];
+    $boards = $pick($fwd, 0, $firstP, $firstP['To']);
+    $alights = $pick($back, $n, $lastP, $lastP['From']);
     $relay = array_flip(appSupplementMeta('TRA.LocalRelay', 'TRA')['RelayStations'] ?? []);
-    $name = function ($i) use ($m, $st) { $x = $m['names'][$st[$i]] ?? null; return is_array($x) ? ($x['Zh_tw'] ?? $st[$i]) : ($x ?? $st[$i]); };
+    $name = function ($u) use ($m) { $x = $m['names'][$u] ?? null; return is_array($x) ? ($x['Zh_tw'] ?? $u) : ($x ?? $u); };
+    $localTo = function ($a, $b, $line) use ($m, $relay) {
+        $p = appSegmentPath($m, [['LineUID' => $line, 'From' => $a, 'To' => $b]]);
+        return count($p['stations']) < 2 ? null : appSupTraLocalLegs($m, $p, 0, count($p['stations']) - 1, $relay);
+    };
     $alts = [];
-    foreach ($boards as $b1) {
-        foreach ($alights as $b2) {
-            if ($b2 <= $b1 || ($b1 === 0 && $b2 === $n) || appLegMinutes('TRA', $st[$b1], $st[$b2], APP_CLASS_EXPRESS) === null) {
+    foreach ($boards as list($bk, $bv)) {
+        foreach ($alights as list($ak, $av)) {
+            $bIn = $bk === 'in';
+            $aIn = $ak === 'in';
+            if ($bIn && $aIn && ($av <= $bv || ($bv === 0 && $av === $n))) {
                 continue;
             }
-            $pre = $b1 > 0 ? appSupTraLocalLegs($m, $path, 0, $b1, $relay) : [];
-            $post = $b2 < $n ? appSupTraLocalLegs($m, $path, $b2, $n, $relay) : [];
+            // 對號段的路線串：往外側的大站時把第一段的起站／最後一段的迄站延伸到大站
+            $ext = $pieces;
+            if (!$bIn) {
+                $ext[0]['From'] = $bv;
+            }
+            if (!$aIn) {
+                $ext[count($ext) - 1]['To'] = $av;
+            }
+            $ep = $bIn && $aIn ? $path : appSegmentPath($m, $ext);
+            $off = $bIn ? 0 : array_search($st[0], $ep['stations'], true);   // 起站在延伸後路線串的位置
+            if ($off === false) {
+                continue;
+            }
+            $e1 = $bIn ? $bv : 0;
+            $e2 = $aIn ? $av + $off : count($ep['stations']) - 1;
+            $u1 = $ep['stations'][$e1];
+            $u2 = $ep['stations'][$e2];
+            if ($e2 <= $e1 || appLegMinutes('TRA', $u1, $u2, APP_CLASS_EXPRESS) === null) {
+                continue;
+            }
+            $pre = $bIn ? ($bv > 0 ? appSupTraLocalLegs($m, $path, 0, $bv, $relay) : []) : $localTo($st[0], $bv, $firstP['LineUID']);
+            $post = $aIn ? ($av < $n ? appSupTraLocalLegs($m, $path, $av, $n, $relay) : []) : $localTo($av, $st[$n], $lastP['LineUID']);
             if ($pre === null || $post === null) {
                 continue;
             }
-            $tag = array_filter([$b1 > 0 ? $name($b1) . '上' : null, $b2 < $n ? $name($b2) . '下' : null]);
-            $alts[] = [array_merge($pre, appSupPiece($path, $b1, $b2, APP_CLASS_EXPRESS, 'TRA'), $post), implode('、', $tag)];
+            $tag = array_filter([$u1 !== $st[0] ? $name($u1) . '上' : null, $u2 !== $st[$n] ? $name($u2) . '下' : null]);
+            $alts[] = [array_merge($pre, appSupPiece($ep, $e1, $e2, APP_CLASS_EXPRESS, 'TRA'), $post), implode('、', $tag)];
         }
     }
     return $alts ? ['Alternatives' => $alts] : null;

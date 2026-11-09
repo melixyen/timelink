@@ -343,6 +343,18 @@ function appJourneyOut(array &$d, array $r, array $chain, $week)
     ];
 }
 
+/** 方案搭幹線的分鐘：臺鐵對號（Class＝express）與高鐵的搭乘段行駛分鐘加總（同分方案的取捨用） */
+function appJourneyTrunkMinutes(array $j)
+{
+    $t = 0;
+    foreach ($j['Legs'] as $l) {
+        if ($l['Type'] === 'ride' && ($l['System'] === 'THSR' || ($l['System'] === 'TRA' && ($l['Class'] ?? null) === APP_CLASS_EXPRESS))) {
+            $t += $l['ArrivalMinute'] - $l['DepartureMinute'];
+        }
+    }
+    return $t;
+}
+
 /**
  * 要輸出的方案：搭乘段補上途中各站時刻 StopTimes（上車站到下車站，含通過站，見 appRideStopTimes），並移除內部欄位 _pars。
  * 串接時每個候選方案都會產生，所以只對最後要回傳的方案做；$withStops＝false 時只移除
@@ -666,6 +678,12 @@ function appJourneysCompute(array $q)
     $all = array_values($all);
     // 互不支配：較晚（或同時）出發、較早（或同時）到達、轉乘不多於，且至少一項較好的方案淘汰其他
     // 指定路由（fixed）時全部保留
+    // 出發、到達、轉乘都相同時：幹線（臺鐵對號、高鐵）坐得比較久的優先，也就是對號在最靠近目的地的大站下車
+    // （愛河之心→汐止：對號坐到松山再換區間車，不在板橋下）、最靠近起點的大站上車；再相同才依路由順序
+    $trunk = [];
+    foreach ($all as $i => $a) {
+        $trunk[$i] = appJourneyTrunkMinutes($a);
+    }
     $keep = $fixed !== null ? $all : [];
     foreach ($fixed !== null ? [] : $all as $i => $a) {
         $dominated = false;
@@ -675,7 +693,7 @@ function appJourneysCompute(array $q)
             }
             $ge = $b['DepartureMinute'] >= $a['DepartureMinute'] && $b['ArrivalMinute'] <= $a['ArrivalMinute'] && $b['TransferCount'] <= $a['TransferCount'];
             $gt = $b['DepartureMinute'] > $a['DepartureMinute'] || $b['ArrivalMinute'] < $a['ArrivalMinute'] || $b['TransferCount'] < $a['TransferCount'];
-            if ($ge && ($gt || $k < $i)) {
+            if ($ge && ($gt || $trunk[$k] > $trunk[$i] || ($trunk[$k] === $trunk[$i] && $k < $i))) {
                 $dominated = true;
                 break;
             }
@@ -715,8 +733,8 @@ function appJourneysCompute(array $q)
     ];
     // 城際多樣性保底：各排除條件下最快的方案（從全部方案挑，不受互不支配與繞遠篩選影響）一定列入
     $diverse = [];
-    $repCmp = $back ? function ($a, $b) { return [-$a['DepartureMinute'], $a['TransferCount'], $a['ArrivalMinute']] <=> [-$b['DepartureMinute'], $b['TransferCount'], $b['ArrivalMinute']]; }
-                    : function ($a, $b) { return [$a['ArrivalMinute'], $a['TransferCount'], -$a['DepartureMinute']] <=> [$b['ArrivalMinute'], $b['TransferCount'], -$b['DepartureMinute']]; };
+    $repCmp = $back ? function ($a, $b) { return [-$a['DepartureMinute'], $a['TransferCount'], $a['ArrivalMinute'], -appJourneyTrunkMinutes($a)] <=> [-$b['DepartureMinute'], $b['TransferCount'], $b['ArrivalMinute'], -appJourneyTrunkMinutes($b)]; }
+                    : function ($a, $b) { return [$a['ArrivalMinute'], $a['TransferCount'], -$a['DepartureMinute'], -appJourneyTrunkMinutes($a)] <=> [$b['ArrivalMinute'], $b['TransferCount'], -$b['DepartureMinute'], -appJourneyTrunkMinutes($b)]; };
     foreach ($diversity as $tag => $mx) {
         $cands = array_values(array_filter($all, function ($j) use ($mx) { return appJourneyAllowed($j, $mx); }));
         usort($cands, $repCmp);
