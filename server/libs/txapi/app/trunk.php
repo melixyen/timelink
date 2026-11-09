@@ -4,7 +4,8 @@
  *
  * 起訖站的生活圈不同而且不相鄰（appRegionRule 套用）時，不再從起點一路搜到終點，改成三段組合：
  *   1. 起點端：起點生活圈（與相鄰生活圈）的幹線站＝高鐵站、臺鐵對號大站（TraHubs），起站本身是臺鐵站或高鐵站也算。
- *      對每個幹線站做一般的短程找路（appCoreRoutes，不搭高鐵），結果與單純查「起站→這個幹線站」一致。
+ *      對每個幹線站做一般的短程找路（appCoreRoutes，不搭高鐵；各排除條件共用同一次找路，不搭對號時濾掉對號段），
+ *      結果與單純查「起站→這個幹線站」一致。
  *   2. 終點端：對稱（幹線站→終站）。
  *   3. 幹線：起點端幹線站到終點端幹線站，只搭臺鐵、高鐵（appNetworkRoutes 只用鐵路系統）；東部往來西部可以在 Gateways 轉乘。
  * 起點端、終點端各依「到幹線站＋幹線＋另一端」的估計挑出前幾名幹線站（每個系統各 Keep 個），再與幹線組合。
@@ -104,9 +105,10 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra)
  */
 function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
 {
+    static $raw = [];
     static $cache = [];
     $cfg = appTrunkConfig();
-    $extra = ($opt['extra'] ?? 0) | APP_EXTRA_NO_HSR;
+    $extra = $opt['extra'] ?? 0;
     $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra;
     if (isset($cache[$k])) {
         return $cache[$k];
@@ -114,10 +116,22 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     if ($u === $x) {
         return $cache[$k] = [['legs' => [], 'est' => 0.0, 'tc' => -1]];
     }
-    $sub = ['extra' => $extra, 'deeper' => $opt['deeper'] ?? null, 'limit' => 20, 'noTrunk' => true];
-    $routes = $toTrunk ? appCoreRoutes($m, $u, $x, $sub) : appCoreRoutes($m, $x, $u, $sub);
+    // 短程找路一律用「不搭高鐵」找一次，各排除條件共用：基本路由的臺鐵段不分車種（串接時才依 extra 選班次），
+    // 不搭臺鐵對號時只濾掉補充路由切出的對號段
+    $rk = $u . '|' . $x . '|' . (int) $toTrunk . '|' . ($opt['deeper'] ?? '');
+    if (!isset($raw[$rk])) {
+        $sub = ['extra' => APP_EXTRA_NO_HSR, 'deeper' => $opt['deeper'] ?? null, 'limit' => 20, 'noTrunk' => true];
+        $raw[$rk] = $toTrunk ? appCoreRoutes($m, $u, $x, $sub) : appCoreRoutes($m, $x, $u, $sub);
+    }
+    $routes = array_values(array_filter($raw[$rk], function ($r) use ($extra) {
+        foreach ($r['legs'] as $l) {
+            if ($l['Type'] === 'ride' && ($l['Class'] ?? null) !== null && !appClassAllowed($extra, $l['System'], $l['Class'])) {
+                return false;
+            }
+        }
+        return true;
+    }));
     $minTc = null;
-    $best = null;
     foreach ($routes as $r) {
         if ($minTc === null || $r['TransferCount'] < $minTc) {
             $minTc = $r['TransferCount'];

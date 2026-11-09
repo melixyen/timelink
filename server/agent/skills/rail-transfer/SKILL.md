@@ -195,7 +195,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 
 - 起訖生活圈不相鄰（appRegionRule 套用）時，appCoreRoutes 不再整段搜尋（appTrunkBaseRoutes；組不出路由才退回整段）：
   1. 幹線站＝起點（終點）生活圈與相鄰生活圈的高鐵站、TraHubs 大站；起站（終站）本身是臺鐵站或高鐵站也算（直接上幹線：汐止直接搭對號、全程區間車接力）
-  2. 生活圈端：起站→每個幹線站做一般短程找路（appCoreRoutes，noTrunk、不搭高鐵），與單純查「起站→大站／高鐵站」一致；每站留轉乘最少、估計在最好 AccessSlack 分內的前 AccessPerStation 條。終點端對稱
+  2. 生活圈端：起站→每個幹線站做一般短程找路（appCoreRoutes，noTrunk、不搭高鐵；不設排除／不搭高鐵／不搭對號三次搜尋共用同一次找路，不搭對號時濾掉補充路由切出的對號段），與單純查「起站→大站／高鐵站」一致；每站留轉乘最少、估計在最好 AccessSlack 分內的前 AccessPerStation 條。終點端對稱
   3. 每端依「生活圈端＋幹線估計（appTrunkQuick：同系統直達最短分鐘；東部往來西部經 Gateways 換車）＋另一端最好」每個系統留前 Keep 個幹線站
   4. 幹線（appTrunkLegs）：appNetworkRoutes 只用臺鐵／高鐵（systems 參數），同系統只取直達一段，東部往來西部可多一次轉乘
   5. 組合後過高鐵站經過規則（appTrunkHsrOk，與 appPrefixExtend 同判斷）；依估計取前 MaxCombos 條（臺鐵、高鐵幹線各至少一半）交回一般流程。段落帶 `_part`（access／trunk／egress），補充資料只改寫幹線段（生活圈端已在短程找路套用過），TRA.HubTransfer 在分解時不用；幹線段沒有直達車的（全程區間車）用補充路由的估計排序
