@@ -15,7 +15,7 @@
 
 const APP_TRUNK_DEFAULTS = [
     'Enabled'          => true,
-    'Candidates'       => ['TRA' => 6, 'THSR' => 3],   // 每端先依距離取最近的幾個幹線站做短程找路（起站本身另外算）
+    'Candidates'       => ['TRA' => 4, 'THSR' => 3],   // 每端先依距離取最近的幾個幹線站做短程找路（起站本身另外算）
     'Keep'             => ['TRA' => 4, 'THSR' => 3],   // 每端依估計留下幾個幹線站（起站本身另外算）
     'AccessPerStation' => 2,                           // 每個幹線站留幾條到達路由（轉乘最少的裡面，估計在最好的 AccessSlack 分內）
     'AccessSlack'      => 10,
@@ -89,6 +89,10 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra)
     $self = appTrunkSystemOf($u);
     if ($self === 'TRA' || ($self === 'THSR' && appSystemAllowed($extra, 'THSR'))) {
         $out[$u] = $self;
+    }
+    // 起站本身是大站（臺鐵）或高鐵站：這個系統只從起站上，不另外找同系統的幹線站（臺北→高雄不必先到松山、板橋）
+    if (($self === 'TRA' && isset($R['hubs'][$u])) || $self === 'THSR') {
+        $by[$self] = [];
     }
     foreach ($by as $sys => $list) {
         asort($list);
@@ -164,7 +168,14 @@ function appTrunkQuick(array $m, $s, $t, $extra, $eastWest)
     $cls = ($extra & APP_EXTRA_NO_EXPRESS) ? APP_CLASS_LOCAL : null;
     $ss = appTrunkSystemOf($s);
     $ts = appTrunkSystemOf($t);
-    $direct = function ($sys, $a, $b) use ($cls) { return appLegMinutes($sys, $a, $b, $sys === 'TRA' ? $cls : null); };
+    // 不搭對號時區間車多半沒有長途直達（要接力）：用不分車種的分鐘 × 1.6 粗估，只用於篩選排序
+    $direct = function ($sys, $a, $b) use ($cls) {
+        $v = appLegMinutes($sys, $a, $b, $sys === 'TRA' ? $cls : null);
+        if ($v === null && $sys === 'TRA' && $cls !== null && ($any = appLegMinutes('TRA', $a, $b, null)) !== null) {
+            $v = $any * 1.6;
+        }
+        return $v;
+    };
     $v = $ss === $ts ? $direct($ss, $s, $t) : null;
     if ($eastWest) {
         // 經轉乘生活圈（北北基、高雄）的車站換車：同系統兩段，或換系統（臺鐵↔高鐵，同轉乘群組）
