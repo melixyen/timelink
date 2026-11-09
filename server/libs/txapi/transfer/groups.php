@@ -55,6 +55,10 @@ function transferLoadGroups()
     if ($cache !== null) {
         return $cache;
     }
+    // transfer_seed.json 改過（佈署了新版）就先自動重建（transfer.php 的 transferEnsureGroups）
+    if (function_exists('transferEnsureGroups')) {
+        transferEnsureGroups();
+    }
     if (!is_file(TRANSFER_GROUPS_FILE)) {
         return null;
     }

@@ -250,6 +250,7 @@ function transferMissingGroups()
 function transferFuncGroups()
 {
     if (!empty($_GET['raw'])) {
+        transferEnsureGroups();
         if (!is_file(TRANSFER_GROUPS_FILE)) {
             transferMissingGroups();
         }
@@ -296,14 +297,33 @@ function transferFuncGroups()
 function transferFuncBuild()
 {
     try {
-        finderDbEnsure(['station', 'line', 'line_station', 'train', 'train_stop']);
-        $g = transferBuildGroups();
+        $r = transferRebuildGroups(!empty($_GET['preview']));
     } catch (FinderDbIncomplete $e) {
         sendJson(503, ['ok' => false, 'error' => 'Download data is incomplete', 'missing' => $e->missing]);
     } catch (Throwable $e) {
         sendJson(500, ['ok' => false, 'error' => $e->getMessage()]);
     }
-    $old = transferLoadGroups();
+    $g = $r['groups'];
+    $links = $r['links'];
+    sendJson(200, ['ok' => true, 'action' => 'admin_transfer', 'func' => 'build_groups', 'saved' => $r['saved'],
+                   'unchanged' => !$r['saved']['groups'] && !$r['saved']['distance'] && !$r['saved']['links'] && empty($_GET['preview']), 'Counts' => $g['Counts'],
+                   'links' => ['total' => count($links['Links']), 'added' => $links['Diff']['added'], 'excluded' => $links['Diff']['excluded'],
+                               'notDetected' => $links['Diff']['notDetected']],
+                   'Unresolved' => $g['Unresolved'], 'diff' => $r['diff']] + (empty($_GET['preview']) ? [] : ['groups' => $g]));
+}
+
+/**
+ * 重建轉乘群組（func=build_groups 與查詢時的自動重建共用）：產生群組、與舊檔比對差異，$preview＝false 時寫入連結紀錄、群組與里程
+ * （內容沒變就不重寫，加速清單的輸入雜湊才不會無故改變），並記下這次用的 transfer_seed.json 雜湊（transferGroupsStamp）。
+ * 回傳 ['groups', 'links', 'diff', 'saved']；失敗丟例外（FinderDbIncomplete：下載資料不完整）
+ */
+function transferRebuildGroups($preview = false)
+{
+    $seedSha = (string) @sha1_file(TRANSFER_SEED_FILE);
+    finderDbEnsure(['station', 'line', 'line_station', 'train', 'train_stop']);
+    $g = transferBuildGroups();
+    // 舊檔直接讀原始檔（transferLoadGroups 會補名稱、也會觸發自動重建）
+    $old = is_file(TRANSFER_GROUPS_FILE) ? json_decode((string) file_get_contents(TRANSFER_GROUPS_FILE), true) : null;
     $diff = ['added' => [], 'removed' => [], 'changed' => []];
     $oldMap = [];
     foreach ($old['TransferGroups'] ?? [] as $x) {
@@ -327,7 +347,7 @@ function transferFuncBuild()
     $links = $g['_links'];
     unset($g['_links']);
     $saved = ['groups' => false, 'distance' => false, 'links' => false];
-    if (empty($_GET['preview'])) {
+    if (!$preview) {
         // 連結紀錄檔：有新增或排除才重寫（LastSeenAt／Detected 的變化不必重寫）
         if ($links['Diff']['added'] || $links['Diff']['excluded'] || !is_file(transferDataFile('Links'))) {
             $saved['links'] = transferWriteGenerated('Links', json_encode([
@@ -347,12 +367,84 @@ function transferFuncBuild()
         if (!$oldDist || !$same($dist, $oldDist)) {
             $saved['distance'] = transferWriteGenerated('Distance', json_encode($dist, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
+        transferGroupsStamp(['SeedSha1' => $seedSha, 'BuiltAt' => downloadFmtTime(time())]);
     }
-    sendJson(200, ['ok' => true, 'action' => 'admin_transfer', 'func' => 'build_groups', 'saved' => $saved,
-                   'unchanged' => !$saved['groups'] && !$saved['distance'] && !$saved['links'] && empty($_GET['preview']), 'Counts' => $g['Counts'],
-                   'links' => ['total' => count($links['Links']), 'added' => $links['Diff']['added'], 'excluded' => $links['Diff']['excluded'],
-                               'notDetected' => $links['Diff']['notDetected']],
-                   'Unresolved' => $g['Unresolved'], 'diff' => $diff] + (empty($_GET['preview']) ? [] : ['groups' => $g]));
+    return ['groups' => $g, 'links' => $links, 'diff' => $diff, 'saved' => $saved];
+}
+
+/** 自動重建的紀錄檔（custom/…/transfer_groups_stamp.json）：讀取，或給 $set 時寫入（取代整份） */
+function transferGroupsStamp(array $set = null)
+{
+    $f = TRANSFER_GEN_DIR . '/transfer_groups_stamp.json';
+    if ($set === null) {
+        $j = is_file($f) ? json_decode((string) @file_get_contents($f), true) : null;
+        return is_array($j) ? $j : [];
+    }
+    if (!is_dir(TRANSFER_GEN_DIR)) {
+        @mkdir(TRANSFER_GEN_DIR, 0755, true);
+    }
+    $tmp = $f . '.tmp' . getmypid();
+    if (@file_put_contents($tmp, json_encode($set, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)) !== false) {
+        @rename($tmp, $f);
+    }
+    return $set;
+}
+
+/** 自動重建失敗後多久再試（秒） */
+const TRANSFER_AUTO_REBUILD_RETRY = 600;
+
+/**
+ * 查詢時的自動重建（transferLoadGroups 讀群組前呼叫，每個請求只檢查一次）：transfer_seed.json 的雜湊與上次重建時不同、
+ * 或還沒有群組檔時，自動跑一次 build_groups（transferRebuildGroups）。佈署新的 transfer_seed.json 後不必手動執行，第一次查詢就會重建。
+ *   - 用雜湊比對，不看檔案時間（佈署方式保留或不保留修改時間都可以）
+ *   - 檔案鎖：同時只有一個請求重建；其他請求有舊群組就直接用舊的，沒有群組檔才等它做完
+ *   - 失敗時用舊群組、寫入錯誤紀錄（error_log），同一份 seed 在 TRANSFER_AUTO_REBUILD_RETRY 秒內不再重試
+ * 加速清單（func=learn）不會自動重算：群組內容變了，加速清單就過期（不使用），要再手動跑 func=learn
+ */
+function transferEnsureGroups()
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    $sha = (string) @sha1_file(TRANSFER_SEED_FILE);
+    $fresh = function () use ($sha) {
+        $st = transferGroupsStamp();
+        if (is_file(TRANSFER_GROUPS_FILE) && ($st['SeedSha1'] ?? null) === $sha) {
+            return true;
+        }
+        // 剛失敗過：先用舊的（沒有群組檔時照樣重試）
+        return is_file(TRANSFER_GROUPS_FILE) && ($st['FailedSeedSha1'] ?? null) === $sha
+            && time() - (int) ($st['FailedAt'] ?? 0) < TRANSFER_AUTO_REBUILD_RETRY;
+    };
+    if ($sha === '' || $fresh()) {
+        return;
+    }
+    if (!is_dir(TRANSFER_GEN_DIR)) {
+        @mkdir(TRANSFER_GEN_DIR, 0755, true);
+    }
+    $lock = @fopen(TRANSFER_GEN_DIR . '/transfer_groups.lock', 'c');
+    if (!$lock) {
+        return;
+    }
+    // 有舊群組：別的請求正在重建就不等；沒有群組檔：等它做完
+    if (!flock($lock, is_file(TRANSFER_GROUPS_FILE) ? LOCK_EX | LOCK_NB : LOCK_EX)) {
+        fclose($lock);
+        return;
+    }
+    try {
+        if (!$fresh()) {
+            @set_time_limit(300);
+            transferRebuildGroups(false);
+        }
+    } catch (Throwable $e) {
+        error_log('[transfer] 自動重建轉乘群組失敗：' . $e->getMessage());
+        transferGroupsStamp(array_merge(transferGroupsStamp(), ['FailedSeedSha1' => $sha, 'FailedAt' => time(), 'Error' => $e->getMessage()]));
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
 }
 
 /**
