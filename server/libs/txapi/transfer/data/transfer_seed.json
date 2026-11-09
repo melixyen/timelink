@@ -232,6 +232,13 @@
     "TYMC-A1"
    ],
    "Note": "北門 ↔ 機捷台北車站（地下街步行，TDX StationTransfer 也有、railtime taipei7）"
+  },
+  {
+   "Stations": [
+    "TRA-1100",
+    "TYMC-A22"
+   ],
+   "Note": "臺鐵中壢 ↔ 機捷老街溪 A22（使用者指定，2026-11：讓中壢可經機捷到高鐵桃園站 A18）"
   }
  ],
  "ExcludePairs": [],
@@ -469,6 +476,14 @@
    "Minutes": 7,
    "Source": "railtime",
    "Ref": "yingge1"
+  },
+  {
+   "From": "TRA-1100",
+   "To": "TYMC-A22",
+   "Minutes": 18,
+   "Source": "manual",
+   "Ref": "zhongli-laojiexi",
+   "Note": "使用者指定 18 分鐘"
   }
  ],
  "Videos": [
