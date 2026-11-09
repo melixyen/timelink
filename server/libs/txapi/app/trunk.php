@@ -17,7 +17,7 @@ const APP_TRUNK_DEFAULTS = [
     'Enabled'          => true,
     'Candidates'       => ['TRA' => 4, 'THSR' => 3],   // 每端先依距離取最近的幾個幹線站做短程找路（起站本身另外算）
     'Keep'             => ['TRA' => 4, 'THSR' => 3],   // 每端依估計留下幾個幹線站（起站本身另外算）
-    'AccessPerStation' => 2,                           // 每個幹線站留幾條到達路由（轉乘最少的裡面，估計在最好的 AccessSlack 分內）
+    'AccessPerStation' => 2,                           // 每個幹線站留幾條到達路由（依估計＋轉乘分排序，在最好的 AccessSlack 分內）
     'AccessSlack'      => 10,
     'TrunkPerPair'     => 2,                           // 每一對幹線站留幾條幹線路由
     'MaxCombos'        => 48,                          // 組合後最多交出幾條基本路由（依估計，臺鐵幹線、高鐵幹線各至少一半）
@@ -105,7 +105,8 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra)
 
 /**
  * 生活圈端的路由：$u（起站或終站）與幹線站 $x 之間的一般短程找路（不搭高鐵），$toTrunk＝true 是 $u→$x，false 是 $x→$u。
- * 回傳轉乘最少的裡面、估計在最好的 AccessSlack 分內的前 AccessPerStation 條 [['legs', 'est', 'tc'], ...]；$u＝$x 時回一條空路由
+ * 依「估計分鐘＋每次轉乘 TransferMinutes」排序，回傳在最好的 AccessSlack 分內的前 AccessPerStation 條 [['legs', 'est', 'tc', 'score'], ...]；
+ * $u＝$x 時回一條空路由
  */
 function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
 {
@@ -118,7 +119,7 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
         return $cache[$k];
     }
     if ($u === $x) {
-        return $cache[$k] = [['legs' => [], 'est' => 0.0, 'tc' => -1]];
+        return $cache[$k] = [['legs' => [], 'est' => 0.0, 'tc' => -1, 'score' => 0.0]];
     }
     // 短程找路一律用「不搭高鐵」找一次，各排除條件共用：基本路由的臺鐵段不分車種（串接時才依 extra 選班次），
     // 不搭臺鐵對號時只濾掉補充路由切出的對號段
@@ -135,22 +136,16 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
         }
         return true;
     }));
-    $minTc = null;
-    foreach ($routes as $r) {
-        if ($minTc === null || $r['TransferCount'] < $minTc) {
-            $minTc = $r['TransferCount'];
-        }
-    }
+    // 依「估計分鐘＋每次轉乘 TransferMinutes」排序，不先篩最少轉乘（多轉一次但比較快到幹線站的走法也要比得到）
     $list = [];
     foreach ($routes as $r) {
-        if ($r['TransferCount'] === $minTc) {
-            $list[] = ['legs' => $r['legs'], 'est' => (float) $r['EstimatedMinutes'], 'tc' => $r['TransferCount']];
-        }
+        $list[] = ['legs' => $r['legs'], 'est' => (float) $r['EstimatedMinutes'], 'tc' => $r['TransferCount'],
+                   'score' => (float) $r['EstimatedMinutes'] + $cfg['TransferMinutes'] * $r['TransferCount']];
     }
-    usort($list, function ($a, $b) { return $a['est'] <=> $b['est']; });
+    usort($list, function ($a, $b) { return $a['score'] <=> $b['score']; });
     $out = [];
     foreach ($list as $r) {
-        if (count($out) < $cfg['AccessPerStation'] && $r['est'] <= $list[0]['est'] + $cfg['AccessSlack']) {
+        if (count($out) < $cfg['AccessPerStation'] && $r['score'] <= $list[0]['score'] + $cfg['AccessSlack']) {
             $out[] = $r;
         }
     }
@@ -360,6 +355,10 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
                         if (!appTrunkHsrOk($m, $from, $to, $legs)) {
                             continue;
                         }
+                        // 折返：生活圈端搭臺鐵經過的大站，幹線又經過（東湖→南港→臺鐵往回到七堵再搭對號經過南港）
+                        if (appTrunkBackHub($m, $a['legs'], $tr['legs'], $s) || appTrunkBackHub($m, $b['legs'], $tr['legs'], $t)) {
+                            continue;
+                        }
                         $rides = count(array_filter($legs, function ($l) { return $l['Type'] === 'ride' && empty($l['Through']); }));
                         $combos[] = ['legs' => $legs, 'score' => $a['est'] + $tr['est'] + $b['est'] + $tc * max(0, $rides - 1),
                                      'sys' => $tr['legs'][0]['System']];
@@ -397,4 +396,34 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     ];
     appTrunkMeta($meta, $extra);
     return ['routes' => $routes, 'meta' => $meta];
+}
+
+/**
+ * 折返經過大站：生活圈端的臺鐵段經過的大站（不含與幹線相接的 $x），幹線的臺鐵段又經過一次。
+ * 例如東湖→南港→臺鐵往回到七堵再搭對號經過南港、內壢往北到板橋再搭對號經過桃園；五堵→七堵、汐科→南港往反方向一站上車不經過大站，不受影響
+ */
+function appTrunkBackHub(array $m, array $side, array $trunk, $x)
+{
+    $hubs = appTraHubs();
+    $stations = function ($legs) use ($m) {
+        $out = [];
+        foreach ($legs as $l) {
+            if ($l['Type'] === 'ride' && $l['System'] === 'TRA') {
+                foreach ($l['Path'] ?? [$l] as $p) {
+                    foreach (appRideStations($m, $p) ?? [] as $u) {
+                        $out[$u] = true;
+                    }
+                }
+            }
+        }
+        return $out;
+    };
+    $a = $stations($side);
+    unset($a[$x]);
+    foreach ($stations($trunk) as $u => $_) {
+        if ($u !== $x && isset($a[$u], $hubs[$u])) {
+            return true;
+        }
+    }
+    return false;
 }
