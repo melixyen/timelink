@@ -124,8 +124,10 @@ function appApplySupplements(array $m, array $legs, $extra, $onlyLogic = null)
         $fn = APP_SUPPLEMENT_LOGIC[$x['Logic']];
         $combos = [[[], []]];   // [段落, 名稱後綴]
         $changed = false;
-        foreach ($legs as $leg) {
-            $rep = appSupplementMatch($m, $x, $leg, $extra) ? $fn($m, $leg, $x['Meta'] ?? [], $extra) : null;
+        foreach ($legs as $li => $leg) {
+            // 給 Logic 的前後文：前一段、後一段搭乘的系統（中間的步行略過；沒有是 null）
+            $ctx = $leg + ['_PrevSystem' => appSupNeighborSystem($legs, $li, -1), '_NextSystem' => appSupNeighborSystem($legs, $li, 1)];
+            $rep = appSupplementMatch($m, $x, $leg, $extra) ? $fn($m, $ctx, $x['Meta'] ?? [], $extra) : null;
             $alts = $rep ? ($rep['Alternatives'] ?? [[$rep, null]]) : [];
             if (!$alts) {
                 foreach ($combos as &$c) {
@@ -152,6 +154,17 @@ function appApplySupplements(array $m, array $legs, $extra, $onlyLogic = null)
         }
     }
     return $out;
+}
+
+/** 第 $i 段往前（$dir＝-1）或往後（1）最近一段搭乘的系統，中間的步行略過；沒有回 null */
+function appSupNeighborSystem(array $legs, $i, $dir)
+{
+    for ($k = $i + $dir; $k >= 0 && $k < count($legs); $k += $dir) {
+        if ($legs[$k]['Type'] === 'ride') {
+            return $legs[$k]['System'];
+        }
+    }
+    return null;
 }
 
 /**
@@ -314,7 +327,9 @@ function appSupTraExpressTransfer(array $m, array $leg, array $meta, $extra)
  *          起站有對號停靠時也保留從起站上車。
  *   下車端：對稱（到達前的大站、越過終點的大站，各最多 APP_HUB_PER_SIDE 個；到達前沒有時往回找最後一個大站）。
  *   幹線：上車端看起站往前第一個只屬於一條幹線的車站（五堵往南是 w，往宜蘭是 e），下車端從終點往回看；大站要是這條幹線的大站。
- * 起訖站是捷運、輕軌的路由，臺鐵段（經轉乘群組接上）也用同一個規則。回傳 ['Alternatives' => [[段落, 名稱後綴], ...]]
+ * 起訖站是捷運、輕軌的路由，臺鐵段（經轉乘群組接上）也用同一個規則：臺鐵段前面（後面）接的是捷運、輕軌等其他系統時，
+ * 那一端的轉乘要在大站，只保留對號直接在這一站上（下）車（這一站有對號停靠時），不產生「大站下車、區間車到小站再轉捷運」
+ * 的組合（高雄捷運、輕軌的轉乘由其他基本路由在大站直接轉）。回傳 ['Alternatives' => [[段落, 名稱後綴], ...]]
  */
 const APP_HUB_PER_SIDE = 2;
 
@@ -366,11 +381,11 @@ function appSupTraHubTransfer(array $m, array $leg, array $meta, $extra)
         }
         return $out;
     };
-    // 一端的選項：['in', 路由上的索引] 或 ['out', 外側的大站]
-    $pick = function ($order, $end, $piece, $other) use ($st, $isHub, $exp, $side, $outward) {
+    // 一端的選項：['in', 路由上的索引] 或 ['out', 外側的大站]；$fixed＝這一端接其他系統，只能在端點本身上下對號
+    $pick = function ($order, $end, $piece, $other, $fixed) use ($st, $isHub, $exp, $side, $outward) {
         $tr = $side($order);
-        if ($isHub($st[$end], $tr)) {
-            return [['in', $end]];
+        if ($isHub($st[$end], $tr) || $fixed) {
+            return $isHub($st[$end], $tr) || isset($exp[$st[$end]]) ? [['in', $end]] : [];
         }
         $rg = appRegionOf($st[$end]);
         $in = [];
@@ -397,8 +412,9 @@ function appSupTraHubTransfer(array $m, array $leg, array $meta, $extra)
     $back = array_reverse($fwd);
     $firstP = $pieces[0];
     $lastP = $pieces[count($pieces) - 1];
-    $boards = $pick($fwd, 0, $firstP, $firstP['To']);
-    $alights = $pick($back, $n, $lastP, $lastP['From']);
+    $otherSys = function ($s) { return $s !== null && $s !== 'TRA'; };
+    $boards = $pick($fwd, 0, $firstP, $firstP['To'], $otherSys($leg['_PrevSystem'] ?? null));
+    $alights = $pick($back, $n, $lastP, $lastP['From'], $otherSys($leg['_NextSystem'] ?? null));
     $relay = array_flip(appSupplementMeta('TRA.LocalRelay', 'TRA')['RelayStations'] ?? []);
     $name = function ($u) use ($m) { $x = $m['names'][$u] ?? null; return is_array($x) ? ($x['Zh_tw'] ?? $u) : ($x ?? $u); };
     $localTo = function ($a, $b, $line) use ($m, $relay) {
