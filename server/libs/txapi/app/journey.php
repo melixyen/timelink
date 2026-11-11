@@ -601,8 +601,7 @@ function appRaptorBan(array &$d, $week, $mask)
 /**
  * RAPTOR 補充（使用者規則 2026-11）：排除位元 $mask 下，出發時刻（$start）之後最早到達、或抵達時刻（$end）之前最晚出發的一班，轉成方案格式。
  * 出發時刻模式給 $bound（原本的演算法已有的最早到達秒數）時只找比它更早到的，沒有就回 null。
- * 出發時刻模式往後算到的方案，再倒回檢查（transferLatestDeparture：同樣搭幾班、同時到達最晚幾點出發），可以晚出發就從那個時刻重算，
- * 用晚一點的班次串回去。找不到回 null
+ * 出發時刻模式往後算到的方案，再用固定路由倒回檢查（appRaptorFixedLater：同一條路由逐段改搭最晚趕得上的班次）。找不到回 null
  */
 function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $mask, $bound = null)
 {
@@ -617,7 +616,44 @@ function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $ma
     } finally {
         list($d['tripBan'], $d['accel']) = $saved;
     }
-    return $j === null ? null : appRaptorJourneyOut($d, $j, $week);
+    if ($j === null) {
+        return null;
+    }
+    // 出發時刻模式往後算到的最快一班：固定它的路由，從最後一段往前逐段改搭最晚還趕得上的班次（同時到達、晚一點出發）
+    return (!$back ? appRaptorFixedLater($d, $j, $week, $mask) : null) ?? appRaptorJourneyOut($d, $j, $week);
+}
+
+/**
+ * RAPTOR 方案的倒回檢查（使用者規則 2026-11：固定路由回查法）：路由（各段起訖站、路線、步行）固定，以它的抵達分鐘當期限做反向串接
+ * （appChainRouteBack：從最後一段往前取趕得上下一段的最晚班次），取最晚出發的一組轉成方案格式。不換路由（換路由才能更晚出發的，
+ * 原本的演算法多半已有那個走法，最後一起排序篩選）；比反向 RAPTOR＋重算快約 30 倍。串不起來回 null
+ */
+function appRaptorFixedLater(array &$d, array $j, $week, $mask)
+{
+    $legs = [];
+    foreach ($j['Steps'] as $s) {
+        if ($s['Type'] === 'walk') {
+            $legs[] = ['Type' => 'walk', 'From' => $s['FromStationUID'], 'To' => $s['ToStationUID'], 'Minutes' => $s['Minutes'], 'MinutesGiven' => false];
+        } elseif ($s['Type'] === 'ride') {
+            $sys = $s['System'];
+            $legs[] = ['Type' => 'ride', 'From' => $s['FromStationUID'], 'To' => $s['ToStationUID'],
+                       'LineUID' => in_array($sys, FINDER_TRAIN_SYSTEMS, true) ? $sys : $s['LineUID'], 'System' => $sys, 'Class' => null, 'Through' => false];
+        }
+    }
+    if (!$legs) {
+        return null;
+    }
+    $am = intdiv($j['_arr'], 60);
+    $pick = null;
+    foreach (appChainRouteBack($d, $legs, $mask, $am, $am) as $c) {
+        if ($c['arr'] <= $j['_arr'] && ($pick === null || $c['dep'] > $pick['dep'] || ($c['dep'] === $pick['dep'] && count($c['rides']) < count($pick['rides'])))) {
+            $pick = $c;
+        }
+    }
+    if ($pick === null) {
+        return null;
+    }
+    return appJourneyOut($d, ['route' => appRouteFormat(['Legs' => $legs]), 'legs' => $legs], $pick, $week) + ['_raptor' => true];
 }
 
 /** appJourneyRaptor 的搜尋本體（$dd 已設好排除的班次）：回傳 RAPTOR 的方案或 null */
@@ -643,15 +679,7 @@ function appJourneyRaptorSearch(array &$dd, $from, $to, $back, $start, $end, $bo
         if ($j === null) {
             return null;
         }
-        // 倒回檢查：同樣搭 RideCount 班、同時到達，最晚幾點出發；比較晚就從那裡重算（晚一班或幾班仍接得上）
-        $L = transferLatestDeparture($dd, $from, $to, $j['_arr'], $j['RideCount'], $t0);
-        if ($L !== null && $L > $t0) {
-            // 重算只需要不晚於這班到達的方案：用它的抵達時刻當上限剪枝
-            $later = $best(array_filter(transferRaptor($dd, $from, $to, $L, TRANSFER_MAX_TRIPS, array_fill(1, TRANSFER_MAX_TRIPS, $j['_arr'] + 1)), function ($x) use ($j) {
-                return $x['_arr'] <= $j['_arr'] && $x['RideCount'] <= $j['RideCount'];
-            }));
-            $j = $later ?? $j;
-        }
+        // 倒回檢查改在呼叫端用固定路由做（appRaptorFixedLater），不再反向 RAPTOR＋重算
     } else {
         // 抵達時刻模式：期限前到達、最晚出發的一班（各搭車班數取最晚出發，再從那個時刻往後算出班次）
         $deadline = $end * 60 + 59;
