@@ -571,21 +571,13 @@ function appJourneyCovered(array $list, array $j, $mask)
     return false;
 }
 
-/** RAPTOR 用的路網時刻資料：依排除位元 $mask 拿掉高鐵、臺鐵對號的班次（各站可搭的臺鐵、高鐵班次清單 stationTrips） */
-function &appRaptorData(array &$d, $week, $mask)
+/** RAPTOR 補充依排除位元 $mask 要略過的臺鐵、高鐵班次（trips 的索引 => true；每種位元算一次）。搜尋時直接略過，不複製路網資料 */
+function appRaptorBan(array &$d, $week, $mask)
 {
     static $cache = [];
     $k = $week . '|' . $mask;
     if (!isset($cache[$k])) {
-        // 只跟捷運發車、下界有關的快取與原資料共用（濾掉的只有臺鐵、高鐵班次；完整路網算的下界對濾掉班次的模式仍然成立）
-        foreach (['stationDep', 'groupInfo', 'depCache', 'lb'] as $key) {
-            $d[$key] = $d[$key] ?? [];
-        }
-        $dd = $d;
-        foreach (['stationDep', 'groupInfo', 'depCache', 'lb'] as $key) {
-            $dd[$key] = &$d[$key];
-        }
-        $dd['accel'] = null;
+        $ban = [];
         if ($mask) {
             static $type = null;
             if ($type === null) {
@@ -594,14 +586,14 @@ function &appRaptorData(array &$d, $week, $mask)
                     $type[$r['train_key']] = [$r['system'], $r['train_type_code']];
                 }
             }
-            foreach ($dd['stationTrips'] as $u => $list) {
-                $dd['stationTrips'][$u] = array_values(array_filter($list, function ($x) use ($d, $type, $mask) {
-                    list($sys, $code) = $type[$d['trips'][$x[0]]['key']] ?? [null, ''];
-                    return appClassAllowed($mask, $sys, $sys === 'TRA' ? appTrainClassByType($code) : APP_CLASS_LOCAL);
-                }));
+            foreach ($d['trips'] as $ti => $tr) {
+                list($sys, $code) = $type[$tr['key']] ?? [null, ''];
+                if (!appClassAllowed($mask, $sys, $sys === 'TRA' ? appTrainClassByType($code) : APP_CLASS_LOCAL)) {
+                    $ban[$ti] = true;
+                }
             }
         }
-        $cache[$k] = $dd;
+        $cache[$k] = $ban;
     }
     return $cache[$k];
 }
@@ -614,10 +606,23 @@ function &appRaptorData(array &$d, $week, $mask)
  */
 function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $mask, $bound = null)
 {
-    // 下界（到迄站、從起站）先在原資料算好，各模式共用
+    // 下界（到迄站、從起站）用完整路網算，對排除班次的模式仍然成立；排除的班次在搜尋時直接略過（tripBan），不複製路網資料
     transferLowerBounds($d, $to);
     transferLowerBounds($d, $from, true);
-    $dd = &appRaptorData($d, $week, $mask);
+    $saved = [$d['tripBan'] ?? null, $d['accel'] ?? null];
+    $d['tripBan'] = appRaptorBan($d, $week, $mask) ?: null;
+    $d['accel'] = null;
+    try {
+        $j = appJourneyRaptorSearch($d, $from, $to, $back, $start, $end, $bound);
+    } finally {
+        list($d['tripBan'], $d['accel']) = $saved;
+    }
+    return $j === null ? null : appRaptorJourneyOut($d, $j, $week);
+}
+
+/** appJourneyRaptor 的搜尋本體（$dd 已設好排除的班次）：回傳 RAPTOR 的方案或 null */
+function appJourneyRaptorSearch(array &$dd, $from, $to, $back, $start, $end, $bound)
+{
     $best = function ($res, $deadline = null) {
         $pick = null;
         foreach ($res as $j) {
@@ -641,7 +646,8 @@ function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $ma
         // 倒回檢查：同樣搭 RideCount 班、同時到達，最晚幾點出發；比較晚就從那裡重算（晚一班或幾班仍接得上）
         $L = transferLatestDeparture($dd, $from, $to, $j['_arr'], $j['RideCount'], $t0);
         if ($L !== null && $L > $t0) {
-            $later = $best(array_filter(transferRaptor($dd, $from, $to, $L), function ($x) use ($j) {
+            // 重算只需要不晚於這班到達的方案：用它的抵達時刻當上限剪枝
+            $later = $best(array_filter(transferRaptor($dd, $from, $to, $L, TRANSFER_MAX_TRIPS, array_fill(1, TRANSFER_MAX_TRIPS, $j['_arr'] + 1)), function ($x) use ($j) {
                 return $x['_arr'] <= $j['_arr'] && $x['RideCount'] <= $j['RideCount'];
             }));
             $j = $later ?? $j;
@@ -660,12 +666,9 @@ function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $ma
         if ($L === null) {
             return null;
         }
-        $j = $best(transferRaptor($dd, $from, $to, $L), $deadline);
-        if ($j === null) {
-            return null;
-        }
+        $j = $best(transferRaptor($dd, $from, $to, $L, TRANSFER_MAX_TRIPS, array_fill(1, TRANSFER_MAX_TRIPS, $deadline + 1)), $deadline);
     }
-    return appRaptorJourneyOut($d, $j, $week);
+    return $j;
 }
 
 /** RAPTOR 的方案（transferRaptor）轉成 journeys 的方案格式（Legs 用 appRideOut；_sig 與原本的演算法同一種班次代碼，可以比對是不是同一組班次） */

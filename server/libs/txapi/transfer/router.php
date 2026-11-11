@@ -528,8 +528,12 @@ function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRI
         // 就改從那一站上車（到達時刻不變，但前段少坐、候車餘裕較多，例如汐科坐區間車到南港上車，
         // 而不是往回坐到松山再上同一班自強號；也不會為了同一班車把區間車多坐到瑞芳）
         $board = [];
+        $ban = $d['tripBan'] ?? null;   // 排除的臺鐵、高鐵班次（journeys 的 RAPTOR 補充依模式設定；沒有＝不排除）
         foreach ($marked as $u => $t) {
             foreach ($d['stationTrips'][$u] ?? [] as list($ti, $i)) {
+                if ($ban !== null && isset($ban[$ti])) {
+                    continue;
+                }
                 if ($d['trips'][$ti]['dep'][$i] >= $t) {
                     $board[$ti][$i] = $t;
                 }
@@ -1031,8 +1035,12 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
         $B = [];   // 最晚上車時刻
         // 臺鐵、高鐵：每班車取最後一個趕得上期限的下車站，往前每站都是可上車站
         $tripMax = [];
+        $ban = $d['tripBan'] ?? null;   // 排除的臺鐵、高鐵班次（同 transferRaptor）
         foreach ($A as $x => $dl) {
             foreach ($d['stationTrips'][$x] ?? [] as list($ti, $ix)) {
+                if ($ban !== null && isset($ban[$ti])) {
+                    continue;
+                }
                 if ($d['trips'][$ti]['arr'][$ix] <= $dl && $ix > ($tripMax[$ti] ?? -1)) {
                     $tripMax[$ti] = $ix;
                 }
