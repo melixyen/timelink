@@ -255,6 +255,7 @@ function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1, array $syst
         }
     }
     $regionRule = appRegionRule($from, $to);   // 生活圈幹線規則：不套用時 null
+    $ctx = md5(json_encode([$regionRule, appRegionOf($from), appRegionOf($to), $extra, $systems]));   // 前段展開共用的條件
     $paths = [];
     $queue = [];
     foreach (array_keys($starts) as $l) {
@@ -343,46 +344,28 @@ function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1, array $syst
             if ($s[0] !== $from) {
                 $st0 = appPrefixExtend($m, $st0, ['Type' => 'walk', 'From' => $from, 'To' => $s[0]]);
             }
-            $stack = [[0, $s[0], [], $st0]];
-            while ($stack) {
-                list($i, $cur, $combo, $state) = array_pop($stack);
-                if ($i === $last) {
-                    foreach ($goals[$p[$last]] as $g) {
-                        // 最後一段（搭到下車站＋步行到終點）也要過排除規則，回傳的基本路由就都已檢查過
-                        if ($g[0] === $cur || !isset($m['stationLines'][$cur][$p[$last]], $m['stationLines'][$g[0]][$p[$last]])) {
-                            continue;
-                        }
-                        $ns = appPrefixExtend($m, $state, ['Type' => 'ride', 'From' => $cur, 'To' => $g[0], 'LineUID' => $p[$last], 'System' => substr($p[$last], 0, strpos($p[$last], '-'))]);
-                        if ($ns !== null && $g[0] !== $to) {
-                            $ns = appPrefixExtend($m, $ns, ['Type' => 'walk', 'From' => $g[0], 'To' => $to]);
-                        }
-                        if ($ns === null) {
-                            continue;
-                        }
-                        $r = appNetworkRoute($m, $from, $to, $p, $s, $g, $combo);
-                        if ($r !== null && appRoutePatternHit($m, $r, $patterns)) {
-                            continue;   // 轉乘走法排除（起訖符合、轉乘站串相同）
-                        }
-                        if ($r !== null) {
-                            $routes[] = $r;
-                        }
-                    }
-                    continue;
-                }
-                $line = $p[$i];
-                foreach ($transfers[$line . '>' . $p[$i + 1]] as list($x, $y)) {
-                    if ($x === $cur || !isset($m['stationLines'][$cur][$line], $m['stationLines'][$x][$line])) {
+            // 前段（最後一條路線以前）的轉乘站組合：同一個起站、同樣的前段路線只展開一次（appNetworkPrefixNodes 跨呼叫共用，
+            // 中長途分解時起站往各幹線站的短程找路前段多半相同）；順序與逐條深度優先展開相同，產生的路由與順序不變
+            foreach (appNetworkPrefixNodes($m, $from, $s[0], $st0, $p, $last, $transfers, $ctx) as list($cur, $combo, $state)) {
+                foreach ($goals[$p[$last]] as $g) {
+                    // 最後一段（搭到下車站＋步行到終點）也要過排除規則，回傳的基本路由就都已檢查過
+                    if ($g[0] === $cur || !isset($m['stationLines'][$cur][$p[$last]], $m['stationLines'][$g[0]][$p[$last]])) {
                         continue;
                     }
-                    // 已走的部分就違反規則（重複經過車站、鐵路改搭捷運又搭回、排除名單）：不必再往下組合
-                    $ns = appPrefixExtend($m, $state, ['Type' => 'ride', 'From' => $cur, 'To' => $x, 'LineUID' => $line, 'System' => substr($line, 0, strpos($line, '-'))]);
-                    if ($ns !== null && $x !== $y) {
-                        $ns = appPrefixExtend($m, $ns, ['Type' => 'walk', 'From' => $x, 'To' => $y]);
+                    $ns = appPrefixExtend($m, $state, ['Type' => 'ride', 'From' => $cur, 'To' => $g[0], 'LineUID' => $p[$last], 'System' => substr($p[$last], 0, strpos($p[$last], '-'))]);
+                    if ($ns !== null && $g[0] !== $to) {
+                        $ns = appPrefixExtend($m, $ns, ['Type' => 'walk', 'From' => $g[0], 'To' => $to]);
                     }
                     if ($ns === null) {
                         continue;
                     }
-                    $stack[] = [$i + 1, $y, array_merge($combo, [[$x, $y]]), $ns];
+                    $r = appNetworkRoute($m, $from, $to, $p, $s, $g, $combo);
+                    if ($r !== null && appRoutePatternHit($m, $r, $patterns)) {
+                        continue;   // 轉乘走法排除（起訖符合、轉乘站串相同）
+                    }
+                    if ($r !== null) {
+                        $routes[] = $r;
+                    }
                 }
                 if (count($routes) > $cfg['MaxRoutes']) {
                     break 3;
@@ -391,6 +374,49 @@ function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1, array $syst
         }
     }
     return $routes;
+}
+
+/**
+ * 路線串 $p 前 $i+1 條路線（第 0～$i 條）的轉乘站組合展開結果：[[目前車站, 轉乘站對, 排除規則狀態], ...]，
+ * 順序與原本的深度優先展開（堆疊）彈出順序相同：上一層每個節點依序展開，子節點依轉乘站反向。
+ * 依「起站、起站步行到的車站、條件、前段路線」快取（同一次請求內跨呼叫共用）；回傳第 $last 層（最後一條路線上車前）
+ */
+function appNetworkPrefixNodes(array $m, $from, $s0, array $st0, array $p, $last, array $transfers, $ctx)
+{
+    static $memo = [];
+    $base = $from . '|' . $s0 . '|' . $ctx . '|';
+    $level = function ($i) use (&$level, &$memo, $base, $m, $s0, $st0, $p, $transfers) {
+        $key = $base . implode('>', array_slice($p, 0, $i + 1));
+        if (isset($memo[$key])) {
+            return $memo[$key];
+        }
+        if ($i === 0) {
+            return $memo[$key] = [[$s0, [], $st0]];
+        }
+        $line = $p[$i - 1];
+        $out = [];
+        foreach ($level($i - 1) as list($cur, $combo, $state)) {
+            $children = [];
+            foreach ($transfers[$line . '>' . $p[$i]] as list($x, $y)) {
+                if ($x === $cur || !isset($m['stationLines'][$cur][$line], $m['stationLines'][$x][$line])) {
+                    continue;
+                }
+                // 已走的部分就違反規則（重複經過車站、鐵路改搭捷運又搭回、排除名單）：不必再往下組合
+                $ns = appPrefixExtend($m, $state, ['Type' => 'ride', 'From' => $cur, 'To' => $x, 'LineUID' => $line, 'System' => substr($line, 0, strpos($line, '-'))]);
+                if ($ns !== null && $x !== $y) {
+                    $ns = appPrefixExtend($m, $ns, ['Type' => 'walk', 'From' => $x, 'To' => $y]);
+                }
+                if ($ns !== null) {
+                    $children[] = [$y, array_merge($combo, [[$x, $y]]), $ns];
+                }
+            }
+            foreach (array_reverse($children) as $c) {
+                $out[] = $c;
+            }
+        }
+        return $memo[$key] = $out;
+    };
+    return $level($last);
 }
 
 /** 組出一條基本路由（段落陣列）；不合理回 null */
