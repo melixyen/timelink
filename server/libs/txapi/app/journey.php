@@ -600,7 +600,7 @@ function appRaptorBan(array &$d, $week, $mask)
 
 /**
  * RAPTOR 補充（使用者規則 2026-11）：排除位元 $mask 下，出發時刻（$start）之後最早到達、或抵達時刻（$end）之前最晚出發的一班，轉成方案格式。
- * 出發時刻模式給 $bound（原本的演算法已有的最早到達秒數）時只找比它更早到的，沒有就回 null。
+ * 出發時刻模式給 $bound（原本的演算法已有的最早到達秒數）時只找比它更早到的；抵達時刻模式的 $bound 是已有的最晚出發，只找不早於它出發的；沒有就回 null。
  * 出發時刻模式往後算到的方案，再用固定路由倒回檢查（appRaptorFixedLater：同一條路由逐段改搭最晚趕得上的班次）。找不到回 null
  */
 function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $mask, $bound = null)
@@ -683,10 +683,11 @@ function appJourneyRaptorSearch(array &$dd, $from, $to, $back, $start, $end, $bo
     } else {
         // 抵達時刻模式：期限前到達、最晚出發的一班（各搭車班數取最晚出發，再從那個時刻往後算出班次）
         $deadline = $end * 60 + 59;
-        $floor = max(0, $start * 60 - 6 * 3600);
+        // 下限：$bound（原本的演算法已有的最晚出發）時只找不早於它的；各搭車班數依序找，找到後下限提高到它（只找更晚的，同時刻留班數少的）
+        $floor = max(0, $start * 60 - 6 * 3600, $bound ?? 0);
         $L = null;
         for ($k = 1; $k <= TRANSFER_MAX_TRIPS; $k++) {
-            $x = transferLatestDeparture($dd, $from, $to, $deadline, $k, $floor);
+            $x = transferLatestDeparture($dd, $from, $to, $deadline, $k, $L === null ? $floor : $L + 1);
             if ($x !== null && ($L === null || $x > $L)) {
                 $L = $x;
             }
@@ -877,14 +878,16 @@ function appJourneysCompute(array $q)
     $raptor = [];
     if ($raptorOn) {
         // 原本的演算法在各模式已找到的最早到達：RAPTOR 只找比它更早到的（抵達時刻模式不剪枝）
+        // 抵達時刻模式：原本的演算法已找到的最晚出發，RAPTOR 的反向搜尋只找不早於它的
         $boundOf = function ($mx) use ($all, $back) {
-            if ($back) {
-                return null;
-            }
             $b = null;
             foreach ($all as $j) {
-                if (appJourneyAllowed($j, $mx) && ($b === null || $j['ArrivalMinute'] * 60 < $b)) {
-                    $b = $j['ArrivalMinute'] * 60;
+                if (!appJourneyAllowed($j, $mx)) {
+                    continue;
+                }
+                $v = $back ? $j['DepartureMinute'] * 60 : $j['ArrivalMinute'] * 60;
+                if ($b === null || ($back ? $v > $b : $v < $b)) {
+                    $b = $v;
                 }
             }
             return $b;
@@ -988,9 +991,16 @@ function appJourneysCompute(array $q)
             $best[$tag] = $tmp[0]['_sig'];
         }
     }
-    // 保底方案的標籤：跟整體最早到達是同一個方案時不另外標（例如使用者已勾不搭高鐵時，不搭高鐵最快的常常就是它）
+    // 保底方案的標籤：跟整體的代表方案是同一個方案時不另外標（例如使用者已勾不搭高鐵時，不搭高鐵最快的常常就是它）。
+    // 整體的代表方案與保底用同一種挑法：出發時刻模式＝最早到達（Fastest）；抵達時刻模式＝最晚出發（全部方案依 $repCmp 排第一的）
+    $refSig = $best['Fastest'] ?? null;
+    if ($back && $all) {
+        $tmp = $all;
+        usort($tmp, $repCmp);
+        $refSig = $tmp[0]['_sig'];
+    }
     foreach ($diverse as $tag => $j) {
-        if ($j['_sig'] !== ($best['Fastest'] ?? null)) {
+        if ($j['_sig'] !== $refSig) {
             $best[$tag] = $j['_sig'];
         }
     }
