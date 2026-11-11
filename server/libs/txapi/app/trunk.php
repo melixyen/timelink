@@ -156,12 +156,39 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     }
     usort($list, function ($a, $b) { return $a['score'] <=> $b['score']; });
     $out = [];
-    foreach ($list as $r) {
+    foreach ($list as $i => $r) {
         if (count($out) < $cfg['AccessPerStation'] && $r['score'] <= $list[0]['score'] + $cfg['AccessSlack']) {
-            $out[] = $r;
+            $out[$i] = $r;
         }
     }
-    return $cache[$k] = $out;
+    // 不同交通系統組合各留最好一條（使用者規則 2026-11），不受 AccessSlack 限制：估計分鐘沒有算等車，班次少的臺鐵會比班次密的捷運
+    // 估得快（高鐵左營→高雄：臺鐵 14 分、紅線 26 分，實際常是紅線先到）。只限轉乘次數與這站最少轉乘相同的，轉乘多的繞路不額外留
+    $minTc = $list ? min(array_column($list, 'tc')) : null;
+    $combo = [];
+    foreach ($out as $r) {
+        $combo[appTrunkSystemCombo($r['legs'])] = true;
+    }
+    foreach ($list as $i => $r) {
+        $key = appTrunkSystemCombo($r['legs']);
+        if (!isset($combo[$key]) && $r['tc'] === $minTc) {
+            $combo[$key] = true;
+            $out[$i] = $r;
+        }
+    }
+    ksort($out);
+    return $cache[$k] = array_values($out);
+}
+
+/** 生活圈端路由搭乘的交通系統組合（依序、連續相同的合併），例如 TRA、KRTC、TRTC>TRA */
+function appTrunkSystemCombo(array $legs)
+{
+    $seq = [];
+    foreach ($legs as $l) {
+        if ($l['Type'] === 'ride' && end($seq) !== $l['System']) {
+            $seq[] = $l['System'];
+        }
+    }
+    return implode('>', $seq);
 }
 
 /** 幹線估計（篩選、排序用）：同系統直達的最短分鐘；東部往來西部跨系統時，經 Gateways 生活圈的同站轉乘估計；做不到回 null */
