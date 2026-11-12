@@ -548,10 +548,9 @@ const APP_JOURNEY_TAGS = [
 
 /**
  * 城際多樣性保底（使用者規則 2026-11）：路由會經過臺鐵或高鐵時，結果一定附上各模式最快（最早到達；抵達時刻模式為最晚出發）的方案。
- * 各模式用 RAPTOR 找（appJourneyRaptor，只找使用者設定的出發時刻之後、或抵達時刻之前最接近的一班），不再用原本的演算法另外找路由：
- *   模式＝使用者的排除位元再加上這裡的位元（1＝不搭臺鐵對號、2＝不搭高鐵，與 APP_EXTRA_NO_EXPRESS、APP_EXTRA_NO_HSR 相同）；
- *   使用者條件本身也跑一次（不帶標籤）：原本的演算法沒找到同樣好的就補進方案。
- * 原本的演算法已有同樣好（同時或較早到、同時或較晚出發、轉乘不多）的方案時用它，不重複列。
+ *   模式＝使用者的排除位元再加上這裡的位元（1＝不搭臺鐵對號、2＝不搭高鐵，與 APP_EXTRA_NO_EXPRESS、APP_EXTRA_NO_HSR 相同）。
+ * 保底方案從原本的演算法已串出的方案裡挑（不另外找路由）。RAPTOR（appJourneyRaptor）只跑使用者目前的模式一次，
+ * 原本的演算法沒找到同樣好的就補進方案；使用者勾選該模式時，RAPTOR 就會找該模式最快的一班。
  * 要多一種模式就加一行，並在前端語言檔加 journey.tag.<標籤> 的翻譯
  */
 const APP_JOURNEY_DIVERSITY = [
@@ -859,18 +858,6 @@ function appJourneysCompute(array $q)
         $jobs[$r['route'] . '|' . $extra] = [$r, $extra];
     }
     $raptorOn = $fixed === null && appRoutesIntercity($routes);
-    // 實驗：多樣性保底交給原本的演算法。TL_DIV=routes 時各保底模式另外找路由（appCoreRoutes 帶該模式的排除位元）一起串；
-    // 其他（預設 pool）只從使用者條件找到的方案裡挑
-    if ($raptorOn && getenv('TL_DIV') === 'routes') {
-        foreach (APP_JOURNEY_DIVERSITY as $bits) {
-            $mx = $extra | $bits;
-            if ($mx !== $extra) {
-                foreach (appCoreRoutes($m, $from, $to, ['extra' => $mx] + $opt) as $r) {
-                    $jobs[$r['route'] . '|' . $mx] = $jobs[$r['route'] . '|' . $mx] ?? [$r, $mx];
-                }
-            }
-        }
-    }
     $d = &appRouterData($week);
     // 每條路由串接，收集所有旅程（同一組班次只留一個）
     $all = [];
@@ -889,7 +876,7 @@ function appJourneysCompute(array $q)
     $diversity = [];
     $raptor = [];
     if ($raptorOn) {
-        // 原本的演算法在各模式已找到的最早到達：RAPTOR 只找比它更早到的（抵達時刻模式不剪枝）
+        // 原本的演算法在使用者模式已找到的最早到達：RAPTOR 只找比它更早到的
         // 抵達時刻模式：原本的演算法已找到的最晚出發，RAPTOR 的反向搜尋只找不早於它的
         $boundOf = function ($mx) use ($all, $back) {
             $b = null;
@@ -904,7 +891,8 @@ function appJourneysCompute(array $q)
             }
             return $b;
         };
-        // 實驗：RAPTOR 只跑使用者目前的模式一次（沒排除＝全部最快、排除高鐵＝不含高鐵最快、排除對號＝不含對號最快、都排除＝都不含最快）
+        // RAPTOR 只跑使用者目前的模式一次（沒排除＝全部最快、排除高鐵＝不含高鐵最快、排除對號＝不含對號最快、都排除＝都不含最快）；
+        // 保底模式只從原本的演算法已串出的方案挑
         $raptor[$extra] = appJourneyRaptor($d, $from, $to, $week, $back, $start, $end, $extra, $boundOf($extra));
         foreach (APP_JOURNEY_DIVERSITY as $tag => $bits) {
             $mx = $extra | $bits;
