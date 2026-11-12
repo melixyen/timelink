@@ -68,7 +68,7 @@ function appTrunkKm($a, $b)
  * 一端的幹線站候選：生活圈 $regions 內的高鐵站（extra 沒排除高鐵時）與臺鐵大站，依與 $u 的距離每個系統取前 Candidates 個；
  * $u 本身是臺鐵站或高鐵站時也算（直接從起站上幹線）。回傳 [StationUID => 系統]
  */
-function appTrunkCandidates(array $m, $u, array $regions, $extra)
+function appTrunkCandidates(array $m, $u, array $regions, $extra, array $trunks = null)
 {
     $cfg = appTrunkConfig();
     $R = appRegions();
@@ -80,7 +80,7 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra)
         $sys = appTrunkSystemOf($x);
         if ($sys === 'THSR' && appSystemAllowed($extra, 'THSR')) {
             $by['THSR'][$x] = appTrunkKm($u, $x) ?? INF;
-        } elseif ($sys === 'TRA' && isset($R['hubs'][$x])) {
+        } elseif ($sys === 'TRA' && isset($R['hubs'][$x]) && ($trunks === null || array_intersect_key($R['hubs'][$x], $trunks))) {
             $by['TRA'][$x] = appTrunkKm($u, $x) ?? INF;
         }
     }
@@ -89,8 +89,9 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra)
     if ($self === 'TRA' || ($self === 'THSR' && appSystemAllowed($extra, 'THSR'))) {
         $out[$u] = $self;
     }
-    // 起站本身是大站（臺鐵）或高鐵站：這個系統只從起站上，不另外找同系統的幹線站（臺北→高雄不必先到松山、板橋）
-    if (($self === 'TRA' && isset($R['hubs'][$u])) || $self === 'THSR') {
+    // 起站本身是大站（臺鐵，而且停靠屬性符合要搭的幹線）或高鐵站：這個系統只從起站上，不另外找同系統的幹線站（臺北→高雄不必先到松山、板橋）；
+    // 起站是別條幹線的大站時照樣找（宜蘭只標 e，往臺中要找北北基標 w 的大站）
+    if (($self === 'TRA' && isset($R['hubs'][$u]) && ($trunks === null || array_intersect_key($R['hubs'][$u], $trunks))) || $self === 'THSR') {
         $by[$self] = [];
     }
     foreach ($by as $sys => $list) {
@@ -342,11 +343,24 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     $sideB = [$rb => true] + ($R['adj'][$rb] ?? []);
     $tc = $cfg['TransferMinutes'];
 
+    // 兩端臺鐵大站的停靠屬性（TraHubs 的幹線 e／w／s）：只挑兩端有共同幹線的大站（臺北往高雄只用 w 的大站，南港、樹林、八堵只標 e 不列）；
+    // 沒有共同幹線（東部往來西部）時不篩，由跨線交會站（TraJunctions）換車
+    $trunkSet = function ($regions) use ($R) {
+        $set = [];
+        foreach ($R['hubs'] as $x => $tr) {
+            if (isset($regions[$R['of'][$x] ?? ''])) {
+                $set += $tr;
+            }
+        }
+        return $set;
+    };
+    $trunks = array_intersect_key($trunkSet($sideA), $trunkSet($sideB)) ?: null;
+
     // 1、2. 兩端的幹線站與生活圈端路由
     $ends = [];
     foreach (['A' => [$from, $sideA, true], 'B' => [$to, $sideB, false]] as $side => list($u, $regions, $toTrunk)) {
         $ends[$side] = [];
-        foreach (appTrunkCandidates($m, $u, $regions, $extra) as $x => $sys) {
+        foreach (appTrunkCandidates($m, $u, $regions, $extra, $trunks) as $x => $sys) {
             $acc = appTrunkAccess($m, $u, $x, $toTrunk, $opt);
             if ($acc) {
                 // 這個幹線站的生活圈端估計：留下的路由裡「估計＋轉乘分（含接幹線那一次）」最好的
@@ -465,7 +479,7 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     $meta = [
         'From' => array_keys($keep['A']), 'To' => array_keys($keep['B']),
         'Candidates' => ['From' => count($ends['A']), 'To' => count($ends['B'])],
-        'Combos' => count($combos), 'Routes' => count($routes), 'RelayRoutes' => $relay, 'EastWest' => $eastWest,
+        'Combos' => count($combos), 'Routes' => count($routes), 'RelayRoutes' => $relay, 'EastWest' => $eastWest, 'Trunks' => $trunks ? array_keys($trunks) : null,
         'seconds' => round(microtime(true) - $t0, 3),
     ];
     appTrunkMeta($meta, $extra);
