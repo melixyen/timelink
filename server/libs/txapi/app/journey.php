@@ -599,7 +599,7 @@ function appRaptorBan(array &$d, $week, $mask)
 
 /**
  * RAPTOR 補充（使用者規則 2026-11）：排除位元 $mask 下，出發時刻（$start）之後最早到達、或抵達時刻（$end）之前最晚出發的一班，轉成方案格式。
- * 出發時刻模式給 $bound（原本的演算法已有的最早到達秒數）時只找比它更早到的；抵達時刻模式的 $bound 是已有的最晚出發，只找不早於它出發的；沒有就回 null。
+ * 出發時刻模式給 $bound（原本的演算法已有的最早到達秒數）時只找同時（同一分鐘）或更早到的；抵達時刻模式的 $bound 是已有的最晚出發，只找不早於它出發的；沒有就回 null。
  * 出發時刻模式往後算到的方案，再用固定路由倒回檢查（appRaptorFixedLater：同一條路由逐段改搭最晚趕得上的班次）。找不到回 null
  */
 function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $mask, $bound = null)
@@ -619,7 +619,11 @@ function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $ma
         return null;
     }
     // 出發時刻模式往後算到的最快一班：固定它的路由，從最後一段往前逐段改搭最晚還趕得上的班次（同時到達、晚一點出發）
-    return (!$back ? appRaptorFixedLater($d, $j, $week, $mask) : null) ?? appRaptorJourneyOut($d, $j, $week);
+    // 出發時刻模式往後延時不超過時段結束（$end）；RAPTOR 的班次本身就在時段結束之後出發時不列（不在使用者查的時段裡）
+    if (!$back && intdiv($j['_dep'], 60) > $end) {
+        return null;
+    }
+    return (!$back ? appRaptorFixedLater($d, $j, $week, $mask, $end) : null) ?? appRaptorJourneyOut($d, $j, $week);
 }
 
 /**
@@ -627,7 +631,7 @@ function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $ma
  * （appChainRouteBack：從最後一段往前取趕得上下一段的最晚班次），取最晚出發的一組轉成方案格式。不換路由（換路由才能更晚出發的，
  * 原本的演算法多半已有那個走法，最後一起排序篩選）；比反向 RAPTOR＋重算快約 30 倍。串不起來回 null
  */
-function appRaptorFixedLater(array &$d, array $j, $week, $mask)
+function appRaptorFixedLater(array &$d, array $j, $week, $mask, $endMin = null)
 {
     $legs = [];
     foreach ($j['Steps'] as $s) {
@@ -645,6 +649,9 @@ function appRaptorFixedLater(array &$d, array $j, $week, $mask)
     $am = intdiv($j['_arr'], 60);
     $pick = null;
     foreach (appChainRouteBack($d, $legs, $mask, $am, $am) as $c) {
+        if ($endMin !== null && intdiv($c['dep'], 60) > $endMin) {
+            continue;   // 往後延到時段結束之後的不取
+        }
         if ($c['arr'] <= $j['_arr'] && ($pick === null || $c['dep'] > $pick['dep'] || ($c['dep'] === $pick['dep'] && count($c['rides']) < count($pick['rides'])))) {
             $pick = $c;
         }
@@ -672,8 +679,9 @@ function appJourneyRaptorSearch(array &$dd, $from, $to, $back, $start, $end, $bo
     };
     if (!$back) {
         $t0 = $start * 60;
-        // $bound：原本的演算法在這個模式已找到的最早到達（秒）。RAPTOR 只找比它更早到的（剪枝），找不到就表示原本的已是最佳
-        $bounds = $bound === null ? [] : array_fill(1, TRANSFER_MAX_TRIPS, $bound);
+        // $bound：原本的演算法在這個模式已找到的最早到達（秒，分鐘取整）。RAPTOR 只找同一分鐘或更早到的（剪枝）：
+        // 同時到的也放行，轉乘較少、出發較晚的可以補進來（是否比原本的好由 appJourneyCovered 判斷）；找不到就表示原本的已是最佳
+        $bounds = $bound === null ? [] : array_fill(1, TRANSFER_MAX_TRIPS, $bound + 60);
         $j = $best(transferRaptor($dd, $from, $to, $t0, TRANSFER_MAX_TRIPS, $bounds));
         if ($j === null) {
             return null;
