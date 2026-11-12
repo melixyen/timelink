@@ -5,7 +5,7 @@
         "Classes": "會用到的車種等級陣列（local／express，選填）：extra 排除其中任何一種就不套用",
         "From/To": "搭乘段上車站、下車站條件（選填）：車站代碼陣列，或範圍 [{Line, StationRange?}]，可以混寫",
         "ViaLines/ViaStations": "搭乘段要經過的路線、車站（選填，任一個即可）",
-        "Logic": "處理函式：TRA.LocalRelay（區間車接力）、TRA.HubTransfer（中長途經生活圈大站轉對號）、TRA.ExpressTransfer（區間車轉對號，中長途不套用）、TRA.ChangeAt（指定車站換車）、ClassChange（高鐵、機捷換快慢車）；業者前綴的只看得懂該業者的 Meta",
+        "Logic": "處理函式：TRA.LocalRelay（區間車接力）、TRA.HubTransfer（中長途經生活圈大站轉對號）、TRA.ExpressTransfer（區間車轉對號，中長途不套用）、TRA.ChangeAt（指定車站換車）、TRA.Via（改經指定車站換車，Meta.Via 每站各一條）、ClassChange（高鐵、機捷換快慢車）；業者前綴的只看得懂該業者的 Meta",
         "Meta": "給 Logic 的參數",
         "Rule": "一條補充資料符合時只多一條路由（TRA.HubTransfer 例外：每個大站組合各一條）；一條路由裡所有符合條件的搭乘段一起改寫"
     },
@@ -171,6 +171,80 @@
             },
             "Source": "manual",
             "Note": "在路線串換線的交會站（例如西部幹線接宜蘭線的八堵、宜蘭線接臺東線的…）下車換另一班車；同一班車直通時串接會直接續坐"
+        },
+        {
+            "Name": "臺鐵山線往海線經竹南、彰化換車",
+            "Operators": [
+                "TRA"
+            ],
+            "From": [
+                {
+                    "Line": "TRA-WL",
+                    "StationRange": [
+                        "TRA-3140",
+                        "TRA-3350"
+                    ]
+                }
+            ],
+            "To": [
+                {
+                    "Line": "TRA-WL-C",
+                    "StationRange": [
+                        "TRA-2110",
+                        "TRA-2260"
+                    ]
+                }
+            ],
+            "Logic": "TRA.Via",
+            "Meta": {
+                "Via": [
+                    "TRA-1250",
+                    "TRA-3360"
+                ],
+                "ViaNames": [
+                    "竹南",
+                    "彰化"
+                ]
+            },
+            "Source": "manual",
+            "Note": "山線（造橋～成功）與海線（談文～追分）車站之間：除了原本的走法（成追線），也經竹南、彰化換車折返（成追線班次少，常常是到彰化或竹南換車比較快）；每個換車站各多一條路由"
+        },
+        {
+            "Name": "臺鐵海線往山線經竹南、彰化換車",
+            "Operators": [
+                "TRA"
+            ],
+            "From": [
+                {
+                    "Line": "TRA-WL-C",
+                    "StationRange": [
+                        "TRA-2110",
+                        "TRA-2260"
+                    ]
+                }
+            ],
+            "To": [
+                {
+                    "Line": "TRA-WL",
+                    "StationRange": [
+                        "TRA-3140",
+                        "TRA-3350"
+                    ]
+                }
+            ],
+            "Logic": "TRA.Via",
+            "Meta": {
+                "Via": [
+                    "TRA-1250",
+                    "TRA-3360"
+                ],
+                "ViaNames": [
+                    "竹南",
+                    "彰化"
+                ]
+            },
+            "Source": "manual",
+            "Note": "山線（造橋～成功）與海線（談文～追分）車站之間：除了原本的走法（成追線），也經竹南、彰化換車折返（成追線班次少，常常是到彰化或竹南換車比較快）；每個換車站各多一條路由"
         },
         {
             "Name": "高鐵台中換車",

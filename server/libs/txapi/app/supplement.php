@@ -28,6 +28,7 @@ const APP_SUPPLEMENT_LOGIC = [
     'TRA.ExpressTransfer' => 'appSupTraExpressTransfer',  // 臺鐵區間車轉對號列車再轉區間車
     'TRA.HubTransfer'     => 'appSupTraHubTransfer',      // 臺鐵中長途：經由生活圈大站轉對號列車（一個搭乘段可以有好幾種）
     'TRA.ChangeAt'        => 'appSupTraChangeAt',         // 臺鐵在指定車站換車（不限車種）
+    'TRA.Via'             => 'appSupTraVia',              // 臺鐵改經指定車站換車（例如山線、海線之間經竹南或彰化折返；一個搭乘段可以有好幾種）
     'ClassChange'         => 'appSupClassChange',         // 高鐵、機捷在換車站換快車／慢車
 ];
 
@@ -497,6 +498,48 @@ function appSupTraChangeAt(array $m, array $leg, array $meta, $extra)
     }
     unset($l);
     return $out;
+}
+
+/**
+ * TRA.Via：搭乘段改成「起站→換車站→迄站」兩段臺鐵系統直達段，換車站逐一取 Meta.Via（每站各一種改法）。
+ * 用在路線串的路徑不經過、但實際上常在那裡換車折返的車站：山線、海線車站之間經竹南或彰化換車（成追線班次少，
+ * 原本的路徑走成追線，交會站換車只會切在成功、追分）。換車站就是起站或迄站、或任一段沒有臺鐵直達時跳過；都不行回 null
+ */
+function appSupTraVia(array $m, array $leg, array $meta, $extra)
+{
+    $alts = [];
+    foreach ($meta['Via'] ?? [] as $v) {
+        if ($v === $leg['From'] || $v === $leg['To']) {
+            continue;
+        }
+        $a = appSupTraSystemLeg($m, $leg['From'], $v, $extra);
+        $b = appSupTraSystemLeg($m, $v, $leg['To'], $extra);
+        if ($a === null || $b === null) {
+            continue;
+        }
+        $keep = array_intersect_key($leg, ['_part' => true]);
+        $name = $m['names'][$v] ?? $v;
+        $alts[] = [[$a + $keep, $b + $keep], '經' . (is_array($name) ? $name['Zh_tw'] : $name)];
+    }
+    return $alts ? ['Alternatives' => $alts] : null;
+}
+
+/** 臺鐵兩站之間的系統直達段（不轉乘的臺鐵路由，有好幾種路線串時取里程最短的；有快取）；沒有回 null */
+function appSupTraSystemLeg(array $m, $a, $b, $extra)
+{
+    static $cache = [];
+    $k = $a . '|' . $b . '|' . $extra;
+    if (!array_key_exists($k, $cache)) {
+        $best = null;
+        foreach (appNetworkRoutes($m, $a, $b, $extra, 0, ['TRA']) as $legs) {
+            if (count($legs) === 1 && $legs[0]['Type'] === 'ride' && $legs[0]['System'] === 'TRA'
+                && ($best === null || appPathKm($m, $legs[0]['Path']) < appPathKm($m, $best['Path']))) {
+                $best = $legs[0];
+            }
+        }
+        $cache[$k] = $best;
+    }
+    return $cache[$k];
 }
 
 /** ClassChange：起訖一端是快車不停的車站時，在換車站（Meta.Stations）換快車或慢車（高鐵台中、機捷長庚醫院） */

@@ -1123,7 +1123,9 @@
                 "DirectMinutes": 4,
                 "BestDetourMinutes": 28.8,
                 "BestDetour": "TRA-3350.TRA.TRA-3340.walk.TMRT-G17.TMRT-G.TMRT-G16.walk.TRA-3330.TRA.TRA-2260"
-            }
+            },
+            "Disabled": true,
+            "DisabledNote": "使用者規則 2026-11：山線、海線之間常經彰化折返（先後經過追分、成功），不排除；產生器重算時沿用停用"
         },
         {
             "Stations": [
