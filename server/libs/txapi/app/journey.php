@@ -859,6 +859,18 @@ function appJourneysCompute(array $q)
         $jobs[$r['route'] . '|' . $extra] = [$r, $extra];
     }
     $raptorOn = $fixed === null && appRoutesIntercity($routes);
+    // 實驗：多樣性保底交給原本的演算法。TL_DIV=routes 時各保底模式另外找路由（appCoreRoutes 帶該模式的排除位元）一起串；
+    // 其他（預設 pool）只從使用者條件找到的方案裡挑
+    if ($raptorOn && getenv('TL_DIV') === 'routes') {
+        foreach (APP_JOURNEY_DIVERSITY as $bits) {
+            $mx = $extra | $bits;
+            if ($mx !== $extra) {
+                foreach (appCoreRoutes($m, $from, $to, ['extra' => $mx] + $opt) as $r) {
+                    $jobs[$r['route'] . '|' . $mx] = $jobs[$r['route'] . '|' . $mx] ?? [$r, $mx];
+                }
+            }
+        }
+    }
     $d = &appRouterData($week);
     // 每條路由串接，收集所有旅程（同一組班次只留一個）
     $all = [];
@@ -892,12 +904,12 @@ function appJourneysCompute(array $q)
             }
             return $b;
         };
+        // 實驗：RAPTOR 只跑使用者目前的模式一次（沒排除＝全部最快、排除高鐵＝不含高鐵最快、排除對號＝不含對號最快、都排除＝都不含最快）
         $raptor[$extra] = appJourneyRaptor($d, $from, $to, $week, $back, $start, $end, $extra, $boundOf($extra));
         foreach (APP_JOURNEY_DIVERSITY as $tag => $bits) {
             $mx = $extra | $bits;
             if ($mx !== $extra) {
                 $diversity[$tag] = $mx;
-                $raptor[$mx] = $raptor[$mx] ?? appJourneyRaptor($d, $from, $to, $week, $back, $start, $end, $mx, $boundOf($mx));
             }
         }
         $rj = $raptor[$extra];
