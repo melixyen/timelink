@@ -19,6 +19,8 @@
  * 一條路由裡所有符合條件的搭乘段都交給 Logic 改寫；Logic 回 null 的段不改；一段都沒改就不產生。
  * Logic 也可以回 ['Alternatives' => [[段落, 名稱後綴], ...]]：同一段有好幾種改法（生活圈大站轉乘），每一種各多一條路由
  * （一條路由裡有好幾段時取組合，最多 APP_SUPPLEMENT_MAX_COMBOS 條）。
+ * 整條路由層級的 Logic（APP_SUPPLEMENT_ROUTE_LOGIC，例如 ViaTra）：要換掉好幾段、換掉沿途車站的，拿整條路由改寫，自己重新檢查排除規則。
+ *   MaxRoutes   同一個名稱（含後綴）在一次查詢最多幾條（appCoreRoutes 依估計由好到壞先到先留；選填）
  */
 
 const APP_SUPPLEMENT_MAX_COMBOS = 25;
@@ -32,6 +34,11 @@ const APP_SUPPLEMENT_LOGIC = [
     'ClassChange'         => 'appSupClassChange',         // 高鐵、機捷在換車站換快車／慢車
 ];
 
+/** 整條路由層級的 Logic（不是逐段改寫：要換掉好幾段），回傳 [[段落, 名稱後綴], ...] */
+const APP_SUPPLEMENT_ROUTE_LOGIC = [
+    'ViaTra'              => 'appSupViaTra',              // 捷運某段車站往返某生活圈：改搭臺鐵到轉乘站再轉回這條捷運（機捷桃園段經中壢、老街溪）
+];
+
 /** 補充資料（已過濾停用；沒有檔案回空陣列） */
 function appRouteSupplements()
 {
@@ -41,7 +48,8 @@ function appRouteSupplements()
         $j = json_decode((string) @file_get_contents(transferDataFile('RouteSupplements')), true);
         $m = appModel();
         foreach (is_array($j) ? ($j['Supplements'] ?? []) : [] as $x) {
-            if (!empty($x['Disabled']) || empty($x['Operators']) || !isset(APP_SUPPLEMENT_LOGIC[$x['Logic'] ?? ''])) {
+            if (!empty($x['Disabled']) || empty($x['Operators'])
+                || (!isset(APP_SUPPLEMENT_LOGIC[$x['Logic'] ?? '']) && !isset(APP_SUPPLEMENT_ROUTE_LOGIC[$x['Logic'] ?? '']))) {
                 continue;
             }
             foreach (['From', 'To', 'ViaStations'] as $k) {
@@ -123,6 +131,12 @@ function appApplySupplements(array $m, array $legs, $extra, $onlyLogic = null)
     $out = [];
     foreach (appRouteSupplements() as $x) {
         if ($onlyLogic !== null && !in_array($x['Logic'], $onlyLogic, true)) {
+            continue;
+        }
+        if (isset(APP_SUPPLEMENT_ROUTE_LOGIC[$x['Logic']])) {
+            foreach (call_user_func(APP_SUPPLEMENT_ROUTE_LOGIC[$x['Logic']], $m, $legs, $x, $extra) as list($alt, $suffix)) {
+                $out[] = ['Name' => $x['Name'] . ($suffix !== null ? '（' . $suffix . '）' : ''), 'legs' => $alt, 'Max' => $x['MaxRoutes'] ?? null];
+            }
             continue;
         }
         $fn = APP_SUPPLEMENT_LOGIC[$x['Logic']];
@@ -565,3 +579,163 @@ function appSupClassChange(array $m, array $leg, array $meta, $extra)
     }
     return null;
 }
+
+/**
+ * ViaTra（整條路由層級，不限業者）：捷運路線 Meta.Line（車種 Meta.Class）上某段車站（Meta.Stations）往返某些生活圈（Meta.Regions）時，
+ * 除了原本的走法，也改搭臺鐵到轉乘站、再轉回這條捷運（Meta.Transfer＝[臺鐵站, 捷運站]）。
+ * 路由裡經過臺鐵樞紐站（Meta.Hubs）同轉乘群組的車站之後、到這條捷運下車為止的這一段，換成
+ * 「步行到樞紐站 → 臺鐵 樞紐站→轉乘站 → 步行到捷運站 → 捷運 → 目的站」（回程對稱）；每個樞紐站各一條。
+ * 現有設定：機捷第一航廈～老街溪往返臺北生活圈，臺北、板橋搭臺鐵到中壢、老街溪轉機捷。
+ * 例：台電大樓→興南的基本路由全是「…台北車站→高鐵台北→桃園→機捷」或「機捷台北車站直達」，指數比較高的臺鐵＋機捷排不進來
+ */
+function appSupViaTra(array $m, array $legs, array $x, $extra)
+{
+    static $sets = [];
+    $meta = $x['Meta'] ?? [];
+    $key = $x['Name'];
+    if (!isset($sets[$key])) {
+        $sets[$key] = appSupStationSet($m, $meta['Stations'] ?? []);
+    }
+    $range = $sets[$key];
+    list($traX, $metroX) = $meta['Transfer'] + [null, null];
+    $line = $meta['Line'] ?? null;
+    if (!$range || $traX === null || $metroX === null || $line === null || !$legs) {
+        return [];
+    }
+    $sys = substr($line, 0, strpos($line, '-'));
+    $cls = $meta['Class'] ?? null;
+    foreach ($legs as $l) {
+        if (isset($l['_part'])) {
+            return [];   // 中長途分解的組合：生活圈端已在自己的短程找路套用過
+        }
+    }
+    $regions = array_flip($meta['Regions'] ?? []);
+    $inGroup = function ($s, $h) use ($m) {
+        if ($s === $h) {
+            return true;
+        }
+        foreach ($m['groupOf'][$s] ?? [] as $gid) {
+            foreach ($m['groups'][$gid]['Stations'] as $y) {
+                if ($y['StationUID'] === $h) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    $walk = function ($a, $b) { return ['Type' => 'walk', 'From' => $a, 'To' => $b, 'Minutes' => null, 'MinutesGiven' => false]; };
+    $metro = function ($a, $b) use ($line, $sys, $cls) {
+        return ['Type' => 'ride', 'From' => $a, 'To' => $b, 'LineUID' => $line, 'Class' => $cls, 'System' => $sys, 'Through' => false];
+    };
+    $name = function ($u) use ($m) { $n = $m['names'][$u] ?? $u; return is_array($n) ? $n['Zh_tw'] : $n; };
+    $n = count($legs);
+    $out = [];
+    foreach ($meta['Hubs'] ?? [] as $h) {
+        // 去程：最後一段機捷在範圍內下車、起站在臺北生活圈；回程：第一段機捷在範圍內上車、迄站在臺北生活圈
+        foreach ([true, false] as $outbound) {
+            $end = $outbound ? $legs[0]['From'] : $legs[$n - 1]['To'];
+            if ($regions && !isset($regions[appRegionOf($end)])) {
+                continue;
+            }
+            $k = null;
+            for ($i = 0; $i < $n; $i++) {
+                $l = $legs[$i];
+                if ($l['Type'] === 'ride' && ($l['LineUID'] === $line || ($l['Path'][0]['LineUID'] ?? null) === $line) && isset($range[$outbound ? $l['To'] : $l['From']])) {
+                    $k = $i;
+                    if (!$outbound) {
+                        break;
+                    }
+                }
+            }
+            if ($k === null) {
+                continue;
+            }
+            $y = $outbound ? $legs[$k]['To'] : $legs[$k]['From'];
+            // 樞紐站的轉乘點：去程取機捷段之前最後一個搭乘段的上車站在樞紐群組的；回程取機捷段之後第一個搭乘段的下車站在樞紐群組的
+            $j = null;
+            if ($outbound) {
+                for ($i = $k; $i >= 0; $i--) {
+                    if ($legs[$i]['Type'] === 'ride' && $inGroup($legs[$i]['From'], $h)) {
+                        $j = $i;
+                        break;
+                    }
+                }
+            } else {
+                for ($i = $k; $i < $n; $i++) {
+                    if ($legs[$i]['Type'] === 'ride' && $inGroup($legs[$i]['To'], $h)) {
+                        $j = $i;
+                        break;
+                    }
+                }
+            }
+            if ($j === null) {
+                continue;
+            }
+            $tra = $outbound ? appSupTraSystemLeg($m, $h, $traX, $extra) : appSupTraSystemLeg($m, $traX, $h, $extra);
+            if ($tra === null) {
+                continue;
+            }
+            // 樞紐站之前（回程：之後）已經是臺鐵（臺鐵臺北→板橋再上高鐵）：接上就是在樞紐站原地換臺鐵，和從另一個樞紐站上臺鐵那條重複
+            $nb = $outbound ? appSupNeighborSystem($legs, $j, -1) : appSupNeighborSystem($legs, $j, 1);
+            if ($nb === 'TRA') {
+                continue;
+            }
+            if ($outbound) {
+                $pre = array_slice($legs, 0, $j);
+                $s = $legs[$j]['From'];
+                $mid = [];
+                if ($s !== $h) {
+                    if ($pre && end($pre)['Type'] === 'walk' && $inGroup(end($pre)['From'], $h)) {
+                        $last = array_pop($pre);
+                        $s = $last['From'];
+                    }
+                    $mid[] = $walk($s, $h);
+                }
+                $mid[] = $tra;
+                $mid[] = $walk($traX, $metroX);
+                if ($y !== $metroX) {
+                    $mid[] = $metro($metroX, $y);
+                }
+                $alt = array_merge($pre, $mid, array_slice($legs, $k + 1));
+            } else {
+                $post = array_slice($legs, $j + 1);
+                $t = $legs[$j]['To'];
+                $mid = [];
+                if ($y !== $metroX) {
+                    $mid[] = $metro($y, $metroX);
+                }
+                $mid[] = $walk($metroX, $traX);
+                $mid[] = $tra;
+                if ($t !== $h) {
+                    if ($post && $post[0]['Type'] === 'walk' && $inGroup($post[0]['To'], $h)) {
+                        $first = array_shift($post);
+                        $t = $first['To'];
+                    }
+                    $mid[] = $walk($h, $t);
+                }
+                $alt = array_merge(array_slice($legs, 0, $k), $mid, $post);
+            }
+            if ($alt[0]['Type'] === 'walk' && $alt[0]['From'] === $alt[0]['To']) {
+                array_shift($alt);
+            }
+            // 換掉了沿途車站（不是在同一串車站上切段），排除規則要重新檢查：重複經過車站（板橋上高鐵到台北、再搭臺鐵經過板橋）、排除名單等。
+            // 系統直達段依它的路線串逐段檢查
+            $st = appIndexState0($alt[0]['From'], end($alt)['To']);
+            foreach ($alt as $l) {
+                foreach ($l['Type'] === 'ride' && isset($l['Path']) ? $l['Path'] : [$l] as $piece) {
+                    $st = appPrefixExtend($m, $st, $piece + ['Class' => null, 'Through' => false]);
+                    if ($st === null) {
+                        continue 3;
+                    }
+                }
+            }
+            if (appRoutePatternHit($m, $alt, appRoutePatternsFor($m, $alt[0]['From'], end($alt)['To']))) {
+                continue;
+            }
+            $out[appRouteFormat(['Legs' => $alt])] = [$alt, '臺鐵' . $name($h) . '－' . $name($traX)];
+            // 每條基本路由各改出一條：同一個查詢會有很多條（前面接的捷運轉法不同）；appCoreRoutes 依 MaxRoutes 只留估計最好的基本路由改出來的前幾條
+        }
+    }
+    return array_values($out);
+}
+

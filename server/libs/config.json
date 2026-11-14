@@ -172,7 +172,7 @@
             "group": "查詢限制",
             "level": "public",
             "default": 3,
-            "desc": "deeper 參數（比最少轉乘多找幾次轉乘）可以給到多少；預設值是找路規則檔的 Search.Deeper"
+            "desc": "deeper 參數（比最少轉乘多找幾次轉乘）可以給到多少；預設值是找路規則檔的 Search.Deeper。短程與生活圈端改用綜合指數找路後只影響中長途的幹線段"
         },
         "APP_ROUTE_MAX_LEGS": {
             "group": "查詢限制",

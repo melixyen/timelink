@@ -7,14 +7,23 @@
         "NetworkLimit": 40,
         "DefaultLimit": 20,
         "MaxQueue": 30000,
-        "MaxRoutes": 20000
+        "MaxRoutes": 20000,
+        "IndexRoutes": true,
+        "IndexK": 20,
+        "IndexStopMinutes": 1,
+        "IndexDefaultHeadway": 10,
+        "IndexCutoffRatio": 2,
+        "IndexCutoffPlus": 30,
+        "IndexMaxPops": 30000,
+        "IndexOneTransfer": true,
+        "IndexMinTransfer": 3
     },
     "Notes": {
         "DirectPairs": "排除名單（不這樣走）：路由經過其中兩站時，兩站之間必須在同一系統連續搭乘內完成（同站換快慢車、交會站換線可以），不能步行轉搭其他系統或路線；擊中就不列這條路由。不分方向。只列已知繞道不會比較快的站對，例如南港軟體園區—大安經板南線轉乘可能比較快就不要列",
         "LineTransfers": "加速清單（只這樣走）：兩條路線之間有好幾個轉乘群組時，只用 Groups 列出的群組轉乘（不分方向）；沒有列的路線對不限制",
         "Source": "manual＝人工加入；generated＝產生器依估計時間算出（Evidence 記錄依據，例如直達與最快繞道的分鐘數）",
         "NoTransferStations": "不當轉乘站的車站（人工維護）：路由不在這一站上下車轉乘、也不從起訖站步行到這一站。AliasOf＝它代表的車站（同一個車站的另一個站碼）：兩者之間不步行，起訖是它時直接當 AliasOf 查。例如臺鐵臺北-環島（TRA-1001）AliasOf 臺北（TRA-1000）。排除名單比對時，同一轉乘群組裡同一個鐵路系統的車站本來就視為同一站",
-        "Search": "搜尋範圍：Deeper＝轉乘次數比最少的多幾次還要找（API deeper 預設）；MaxLines＝一條路由最多幾條路線；MaxLineUses＝同一條路線最多搭幾次（捷徑如文湖線→板南線→文湖線、山線→海線→山線）；NetworkLimit＝估計後取前幾個基本路由展開快慢車（不轉乘的一律保留）；DefaultLimit＝routes 預設回傳幾條；MaxQueue、MaxRoutes＝運算保護上限。不合理的走法不靠這裡擋，交給通則（重複經過車站）與排除名單",
+        "Search": "搜尋範圍：Deeper＝轉乘次數比最少的多幾次還要找（API deeper 預設）；MaxLines＝一條路由最多幾條路線；MaxLineUses＝同一條路線最多搭幾次（捷徑如文湖線→板南線→文湖線、山線→海線→山線）；NetworkLimit＝估計後取前幾個基本路由展開快慢車（不轉乘的一律保留）；DefaultLimit＝routes 預設回傳幾條；MaxQueue、MaxRoutes＝運算保護上限。不合理的走法不靠這裡擋，交給通則（重複經過車站）與排除名單。綜合指數找路（短程查詢與中長途的生活圈端共用，使用者規則 2026-11）：IndexRoutes＝開關（false 回到 Deeper 列舉；true 時 deeper 參數對短程與生活圈端沒有作用）；IndexK＝依綜合指數取前幾條基本路由（不用 Deeper 截斷轉乘次數）；指數＝站間行駛分鐘＋中間站數 × IndexStopMinutes＋每次轉乘的步行分鐘與該站全天平均班距的一半（沒有時刻資料用 IndexDefaultHeadway）；IndexCutoffRatio、IndexCutoffPlus＝部分路徑下界超過「最好的 × Ratio ＋ Plus」就停止搜尋（符合規則的路由不到 K 條時不必探完整個路網）；IndexMaxPops＝展開上限（運算保護）；IndexOneTransfer＝直接轉乘演算法（直達與一次轉乘全部列出）；IndexMinTransfer＝最少轉乘保底（直達與一次轉乘都沒有時，用原本的列舉只找最少轉乘那一層，依指數取前幾條；使用者選「轉乘最少」排序時第一筆與原本一致）",
         "RouteBans": "經由排除（人工＋產生器）：同一系統的連續搭乘（同系統直通或同站換車；步行、換系統就重算）中，先經過 From 範圍的站、再經過 Via 的站、又到 To 範圍的站（To 省略＝同 From）就不列。範圍是 [{Line, StationRange?}, ...]：Line 必填；StationRange [A, B] 選填，有值時只算該路線 A 到 B 之間（含）的車站。一般路線不分先後；環狀線（例如高雄輕軌）依路線站序從 A 往後數到 B，兩站先後決定是哪一邊的弧",
         "RouteBanRings": "環線的經由排除產生設定（人工維護，產生器 --only=bans 讀它）：Path 依環線方向串起各段路線範圍；Boundaries 依環線順序把環切成區段（每段從該站到下一個分界站前一站，分界站要放在路線交會站，區段才會落在同一條路線上）；兩個區段之間所有起訖的「遠的一邊 ÷ 近的一邊」里程都 ≥ MinRatio 而且同一邊比較遠時，產生 From＝區段 A、To＝區段 B、Via＝遠的一邊中間一站的 RouteBans；同一區段來回一律產生（繞一圈回來）。Parallel 是有並行路線的區間（山線／海線），Via 不選在區間內部，避免繞海線就漏掉。AnySystem＝產生的規則跨系統也適用（看整條路由），Via 放遠的一邊全部車站"
     },

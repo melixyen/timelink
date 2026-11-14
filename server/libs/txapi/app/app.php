@@ -27,6 +27,7 @@ require_once __DIR__ . '/route.php';
 require_once __DIR__ . '/public.php';
 require_once __DIR__ . '/timetable.php';
 require_once __DIR__ . '/routing.php';
+require_once __DIR__ . '/indexroute.php';   // 綜合指數找路（生活圈端與短程查詢）
 require_once __DIR__ . '/supplement.php';
 require_once __DIR__ . '/trunk.php';
 require_once __DIR__ . '/journey.php';

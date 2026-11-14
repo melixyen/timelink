@@ -346,7 +346,53 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 - 途中各站與通過站：journeys、route_trains 的搭乘段帶 `StopTimes`（appRideStopTimes：transferRideStops＋appPassStations 插入通過站 `Pass`＝true），只對最後回傳的方案算（appJourneyStops）；
   app_train/stops 的 `pass=1` 同樣插入通過站。通過站只算 appClassHasSplit 的系統（臺鐵、高鐵、機捷），沿用 appTrainPath 找兩停靠站間的路線；其他捷運的 lineStations 含支線（見下），不補
 - 核心 A（`app/routing.php`）理念（使用者）：從路網與轉乘站推導所有可能，推導途中遇到排除條件就整串剪掉；**寫死的只能是通則**，其他取捨一律放設定檔（transfer_route_rules.json），能用排除名單做到的就編輯名單，不加死碼。
-  - 路網 BFS：成本＝搭乘的系統段數（同一鐵路系統在交會站換線成本 0）；同一路線最多搭 Search.MaxLineUses（2）次，不分鐵路捷運（文湖線→板南線→文湖線、山線→海線→山線這類捷徑要能找到）；最多 Search.MaxLines 條路線；預設 deeper＝Search.Deeper。
+  - **綜合指數找路（2026-11 使用者規則，app/indexroute.php）**：短程查詢（同生活圈、相鄰生活圈）與中長途分解的生活圈端共用（以幹線站為目的地和去幹線站轉車的交通行為相同）。
+    不用 Deeper 依轉乘次數截斷（轉乘多但真的快的走法會被丟掉，RAPTOR 才會找出比原本演算法快的走法），改依綜合指數取前 Search.IndexK（20）條不繞圈的路徑：
+    指數（分）＝站間行駛分鐘加總＋中間站數 × IndexStopMinutes（1）＋每次轉乘的步行分鐘＋要轉搭那一站的全天平均班距一半（appHeadways：平日每方向「末班−首班」÷（班數−1），
+    捷運用車站時刻表、臺鐵高鐵用停靠，快取 app_headways.ser）；起站第一次上車不加候車，同一鐵路系統在交會站接續（系統直達段）不加候車、算一站停靠。
+    搜尋：車站層級路網的 A*（啟發值＝反向 Dijkstra 的行駛＋步行下界），每次取指數最小的部分路徑，搭某條路線到該路線上的決策站（轉乘站、支線分岔站、迄站群組）；
+    排除規則沿用 appPrefixExtend、appRoutePatternHit，延後到從佇列取出時才檢查；同一站（依抵達路線）最多展開 K 次；下界超過「最好的 × IndexCutoffRatio（2）＋ IndexCutoffPlus（30）」停止。
+    同一路由代碼、不同路線串（豐原→大甲經成追線、經彰化）分開算，appCoreRoutes 再合併成 Paths。路由帶 `Index`；生活圈端（appTrunkAccess）依 Index 取前 AccessPerStation 名。
+    十四張→松山：大坪林→古亭→松江南京（轉 3 次）原本排第 14（每次轉乘加 10 分），改後第 2（指數 50.0，直達 46.1）。
+  - **只跑綜合指數（2026-11 使用者選方案 A；規則：演算法必須完全優於或等於原本的，最佳解不能變差）**：短程與生活圈端只用綜合指數找路，不再跑原本的 Deeper 列舉。
+    曾做過「原本的找路與指數各跑一次取聯集」（Search.IndexUnion），沒上過 dev 也沒 deploy，已刪除。
+    補強（單用指數前 K 名會漏「某個出發時刻才最好」的走法）：
+    - 直接轉乘演算法（Search.IndexOneTransfer，appIndexOneTransfer）：起訖（含同群組車站）所在路線兩兩配對，同線列直達、不同線時兩線上的轉乘站同站或同群組就是一次轉乘，補上指數截斷會丟掉的轉乘少但慢的走法。
+    - 起訖兩端同群組的每個車站各自至少 Search.IndexPerEnd（3）條：主搜尋已經有 3 條用到該站就不另外找；不夠才限定該站再找一次，
+      截斷線沿用主搜尋最好的指數（bestHint，找不到的站不必探到自己的截斷線，汐止→板橋這類段落 1764 次展開降到幾十次）。不當轉乘站的別名站（臺北-環島）不當下車站。
+    - 已經過迄站排除名單夥伴站（DirectPairs）的部分路徑提早丟棄（迄站一定會經過，之後必然違反）。
+    - 最少轉乘保底（Search.IndexMinTransfer＝3）：直達與一次轉乘都沒有時，用原本的列舉只找最少轉乘那一層（appNetworkRoutes deeper＝0，0.001～0.006 秒），依指數取前 3 條。
+      指數搜尋每站（依抵達路線）展開上限會被之後才違反規則的部分路徑用掉：興南→淡海新市鎮的高鐵走法佔滿紅樹林，機捷直達台北車站轉淡水線（轉 2 次）排不進來，
+      使用者選「轉乘最少」排序時第一筆變成轉 3 次。補上後與 dev 一致（環北→大直、領航→耕莘安康院區同）。
+    - 生活圈端最少轉乘：轉乘最少的走法不在依指數的前 AccessPerStation 名時另外附上（appTrunkAccess 的 extra；原本的排序轉乘次數優先一定有它）。
+      古亭→臺鐵松山前 3 名是經臺北、松江南京、東門轉乘的，直達（松山新店線）排第 4，古亭→新竹新莊「轉乘最少」因此從轉 2 次變成轉 3 次。
+      附上的走法組出的組合不參加 MaxCombos 的估計排序（不擠掉原本選得到的）；組合裡搭乘段數最少的一條都沒選到時，每個幹線系統補估計最好的一條。
+      試過「跳過從另一個臺鐵大站搭臺鐵進幹線站的生活圈端走法」：忠孝復興→南港─臺鐵→臺北再轉西部幹線往斗六、東湖→南港往高雄這類（南港沒有直達車）是正當走法，會漏，撤掉。
+    - 機捷桃園段往返臺北經臺鐵中壢（補充資料 ViaTra，使用者規則 2026-11，手動維護）：機場第一航廈～老街溪的車站往返臺北生活圈時，
+      路由經過臺北、板橋轉乘群組之後到機捷下車的那一段，換成「臺鐵 臺北／板橋→中壢 → 步行老街溪 → 機捷」（回程對稱）。整條路由層級的 Logic
+      （APP_SUPPLEMENT_ROUTE_LOGIC，不是逐段改寫）；換掉沿途車站，所以自己重新跑 appPrefixExtend 與 appRoutePatternHit；每個樞紐站最多 MaxRoutes（2）條
+      （appCoreRoutes 依估計由好到壞先到先留）；樞紐站前一段已經是臺鐵的不改（在樞紐原地換臺鐵，和另一個樞紐那條重複）。
+      原因：台電大樓→興南的指數前 20 名全是「…→高鐵台北／板橋→桃園→機捷」的捷運轉法變體，臺鐵＋機捷（指數 113.4，實際 82 分）排不進來，
+      RAPTOR 只在使用者條件下補一班、多樣性標籤只從已有的路由挑，都補不到；dev 靠段數列舉（4 段在最少＋deeper 以內）才有。
+      Logic 不限業者：捷運路線、車種寫在 Meta.Line、Meta.Class，別的捷運要「改搭臺鐵到某站再轉回來」只要加一條設定。
+      完整比對（加上後）：台電大樓→興南出發、抵達、末班都與 dev 一致；同站較好從 16 次變 52 次（中壢、老街溪附近的查詢），新的變差只有時段最後 5 分鐘 1 次。
+    - 站間步行取代法（核心共用）：同一轉乘群組有兩個以上候選幹線站（臺鐵南港＋高鐵南港）時，生活圈端共用群組之間的核心路段，只對這種候選啟用（usePool）。
+    - Deeper（API 的 deeper 參數）對短程與生活圈端不再有作用（只影響中長途幹線段、TRA.Via、IndexRoutes＝false 時的列舉）；前端不送 deeper，
+      「轉乘最少」排序看的是 journeys 依時刻挑出的方案，與 Deeper 無關（見下方驗證）。
+    - 原本的列舉（appNetworkRoutes）與生活圈端依原本排序取前 3（appTrunkAccess 的 dev 分支）保留不刪，註解說明短程棄用原因：
+      Deeper 依轉乘次數截斷，轉乘多但實際比較快的走法（捷運平行轉乘、班距短的轉乘）會被丟掉；生活圈端依轉乘次數優先排序也一樣。
+    試過「最後轉乘站多元」「生活圈端前 5」「保底併進主搜尋」「記憶共用」，漏失比補回多或沒有加速，撤掉。
+  - **臺鐵候車依生活圈（使用者規則 2026-11，transfer_regions.json 的 TraWaitMinutes，手寫）**：該生活圈 TraHubs 大站全日平均候車（班距一半的平均），
+    新竹 3.7、臺北 4.7 … 苗栗 12.1、宜蘭 13.9、花蓮 18.4 分；指數在這個生活圈搭臺鐵一律用它，臺鐵第一次上車也算候車（班次少、要照時刻表趕車，
+    終點端從幹線站出來的第一次上車其實是轉乘）。高鐵左營→聖功醫院「紅線到凹子底換輕軌」因此進入前 3（原本被「新左營搭臺鐵到科工館」及其補充變體擠掉）。
+    生活圈端維持每站前 3（試過前 5：組合上限 48 擠掉區間車接力組合，汐止、東湖→愛河之心只搭區間最快晚 11 分，改回 3）。
+    嚴格比對：真正漏掉的最佳解 0 筆；剩下的差異都屬於使用者同意不處理的類別（時段最後 5 分鐘、幹線中途換車、不是最佳解、50 筆上限）；新版較好 38 次
+  - 驗證（2026-11 本機，嚴格標準：dev 的每個方案新版都有出發不早、到達不晚、轉乘不多的方案，各標籤不變差）：
+    出發時刻：同站（臺鐵與捷運同轉乘群組：板橋、南港、松山、臺北、萬華、鶯歌、中壢 × 21 個捷運站，往返 × 2 時段 × 2 種排除）1176 次變差 27、回歸 80 次變差 1、全台隨機 400 次變差 16、山海線 1024 次變差 4，
+    幾乎都是使用者同意不處理的（時段最後 5 分鐘、幹線中途換車、50 筆上限、不是最佳解）；新版較好 38 次；計算時間 dev 577 秒、新版 554 秒。
+    抵達時刻（by=arr）、首班（first）、末班（last）各 780 次（回歸 80＋隨機 400＋同站抽 300）：時間最佳漏掉的 5、3、3 筆（多半在抵達時段開頭 10 分鐘內，或差 1～2 分轉乘較少）；
+    「轉乘最少」排序（sort=transfers）第一筆 780 次變差 1 次（永靖→台北小城：dev 轉 2 次 5 小時 12 分、新版轉 3 次 2 小時 31 分，原本就列為「不是最佳解」）。
+  - 路網 BFS（appNetworkRoutes，IndexRoutes 關掉時的短程列舉；中長途的幹線段、TRA.Via 仍用它）：成本＝搭乘的系統段數（同一鐵路系統在交會站換線成本 0）；同一路線最多搭 Search.MaxLineUses（2）次，不分鐵路捷運（文湖線→板南線→文湖線、山線→海線→山線這類捷徑要能找到）；最多 Search.MaxLines 條路線；預設 deeper＝Search.Deeper。
   - 有支線的捷運路線（中和新蘆線蘆洲支線、淡水信義線新北投支線、松山新店線小碧潭支線）：appLinePaths 用 metro_travel 的營運路線站序，appRideStations 只在同一條站序上直接搭，跨支線回 null；appLineJunctions 找分岔站，BFS 給這種路線自連邊、在分岔站同站換車（蘆洲→大橋頭→三重）；兩段合起來能直接搭到的同線換車不列。transfer 模組的 lineStations 是一條直線（迴龍接三重國小、淡水接新北投），不能直接拿來切沿途車站。
   - 通則（寫死）：重複經過同一個車站（上下車站與沿途都算，同轉乘群組視為同一站，appStationKey）；跨支線不能直接搭。里程上限（起訖直線距離倍數）試過後使用者要求拿掉（不是基礎），改用 RouteBans 範圍規則。
   - 設定（transfer_route_rules.json）：DirectPairs（兩站都經過時要有一段同時包含兩站＝直接搭同一路線；每段搭乘或步行各算一段。以 StationUID 判斷，同轉乘群組同一鐵路系統的車站視同一站 appPairStation；不要改成轉乘群組判斷，試過會誤殺高鐵台中轉臺鐵）、LineTransfers、NoTransferStations（AliasOf）、Search。
@@ -423,7 +469,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
   - `DirectPairs`（排除名單，不這樣走）：`{"Stations":[A,B],"Line":..,"Source":"manual|generated","Evidence":{...},"Disabled":false}`。兩站都經過時，要有一段搭乘同時包含兩站（直接搭同一路線）。
   - `RouteBans`：`{"From":[{"Line":"TRA-WL","StationRange":["TRA-4080","TRA-4400"]}],"Via":["TRA-1000"],"To":[{"Line":"TRA-EL","StationRange":[...]}]}`。Line 必填、StationRange 選填（appRouteBanScope：一般路線取兩站之間；環狀線依 lineStations 順序從 A 往後數到 B 跨過終點，先後決定弧）；To 省略＝同 From。編譯成 站 => [規則, 角色位元 1=From 2=Via 4=To]（appCompileRouteBans），appRouteBanStep 依段推進各規則階段 0→1（From）→2（Via）→To＝排除；步行或換系統重來；每段每狀態快取。產生器 `--only=bans` 讀 `RouteBanRings`（Path 依環線方向串路線範圍、Boundaries 分界站要放在路線交會站、Parallel 山海線並行區間不當 Via、MinRatio 1.5），每對區段所有起訖都同一邊遠且比值 ≥ MinRatio 才產生，Via 取遠邊中間的分界站；同區段來回一律產生。臺鐵環島 16 區段產生 168 條。規則關掉時不生效。AnySystem＝跨系統也適用（整條路由不重來，Via 放遠邊全部車站）；高雄環狀輕軌試過後停用（Disabled）：兩方向班次不對稱，短的一邊沒車時轉高捷繞過去反而快，依里程擋會擋掉已知最佳解。
   - `RouteBans` 的轉乘走法排除（2026-10，使用者：railtime 52 筆能合併就合併、同性質只寫一次、多種資料格式一次進過濾）：`{"Transfers":[[範圍清單],...],"Ends":{"Pair":[A,B],"Any":[...],"All":[...]}}`。appCompileRoutePatterns 編成群組集合；appRoutePatternsFor 依起訖挑出生效的（轉乘點含起站或迄站的整條不用：本站那是步行，走法已不同）；appNetworkRoutes 組好完整路由時 appRoutePatternHit 比轉乘點串（下車站或上車站群組，正反向完全相同才排除；不轉乘的路由一律不擋）。範圍清單 appRouteBanScope 也收單一 StationUID、{Stations}、{Regex}。railtime 改寫用 `agent/claude/compare/railtime_bypass.php --write`（fromToLine→Ends.Pair、bypassStationReg→Ends.Any、bypassBothStationReg→Ends.All、transStation→Transfers；保留人工 Disabled）。驗證：每條規則依 Ends 抽 12 組（共 586 組）× 5 個時段，開關比較，最早到達／最少轉乘／最短行車時間有變差的規則停用（11 條，DisabledReason 記例子），其餘 41 條在這些起訖少了約 3% 基本路由、方案完全不變；50 條回歸與高雄、北北基桃、bench 基準都不變。railtime 的規則是不看時刻的經驗（例如松山換松山新店線），本站以時刻算出的最佳為準。
-  - `Search`：Deeper、MaxLines、MaxLineUses、NetworkLimit、DefaultLimit、MaxQueue、MaxRoutes（appRouteSearch；沒寫用 APP_ROUTE_SEARCH_DEFAULTS；規則關掉時仍適用）。
+  - `Search`：Deeper、MaxLines、MaxLineUses、NetworkLimit、DefaultLimit、MaxQueue、MaxRoutes、Index*（綜合指數找路）（appRouteSearch；沒寫用 APP_ROUTE_SEARCH_DEFAULTS；規則關掉時仍適用）。
   - `LineTransfers`（加速清單，只這樣走）：`{"Lines":[L1,L2],"Groups":[gid,...]}`，兩條路線之間只用列出的轉乘群組；目前產生器判定每個群組都對某些起訖有用，所以是空的。
   - `NoTransferStations`（人工）：`{"Station":"TRA-1001","AliasOf":"TRA-1000",...}`，資料上的別名站不當轉乘站、與 AliasOf 之間不步行；起訖是它時 appCoreRoutes 直接換成 AliasOf 查（appNoTransferStations；規則關掉時仍生效）。DirectPairs 比對用 appPairStation：同一轉乘群組裡同一鐵路系統的車站取代碼最小的（TRA-1001 視同 TRA-1000），名單本身不必重複列別名。加入後 25 組起訖基本組合 2,087 → 1,611，最佳抵達不變。
 - 產生器：`php agent/skills/rail-transfer/scripts/build_route_rules.php [--dry] [--only=lines|pairs] [--line=X]`。

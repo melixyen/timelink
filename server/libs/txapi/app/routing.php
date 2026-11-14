@@ -182,6 +182,10 @@ function appTraExpressCounts()
 
 /**
  * 路線連結圖搜尋（同 transferNetworkSearch，另可排除路線）。回傳基本路由（段落陣列）的清單
+ *
+ * 用途：中長途分解的幹線段（只搭臺鐵、高鐵）、TRA.Via 補充、規則產生器，以及 Search.IndexRoutes＝false 時的短程列舉。
+ * 短程與生活圈端已改用綜合指數找路（app/indexroute.php，2026-11）而棄用這裡：成本＝搭乘段數、只列到「最少＋deeper」，
+ * 轉乘次數多但實際比較快的走法會被截斷（例如十四張→松山 大坪林→古亭→松江南京 轉 3 次比直達快），RAPTOR 能找到、這裡找不到
  */
 function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1, array $systems = null)
 {
@@ -1783,12 +1787,20 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     if ($from === $to) {
         return [];
     }
+    // 短程（同生活圈、相鄰生活圈）與中長途的生活圈端：綜合指數找路（app/indexroute.php，Search.IndexRoutes；使用者規則 2026-11，方案 A 只跑指數）。
+    // IndexRoutes＝false 才退回原本的 Deeper 列舉（appNetworkRoutes），見下方棄用說明
+    $indexMode = appIndexConfig()['Enabled'];
     // 中長途（起訖生活圈不相鄰）：分解成「生活圈端＋幹線＋生活圈端」組合（app/trunk.php）；不套用時一般找路
     $trunk = empty($opt['via']) && empty($opt['noTrunk']) ? appTrunkBaseRoutes($m, $from, $to, $opt) : null;
     $trunkMode = $trunk !== null && $trunk['routes'];   // 分解組不出路由時退回整段搜尋
     // 基本路由：系統直達段不分路線，經不同路線的同一走法（臺鐵北迴、南迴）合成一條，各自的路線串放進 Paths
     $byCode = [];
-    foreach ($trunkMode ? $trunk['routes'] : appNetworkRoutes($m, $from, $to, $extra, $opt['deeper'] ?? $cfg['Deeper']) as $legs) {
+    // 短程（生活圈端、同生活圈或相鄰生活圈）：綜合指數最小的前 K 條（appIndexRoutes，不用 Deeper 截斷）。
+    // 原本的路網列舉（appNetworkRoutes＋Deeper）短程已棄用（保留給 IndexRoutes＝false）：Deeper 依轉乘次數截斷，
+    // 轉乘多但實際比較快的走法（捷運平行轉乘、班距短的轉乘）會先被丟掉；deeper 參數因此對短程與生活圈端沒有作用
+    $baseRoutes = $trunkMode ? $trunk['routes']
+        : ($indexMode ? appIndexRoutes($m, $from, $to, $extra, null, null, !empty($opt['_pool'])) : appNetworkRoutes($m, $from, $to, $extra, $opt['deeper'] ?? $cfg['Deeper']));
+    foreach ($baseRoutes as $legs) {
         $code = appRouteFormat(['Legs' => $legs]);
         if (!isset($byCode[$code])) {
             foreach ($legs as &$l) {
@@ -1866,6 +1878,7 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             $pick[] = [0, null, $legs];
         }
     }
+    $supCount = [];   // 補充資料的 MaxRoutes：同一個名稱（含後綴）在這次查詢最多幾條（$pick 依估計由好到壞，先到先留）
     foreach ($pick as $x) {
         // 基本路由本身＋補充資料（transfer_route_supplements.json，人工經驗：區間車接力、轉對號、快慢車換車…）每條符合的多一條
         $baseCode = appRouteFormat(['Legs' => $x[2]]);
@@ -1900,12 +1913,18 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             if (isset($out[$code])) {
                 continue;
             }
+            if (!empty($variant['Max'])) {
+                if (($supCount[$variant['Name']] ?? 0) >= $variant['Max']) {
+                    continue;
+                }
+                $supCount[$variant['Name']] = ($supCount[$variant['Name']] ?? 0) + 1;
+            }
             foreach ($legs as &$l) {
                 unset($l['_part'], $l['_relayOnly']);   // 中長途分解的段落標記（只給補充資料判斷用）
             }
             unset($l);
             $dist = appRouteDistance($m, $legs);
-            $out[$code] = ['route' => $code, 'legs' => $legs, 'TransferCount' => $tc, 'EstimatedMinutes' => $est,
+            $out[$code] = ['route' => $code, 'legs' => $legs, 'TransferCount' => $tc, 'EstimatedMinutes' => $est, 'Index' => appRouteIndex($m, $legs),
                            'DistanceKm' => $dist[0] ?? null, 'DistanceSource' => $dist[1] ?? null,
                            'Supplement' => $variant['Name'], 'BaseRoute' => $baseCode, 'Rescued' => isset($x[3])];
         }

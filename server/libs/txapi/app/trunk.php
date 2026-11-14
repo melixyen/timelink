@@ -114,7 +114,8 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     static $cache = [];
     $cfg = appTrunkConfig();
     $extra = $opt['extra'] ?? 0;
-    $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra;
+    $mode = appIndexConfig()['Enabled'] ? 'index' : 'dev';   // index＝綜合指數（預設）；dev＝原本的找路與排序（Search.IndexRoutes＝false）
+    $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra . '|' . $mode;
     if (isset($cache[$k])) {
         return $cache[$k];
     }
@@ -136,24 +137,46 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     // 生活圈端與一般查詢共用同一套找路：參數與 journeys 相同（取前 APP_JOURNEY_ROUTES 條基本路由、帶補充路由），只多「不搭高鐵」
     // （不坐高鐵到高鐵站再轉高鐵）。一律用不搭高鐵找一次，各排除條件共用：基本路由的臺鐵段不分車種（串接時才依 extra 選班次），
     // 不搭臺鐵對號時只濾掉補充路由切出的對號段
-    $rk = $u . '|' . $x . '|' . (int) $toTrunk . '|' . ($opt['deeper'] ?? '');
+    $rk = $u . '|' . $x . '|' . (int) $toTrunk . '|' . ($opt['deeper'] ?? '') . '|' . $mode;
     if (!isset($raw[$rk])) {
-        $sub = ['extra' => APP_EXTRA_NO_HSR, 'deeper' => $opt['deeper'] ?? null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'noTrunk' => true];
+        $sub = ['extra' => APP_EXTRA_NO_HSR, 'deeper' => $opt['deeper'] ?? null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'noTrunk' => true,
+                '_pool' => !empty($opt['_pool'])];
         $raw[$rk] = $toTrunk ? appCoreRoutes($m, $u, $x, $sub) : appCoreRoutes($m, $x, $u, $sub);
     }
-    // 取原本演算法排序（轉乘次數 → 速度等級 → 里程 → 估計分鐘）的前 AccessPerStation 名（使用者規則 2026-11）
-    $out = [];
-    foreach ($raw[$rk] as $r) {
-        if (count($out) >= $cfg['AccessPerStation']) {
-            break;
-        }
+    // dev（已棄用，保留給 Search.IndexRoutes＝false）：原本演算法排序（轉乘次數 → 速度等級 → 里程 → 估計分鐘）的前 AccessPerStation 名；
+    //   轉乘次數優先，轉乘多但比較快的接駁（捷運平行轉乘）排不進前 3，生活圈端因此漏掉最快的走法；
+    // index：綜合指數（appRouteIndex：行駛＋停靠＋轉乘步行與平均候車）最小的前 AccessPerStation 名（與短程查詢同一套找路）
+    $list = $raw[$rk];
+    if ($mode === 'index') {
+        usort($list, function ($a, $b) { return ($a['Index'] ?? INF) <=> ($b['Index'] ?? INF); });
+    }
+    $ok = [];
+    foreach ($list as $r) {
         foreach ($r['legs'] as $l) {
             if ($l['Type'] === 'ride' && ($l['Class'] ?? null) !== null && !appClassAllowed($extra, $l['System'], $l['Class'])) {
                 continue 2;
             }
         }
+        $ok[] = $r;
+    }
+    $pick = array_slice($ok, 0, $cfg['AccessPerStation']);
+    // index：轉乘最少的走法不在前 AccessPerStation 名時另外附上（原本的排序轉乘次數優先，一定有它）。
+    // 古亭→臺鐵松山：前 3 名是經臺北、松江南京、東門轉乘的，直達松山（松山新店線）排第 4，不附上時古亭→新竹新莊「轉乘最少」從轉 2 次變成轉 3 次
+    if ($mode === 'index' && $ok) {
+        $minTc = min(array_column($ok, 'TransferCount'));
+        if (!in_array($minTc, array_column($pick, 'TransferCount'), true)) {
+            foreach ($ok as $r) {
+                if ($r['TransferCount'] === $minTc) {
+                    $pick[] = $r + ['_extra' => true];
+                    break;
+                }
+            }
+        }
+    }
+    $out = [];
+    foreach ($pick as $r) {
         $out[] = ['legs' => $r['legs'], 'est' => (float) $r['EstimatedMinutes'], 'tc' => $r['TransferCount'],
-                  'score' => (float) $r['EstimatedMinutes'] + $cfg['TransferMinutes'] * $r['TransferCount']];
+                  'score' => (float) $r['EstimatedMinutes'] + $cfg['TransferMinutes'] * $r['TransferCount'], 'extra' => !empty($r['_extra'])];
     }
     return $cache[$k] = $out;
 }
@@ -360,8 +383,17 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     $ends = [];
     foreach (['A' => [$from, $sideA, true], 'B' => [$to, $sideB, false]] as $side => list($u, $regions, $toTrunk)) {
         $ends[$side] = [];
-        foreach (appTrunkCandidates($m, $u, $regions, $extra, $trunks) as $x => $sys) {
-            $acc = appTrunkAccess($m, $u, $x, $toTrunk, $opt);
+        $cands = appTrunkCandidates($m, $u, $regions, $extra, $trunks);
+        // 站間步行取代法：同一個轉乘群組有兩個以上的候選幹線站（臺鐵南港＋高鐵南港）時，綜合指數找路共用群組之間的核心路段
+        $grp = [];
+        foreach ($cands as $x => $_) {
+            $g = array_keys(appIndexEnds($m, $x, !$toTrunk));
+            sort($g);
+            $grp[$x] = implode(',', $g);
+        }
+        $nGrp = array_count_values($grp);
+        foreach ($cands as $x => $sys) {
+            $acc = appTrunkAccess($m, $u, $x, $toTrunk, ['_pool' => $nGrp[$grp[$x]] > 1] + $opt);
             if ($acc) {
                 // 這個幹線站的生活圈端估計：留下的路由裡「估計＋轉乘分（含接幹線那一次）」最好的
                 $best = null;
@@ -430,7 +462,7 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
                         }
                         $rides = count(array_filter($legs, function ($l) { return $l['Type'] === 'ride' && empty($l['Through']); }));
                         $combos[] = ['legs' => $legs, 'score' => $a['est'] + $tr['est'] + $b['est'] + $tc * max(0, $rides - 1),
-                                     'sys' => $tr['legs'][0]['System']];
+                                     'sys' => $tr['legs'][0]['System'], 'rides' => $rides, 'extra' => !empty($a['extra']) || !empty($b['extra'])];
                     }
                 }
             }
@@ -438,11 +470,12 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     }
     usort($combos, function ($a, $b) { return $a['score'] <=> $b['score']; });
     // 依估計取前 MaxCombos 條；臺鐵幹線、高鐵幹線各至少保留一半（高鐵很快時臺鐵幹線不會全被擠掉）
+    // 生活圈端另外附上的最少轉乘走法（appTrunkAccess 的 extra）不參加這一輪，不會擠掉原本選得到的組合
     $half = intdiv($cfg['MaxCombos'], 2);
     $pickA = [];
     $bySys = [];
     foreach ($combos as $i => $c) {
-        if (($bySys[$c['sys']] = ($bySys[$c['sys']] ?? 0) + 1) <= $half) {
+        if (!$c['extra'] && ($bySys[$c['sys']] = ($bySys[$c['sys']] ?? 0) + 1) <= $half) {
             $pickA[$i] = true;
         }
     }
@@ -450,7 +483,24 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
         if (count($pickA) >= $cfg['MaxCombos']) {
             break;
         }
-        $pickA[$i] = true;
+        if (!$c['extra']) {
+            $pickA[$i] = true;
+        }
+    }
+    // 最少轉乘保底：搭乘段數最少的組合一條都沒選到時，每個幹線系統補估計最好的一條（使用者選「轉乘最少」排序時第一筆與原本一致）
+    $minRides = $combos ? min(array_column($combos, 'rides')) : 0;
+    $hasMin = false;
+    foreach (array_keys($pickA) as $i) {
+        $hasMin = $hasMin || $combos[$i]['rides'] === $minRides;
+    }
+    if (!$hasMin) {
+        $added = [];
+        foreach ($combos as $i => $c) {
+            if ($c['rides'] === $minRides && !isset($added[$c['sys']])) {
+                $added[$c['sys']] = true;
+                $pickA[$i] = true;
+            }
+        }
     }
     ksort($pickA);
     $routes = [];
