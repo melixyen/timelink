@@ -6,6 +6,7 @@ import { usePublicInfoStore } from '@/stores/publicInfo'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { config, groupByOperator } from '@/config'
 import { nameOf, textOn } from '@/utils/format'
+import RailwayMapPicker from '@/components/RailwayMapPicker.vue'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -23,6 +24,7 @@ const lineStore = usePublicLineStore()
 const open = ref(false)
 const keyword = ref('')
 const selectedLine = ref('')
+const mapOpen = ref(false)
 
 const selected = computed(() => (props.modelValue ? stationStore.stationName(props.modelValue) : ''))
 const fieldLabel = computed(() => (props.labelKey ? t(props.labelKey) : props.label))
@@ -166,6 +168,18 @@ function clear() {
   emit('update:modelValue', '')
 }
 
+/** 開出路網圖選站（先把下拉面板收起來） */
+function openMap() {
+  open.value = false
+  mapOpen.value = true
+}
+
+/** 路網圖選好車站：回填給上層（出發站／到達站） */
+function chooseFromMap(uid) {
+  emit('update:modelValue', uid)
+  keyword.value = ''
+}
+
 onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
@@ -273,9 +287,13 @@ onBeforeUnmount(() => clearTimeout(timer))
 
         <div class="panel-foot">
           <train-link @click="clear">{{ t('station.clear') }}</train-link>
-          <train-link to="/stations" @click="open = false">{{ t('station.all') }}</train-link>
+          <train-button size="small" plain type="primary" icon="route" @click="openMap">
+            {{ t('station.map') }}
+          </train-button>
         </div>
       </div>
     </train-dropdown>
+
+    <railway-map-picker v-model="mapOpen" :selected="modelValue" @confirm="chooseFromMap" />
   </div>
 </template>
