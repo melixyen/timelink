@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TimeLink 軌道路網圖（canvasTaiwanRailwayMap）</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    color: #1d1d24; background: #f4f4f7;
+  }
+  header { flex: none; padding: 10px 14px 8px; background: #fff; border-bottom: 1px solid #dedee6; }
+  h1 { margin: 0 0 8px; font-size: 17px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; padding: 4px 10px; font-size: 13px; line-height: 1.3;
+    border: 1px solid #c9c9d3; border-radius: 999px; background: #fff; cursor: pointer; user-select: none;
+  }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip.on { background: #1d1d24; border-color: #1d1d24; color: #fff; }
+  select, button {
+    font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid #c9c9d3; border-radius: 6px; background: #fff;
+  }
+  button { cursor: pointer; }
+  /* 固定一行高：點擊後文字變長也不會把下面的路網圖往下推 */
+  .info { height: 26px; line-height: 26px; font-size: 13px; color: #6a6a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 點到車站時顯示 StationUID 與站名；點空白就清掉 */
+  #picked {
+    display: inline-block; margin-right: 8px; padding: 0 10px; border-radius: 6px; line-height: 24px;
+    background: #e6194b; color: #fff; font-size: 14px; font-weight: 600; vertical-align: top;
+  }
+  #picked:empty { display: none; }
+  /* 路網圖的容器：canvas 的大小由 library 決定，比容器大就在容器裡捲動 */
+  #map { flex: 1 1 auto; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; background: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TimeLink 軌道路網圖</h1>
+  <div class="row" id="regions"></div>
+  <div class="row">
+    <label>比例
+      <select id="scale">
+        <option value="auto">自動</option>
+        <option value="fit">縮到容器寬度</option>
+        <option value="0.6">60%</option>
+        <option value="0.8">80%</option>
+        <option value="1">100%</option>
+        <option value="1.3">130%</option>
+      </select>
+    </label>
+    <label>字級
+      <select id="font">
+        <option value="0.8">80%</option>
+        <option value="0.9">90%</option>
+        <option value="1" selected>100%（預設）</option>
+        <option value="1.15">115%</option>
+      </select>
+    </label>
+    <button id="save" type="button">下載 PNG</button>
+  </div>
+  <div class="info"><span id="picked"></span><span id="detail">點車站的圓圈或站名試試看</span></div>
+</header>
+<div id="map"></div>
+
+<script src="./canvasTaiwanRailwayMap.js"></script>
+<script>
+(function () {
+  'use strict';
+  var lib = window.canvasTaiwanRailwayMap;       // 載入後只會掛在 window 底下，不會自己畫圖
+  var query = new URLSearchParams(location.search);
+  var picked = document.getElementById('picked');
+  var detail = document.getElementById('detail');
+  var regionBox = document.getElementById('regions');
+
+  // ?region=taipei,taoyuan 指定生活圈；沒給就是全台灣。?station=TRA-1000 一開始標示某一站
+  var start = (query.get('region') || query.get('regions') || 'all').split(',');
+
+  var map = lib.setup(document.getElementById('map'), {
+    regions: start,
+    selected: query.get('station'),
+    onClick: function (e) {
+      if (!e.station) {                          // 點在空白：清掉標籤
+        picked.textContent = '';
+        detail.textContent = '畫布座標 (' + e.x + ', ' + e.y + ')';
+        return;
+      }
+      picked.textContent = e.station.StationUID + '　' + e.station.name;
+      var where = { station: '點在站點上', label: '點在站名上', group: '點在轉乘站的大圈上' }[e.target];
+      // 好幾個系統共用同一個站名時，再點一次站名會換下一個系統
+      var turn = e.target === 'label' && e.candidates.length > 1
+        ? '（共用站名 ' + (e.candidates.indexOf(e.station.StationUID) + 1) + '/' + e.candidates.length + '，再點一次換下一個）' : '';
+      detail.textContent = e.station.SystemName + '・' + where + turn +
+        (e.group ? '・轉乘群組 ' + e.group.TransferGroupID + '（' + e.group.Stations.map(function (s) {
+          return s.StationUID + ' ' + s.name;
+        }).join('、') + '）' : '') +
+        '・畫布座標 (' + e.x + ', ' + e.y + ')';
+    }
+  });
+  window.railwayMap = map;                        // 方便在 console 試：railwayMap.select('THSR-1070', { scroll: true })
+
+  // ---- 範圍：全台灣，或勾選一個以上的生活圈 ----
+  function chip(key, name) {
+    var label = document.createElement('label');
+    label.className = 'chip';
+    var input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = key;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(name));
+    regionBox.appendChild(label);
+    return input;
+  }
+  var allBox = chip('all', '全台灣');
+  var boxes = lib.regions().map(function (r) { return chip(r.key, r.name); });
+  function paintChips() {
+    [allBox].concat(boxes).forEach(function (b) { b.parentNode.className = b.checked ? 'chip on' : 'chip'; });
+  }
+  function apply() {
+    var keys = boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.value; });
+    allBox.checked = !keys.length;
+    paintChips();
+    map.setRegions(keys.length ? keys : 'all');
+  }
+  boxes.forEach(function (b) {
+    b.checked = start.indexOf(b.value) >= 0;
+    b.addEventListener('change', apply);
+  });
+  allBox.addEventListener('change', function () {
+    boxes.forEach(function (b) { b.checked = false; });
+    apply();
+  });
+  allBox.checked = !boxes.some(function (b) { return b.checked; });
+  paintChips();
+
+  document.getElementById('scale').addEventListener('change', function () {
+    map.setScale(isNaN(parseFloat(this.value)) ? this.value : parseFloat(this.value));
+  });
+  document.getElementById('font').addEventListener('change', function () {
+    map.update({ fontScale: parseFloat(this.value) });
+  });
+  document.getElementById('save').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.download = 'timelink-railway-map.png';
+    a.href = map.toDataURL('image/png');
+    a.click();
+  });
+})();
+</script>
+</body>
+</html>
