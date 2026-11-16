@@ -547,12 +547,6 @@ const APP_JOURNEY_TAGS = [
     'FastestLocal'     => '只搭區間車最快',
 ];
 
-/**
- * search_time 抵達時刻模式（by=arr）的「最短行車時間」只在接近抵達時刻的班次裡挑：抵達在時段內最晚抵達的那班往前這麼多分鐘以內
- * （使用者規則 2026-11：設 18:00 前抵達時，不要挑到 14:39→15:15 這種早很多的班次；以最晚抵達為準，班次少的路線也挑得到）
- */
-const APP_JOURNEY_AT_NEAR_MINUTES = 60;
-
 /** search_time 模式：各排除位元（使用者的再加上這些）最快的方案的標籤；使用者自己的模式標 Fastest */
 const APP_JOURNEY_MODE_TAGS = [
     1 => 'FastestNoExpress',
@@ -1158,18 +1152,10 @@ function appJourneysCompute(array $q)
         // 最少轉乘、最短行車時間的第一名也一定附上：前端在最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間之間切換排序時不必重新查詢
         $fewest = null;
         $shortest = null;
-        $nearFrom = null;   // 抵達時刻模式：最短行車時間只看抵達不早於這個分鐘的班次
-        if ($back) {
-            $lastArr = max(array_column($pool, 'ArrivalMinute'));
-            $nearFrom = $lastArr - APP_JOURNEY_AT_NEAR_MINUTES;
-        }
         foreach ($pool as $j) {
             if ($fewest === null || ($back ? [$j['TransferCount'], -$j['DepartureMinute'], $j['ArrivalMinute']] < [$fewest['TransferCount'], -$fewest['DepartureMinute'], $fewest['ArrivalMinute']]
                                            : [$j['TransferCount'], $j['ArrivalMinute'], -$j['DepartureMinute']] < [$fewest['TransferCount'], $fewest['ArrivalMinute'], -$fewest['DepartureMinute']])) {
                 $fewest = $j;
-            }
-            if ($nearFrom !== null && $j['ArrivalMinute'] < $nearFrom) {
-                continue;
             }
             if ($shortest === null || [$j['TravelMinutes'], $j['TransferCount'], $back ? -$j['DepartureMinute'] : $j['ArrivalMinute']]
                                       < [$shortest['TravelMinutes'], $shortest['TransferCount'], $back ? -$shortest['DepartureMinute'] : $shortest['ArrivalMinute']]) {
