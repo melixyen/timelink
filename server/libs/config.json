@@ -94,19 +94,25 @@
             "group": "查詢限制",
             "level": "public",
             "default": 30,
-            "desc": "journeys full_search（研究工具，一次最多算 12 秒）同一 IP 幾秒內只能執行一次，超過回 HTTP 429（錯誤代碼 42904）；執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP 記在 querylimit.sqlite 的 marks。0＝不限制；後臺身分不受限"
+            "desc": "journeys full_search（研究工具，一次最多算 12 秒）同一 IP 的時間窗秒數：時間窗內最多執行 QUERY_FULL_SEARCH_IP_TIMES 次，超過回 HTTP 429（錯誤代碼 42904）；執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP（querylimit.sqlite 的 marks）。0＝不限制；後臺身分不受限"
+        },
+        "QUERY_FULL_SEARCH_IP_TIMES": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 1,
+            "desc": "journeys full_search 同一 IP 在 QUERY_FULL_SEARCH_IP_SECONDS 秒的時間窗內最多執行幾次。0＝不限制"
         },
         "QUERY_MIRROR_IP_SECONDS": {
             "group": "查詢限制",
             "level": "public",
             "default": 7200,
-            "desc": "admin_download/mirror（本機同步線上的離線資料，相當於 dump 資料）沒帶 PAT（後臺網頁登入）時同一 IP 幾秒內只能取一次清單，超過回 HTTP 429（錯誤代碼 42904）；帶 PAT 時改用 QUERY_MIRROR_PAT_SECONDS。也是取得清單後檔案下載的有效時間（沒取過清單回 42905）。執行標記 REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP。0＝不限制"
+            "desc": "admin_download/mirror（本機同步線上的離線資料＝dump）同一 IP 的時間窗秒數：時間窗內最多呼叫 QUERY_MIRROR_IP_TIMES 次（清單、每個檔案各算一次），超過回 HTTP 429（錯誤代碼 42904）；執行標記 REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP，後臺身分（PAT）也受限。0＝不限制"
         },
-        "QUERY_MIRROR_PAT_SECONDS": {
+        "QUERY_MIRROR_IP_TIMES": {
             "group": "查詢限制",
             "level": "public",
-            "default": 30,
-            "desc": "admin_download/mirror 帶 PAT 呼叫時，同一 IP 幾秒內只能取一次清單（後臺網頁登入用 QUERY_MIRROR_IP_SECONDS）；檔案下載的有效時間仍是取得清單後 QUERY_MIRROR_IP_SECONDS 秒。0＝不限制"
+            "default": 200,
+            "desc": "admin_download/mirror 同一 IP 在 QUERY_MIRROR_IP_SECONDS 秒的時間窗內最多呼叫幾次（清單 1 次＋每個檔案 1 次；全新環境同步一次約 60 次）。0＝不限制"
         },
         "QUERY_MAX_RANGE_MINUTES": {
             "group": "查詢限制",

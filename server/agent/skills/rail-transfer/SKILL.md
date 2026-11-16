@@ -393,7 +393,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
       都沒有＝行車時間最長的捷運（不能單看最長的一段：轉幾次捷運到高鐵站時捷運段比 20 分的高鐵段長）。每類取最快，超過最短行車時間 2 倍＋60 分又不少轉乘的不列。
       extra 再加 0～3 每個條件的最快一定列：原本演算法的最快當上界跑 RAPTOR；寬條件已證明最快的方案也符合窄條件時（全搭最快剛好沒搭高鐵）不再跑。標籤 FastestNoExpress（新）。
       臺北→中壢：臺鐵對號、臺鐵區間、高鐵轉機捷、機捷到老街溪走過去。680 組 × 出發／抵達 × 4 條件比對：沒有一組比 journeys 從同一時刻出發的最快差
-    - `full_search=1`（研究工具，公開；同一 IP 30 秒內只能執行一次：執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，querylimit.php 的 queryLimitMark，querylimit.sqlite 的 marks 表＝每個 IP、每個標記一列（主鍵 IP 雜湊＋標記，at＝最後一次執行；同一 IP UPDATE、新的 IP 才 INSERT），查與寫同一個交易；後臺身分不受限）：extra 再加 0～3 每個條件：原本的演算法串整個時段＋RAPTOR 從時段開始每次由上一批最早出發的下一分鐘再找、掃到時段結束
+    - `full_search=1`（研究工具，公開；同一 IP 30 秒內 1 次：執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，querylimit.php 的 queryLimitMark 與 QUERY_LIMIT_MARKS（每個標記的時間窗秒數與可執行次數），querylimit.sqlite 的 marks 表＝每個 IP、每個標記一列（主鍵 IP 雜湊＋標記，start＝時間窗開始、cnt＝次數；時間窗內 cnt＋1、超過重新開始 cnt＝1；同一 IP UPDATE、新的 IP 才 INSERT），查與寫同一個交易；後臺身分不受限）：extra 再加 0～3 每個條件：原本的演算法串整個時段＋RAPTOR 從時段開始每次由上一批最早出發的下一分鐘再找、掃到時段結束
       （抵達時刻模式從「時段開始前就到得了的最晚出發」起掃，掃描起點不早於營運日 04:00——更早出發 RAPTOR 找不到任何方案），每班再用固定路由倒回取同時到達的最晚出發；
       各條件各自在時段內互不支配，方案帶 Modes、Source（routes／raptor／both）。上限 APP_JOURNEY_FULL_SECONDS（12 秒），沒算完 meta.complete＝false。
       驗證：175 次（出發 120、抵達 40、末班 15）一般 journeys 的每個方案 full_search 都有同樣好或更好的；3 小時時段中位數 0.7～0.9 秒，整天（first／last）最慢 10.5 秒

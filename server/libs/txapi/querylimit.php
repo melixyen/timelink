@@ -9,9 +9,11 @@
  * - 計數要即時才擋得準，所以不像流量紀錄那樣累積後再寫；每次查詢一個交易（synchronous=NORMAL）
  * - 每個回應帶 X-Query-Limit-Minute／X-Query-Remaining-Minute／X-Query-Limit-Hour／X-Query-Remaining-Hour
  *
- * 執行標記（queryLimitMark）：特定的重功能（例如 journeys 的 full_search）另外限制「同一 IP 幾秒內只能執行一次」。
- * 同一個資料庫的 marks 表是每個 IP、每個標記最後一次執行的時間（主鍵 IP 雜湊＋標記名稱），一般 API 不寫；帶標記的功能被呼叫時先用 SQL 查這個 IP
- * 這個標記的時間，在限制秒數內就回 429（42904），否則更新時間（第一次才新增）再開始執行（查與寫在同一個交易，同時送來的請求只有一個會通過）
+ * 執行標記（queryLimitMark）：特定的重功能另外限制「同一 IP 在一段時間內最多執行幾次」，每個標記的時間與次數在 QUERY_LIMIT_MARKS 設定
+ * （秒數、次數都是 libs/config.json 的設定項目，可在 custom/libs/config.json 調整）。
+ * 同一個資料庫的 marks 表：每個 IP、每個標記一列（主鍵 k＝IP 雜湊＋mark），start＝這個時間窗的開始、cnt＝時間窗內執行了幾次；一般 API 不寫。
+ * 被呼叫時：還在時間窗內 → cnt 已到上限就回 429（42904），否則 cnt＋1；超過時間窗 → start＝現在、cnt＝1（同一 IP 都是更新，新的 IP 才新增）。
+ * 查與寫在同一個交易，同時送來的請求不會一起超過上限
  */
 
 const QUERY_LIMIT_ACTIONS = ['transfer', 'finder'];
@@ -124,87 +126,71 @@ function queryLimitCheck($action)
 }
 
 /**
- * 執行標記：同一 IP 在 $seconds 秒內執行過同一個標記（$mark，例如 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP）的功能就回 429（42904）結束；
- * 沒有就寫一筆執行紀錄，呼叫端接著執行。$seconds <= 0 時不限制；$exemptAdmin＝true 時後臺身分（面板登入或 PAT）也不限制
- * （本來就要 PAT 的功能，例如 admin_download/mirror，要傳 false 才有作用）。
- * 紀錄存在 querylimit.sqlite 的 marks（主鍵 k＝IP 雜湊＋mark，at＝最後一次執行的 Unix 秒；同一 IP 更新、新的 IP 才新增），偶爾清掉一天沒再來的
+ * 執行標記的設定：標記 => [時間窗秒數的設定項目, 可執行次數的設定項目, 預設秒數, 預設次數, 功能名稱（錯誤訊息用）, 後臺身分是否不受限]。
+ *   REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP     journeys 的 full_search（研究工具，一次最多算 12 秒）：30 秒內 1 次；後臺身分不受限
+ *   REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP    admin_download 的 mirror（本機同步線上的離線資料＝dump）：2 小時內 200 次（清單、每個檔案各算一次）；
+ *                                              本來就要 PAT，所以後臺身分也受限
  */
-function queryLimitMark($mark, $seconds, $feature, $exemptAdmin = true)
+const QUERY_LIMIT_MARKS = [
+    'REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP'  => ['QUERY_FULL_SEARCH_IP_SECONDS', 'QUERY_FULL_SEARCH_IP_TIMES', 30, 1, 'full_search', true],
+    'REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP' => ['QUERY_MIRROR_IP_SECONDS', 'QUERY_MIRROR_IP_TIMES', 7200, 200, 'mirror', false],
+];
+
+/** 標記的 [時間窗秒數, 可執行次數, 功能名稱, 後臺身分是否不受限]（設定檔沒寫用預設） */
+function queryLimitMarkSettings($mark)
 {
-    if ($seconds <= 0 || ($exemptAdmin && function_exists('downloadAdminOk') && downloadAdminOk())) {
+    list($secKey, $timesKey, $sec, $times, $feature, $exempt) = QUERY_LIMIT_MARKS[$mark];
+    return [defined($secKey) ? max(0, (int) constant($secKey)) : $sec, defined($timesKey) ? max(0, (int) constant($timesKey)) : $times, $feature, $exempt];
+}
+
+/**
+ * 執行標記：同一 IP 在標記的時間窗內已經執行到可執行次數，就回 429（42904，附 Retry-After＝時間窗結束還有幾秒）結束；
+ * 否則記一次（時間窗內 cnt＋1，超過時間窗重新開始 cnt＝1），呼叫端接著執行。秒數或次數設 0＝不限制。紀錄失敗不擋請求
+ */
+function queryLimitMark($mark)
+{
+    list($seconds, $times, $feature, $exemptAdmin) = queryLimitMarkSettings($mark);
+    if ($seconds <= 0 || $times <= 0 || ($exemptAdmin && function_exists('downloadAdminOk') && downloadAdminOk())) {
         return;
     }
-    $key = queryLimitMarkKey();
+    $key = substr(hash('sha256', 'querylimit|' . (string) ($_SERVER['REMOTE_ADDR'] ?? '') . '|' . __DIR__), 0, 32);
     $now = time();
     try {
-        $pdo = queryLimitMarkDb();
-        $pdo->exec('BEGIN IMMEDIATE');
-        $sel = $pdo->prepare('SELECT at FROM marks WHERE k = ? AND mark = ?');
-        $sel->execute([$key, $mark]);
-        $last = $sel->fetchColumn();
-        if ($last !== false && (int) $last > $now - $seconds) {
-            $pdo->exec('COMMIT');
-            $retry = max(1, (int) $last + $seconds - $now);
-            header('Retry-After: ' . $retry);
-            appError(42904, ['feature' => $feature, 'seconds' => $seconds, 'retry' => $retry], ['retryAfter' => $retry, 'mark' => $mark]);
+        if (!is_dir(TDX_CACHE_DIR)) {
+            @mkdir(TDX_CACHE_DIR, 0755, true);
         }
-        // 同一個 IP、同一個標記已經有紀錄就更新時間，第一次才新增（表的大小只跟 IP 數有關，不會每次呼叫多一列）
-        $pdo->prepare('INSERT INTO marks (k, mark, at) VALUES (?, ?, ?) ON CONFLICT (k, mark) DO UPDATE SET at = excluded.at')->execute([$key, $mark, $now]);
+        $pdo = new PDO('sqlite:' . TDX_CACHE_DIR . '/querylimit.sqlite', null, null,
+                       [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 3]);
+        $pdo->exec('PRAGMA journal_mode = WAL');
+        $pdo->exec('PRAGMA synchronous = NORMAL');
+        // 舊版的 marks（沒有 cnt 欄位）直接重建：只是限制頻率用的紀錄
+        $old = $pdo->query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'marks'")->fetchColumn();
+        if ($old !== false && stripos((string) $old, 'cnt') === false) {
+            $pdo->exec('DROP TABLE marks');
+        }
+        $pdo->exec('CREATE TABLE IF NOT EXISTS marks (k TEXT NOT NULL, mark VARCHAR(80) NOT NULL, start INTEGER NOT NULL, cnt INTEGER NOT NULL,
+                    PRIMARY KEY (k, mark)) WITHOUT ROWID');
+        $pdo->exec('BEGIN IMMEDIATE');
+        $sel = $pdo->prepare('SELECT start, cnt FROM marks WHERE k = ? AND mark = ?');
+        $sel->execute([$key, $mark]);
+        $row = $sel->fetch(PDO::FETCH_NUM);
+        $inWindow = $row && (int) $row[0] > $now - $seconds;
+        if ($inWindow && (int) $row[1] >= $times) {
+            $pdo->exec('COMMIT');
+            $retry = max(1, (int) $row[0] + $seconds - $now);
+            header('Retry-After: ' . $retry);
+            appError(42904, ['feature' => $feature, 'seconds' => $seconds, 'times' => $times, 'retry' => $retry], ['retryAfter' => $retry, 'mark' => $mark]);
+        }
+        // 時間窗內＋1；不在時間窗內（或第一次）從現在重新開始、cnt＝1。同一 IP 一律更新，新的 IP 才新增
+        $pdo->prepare('INSERT INTO marks (k, mark, start, cnt) VALUES (?, ?, ?, ?) ON CONFLICT (k, mark) DO UPDATE SET start = excluded.start, cnt = excluded.cnt')
+            ->execute([$key, $mark, $inWindow ? (int) $row[0] : $now, $inWindow ? (int) $row[1] + 1 : 1]);
         if (mt_rand(1, 200) === 1) {
-            $pdo->prepare('DELETE FROM marks WHERE at < ?')->execute([$now - 86400]);   // 一天沒再來的 IP
+            $pdo->prepare('DELETE FROM marks WHERE start < ?')->execute([$now - 86400]);   // 一天沒再來的 IP（時間窗都早已結束）
         }
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {
-        // 紀錄失敗不擋查詢（例如磁碟或鎖定問題）
         if (isset($pdo) && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
     }
 }
-
-/** 執行標記用的 IP 鍵（與次數限制相同的雜湊，不存明碼 IP） */
-function queryLimitMarkKey()
-{
-    return substr(hash('sha256', 'querylimit|' . (string) ($_SERVER['REMOTE_ADDR'] ?? '') . '|' . __DIR__), 0, 32);
-}
-
-/** 執行標記的資料庫（querylimit.sqlite 的 marks：每個 IP、每個標記一列） */
-function queryLimitMarkDb()
-{
-    if (!is_dir(TDX_CACHE_DIR)) {
-        @mkdir(TDX_CACHE_DIR, 0755, true);
-    }
-    $pdo = new PDO('sqlite:' . TDX_CACHE_DIR . '/querylimit.sqlite', null, null,
-                   [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 3]);
-    $pdo->exec('PRAGMA journal_mode = WAL');
-    $pdo->exec('PRAGMA synchronous = NORMAL');
-    // 每個 IP、每個標記一列（主鍵 k＋mark），at＝最後一次執行；舊版沒有主鍵的 marks（每次一列）直接重建（只是限制頻率用的紀錄）
-    $old = $pdo->query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'marks'")->fetchColumn();
-    if ($old !== false && stripos((string) $old, 'PRIMARY KEY') === false) {
-        $pdo->exec('DROP TABLE marks');
-    }
-    $pdo->exec('CREATE TABLE IF NOT EXISTS marks (k TEXT NOT NULL, mark VARCHAR(80) NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (k, mark)) WITHOUT ROWID');
-    return $pdo;
-}
-
-/**
- * 要求這個 IP 在 $seconds 秒內執行過標記 $mark（例如 mirror 的檔案下載要先取過清單），沒有就回 429（42905）結束；不寫入。
- * $seconds <= 0 時不檢查。紀錄讀不到（磁碟或鎖定問題）時不擋
- */
-function queryLimitMarkRequire($mark, $seconds, $feature)
-{
-    if ($seconds <= 0) {
-        return;
-    }
-    try {
-        $sel = queryLimitMarkDb()->prepare('SELECT at FROM marks WHERE k = ? AND mark = ?');
-        $sel->execute([queryLimitMarkKey(), $mark]);
-        $at = $sel->fetchColumn();
-    } catch (Throwable $e) {
-        return;
-    }
-    if ($at === false || (int) $at <= time() - $seconds) {
-        appError(42905, ['feature' => $feature, 'seconds' => $seconds], ['mark' => $mark]);
-    }
-}
-

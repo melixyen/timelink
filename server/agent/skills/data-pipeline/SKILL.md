@@ -67,8 +67,8 @@ GET /txapi/admin_download/mirror?service=tdx（Authorization: Bearer <PAT>，adm
 
 - 需要後臺帳號產生的 PAT（後臺「我的帳號」），角色要有 `admin_download` 的讀取權限；沒帶或錯誤回 401、沒有權限回 403
 - 可以重複執行：已相同的檔案不下載，只補 mtime
-- 避免被頻繁 dump：主機限制同一 IP 取清單的間隔——**帶 PAT 30 秒**（`QUERY_MIRROR_PAT_SECONDS`，秒）、後臺網頁登入 2 小時（`QUERY_MIRROR_IP_SECONDS`），
-  超過回 429（錯誤代碼 42904）；下載檔案要在取得清單後 2 小時內（`QUERY_MIRROR_IP_SECONDS`，沒取過清單回 42905）。同步中斷時隔 30 秒再跑即可
+- 避免被頻繁 dump：主機限制同一 IP **2 小時內最多呼叫 mirror 200 次**（`QUERY_MIRROR_IP_SECONDS`、`QUERY_MIRROR_IP_TIMES`；清單與每個檔案各算一次，
+  全新環境同步一次約 60 次、之後只下載有變的檔案；後臺身分也受限），超過回 429（錯誤代碼 42904，附 `Retry-After`）
 - 只同步 TDX 下載檔。轉乘產生檔（轉乘群組、里程，`custom/libs/txapi/transfer/data/`）本機第一次查詢時自動重建；
   加速清單（`transfer_accel_learned.json`）沒有時查詢不套用加速（結果正確、比較慢），要一樣就在本機另跑 `learn`
 - 後臺帳號、設定與私密值（`custom/`）不在同步範圍，本機自己建立
