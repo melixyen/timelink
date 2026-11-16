@@ -718,6 +718,20 @@ function appSupViaTra(array $m, array $legs, array $x, $extra)
             if ($alt[0]['Type'] === 'walk' && $alt[0]['From'] === $alt[0]['To']) {
                 array_shift($alt);
             }
+            // 起訖本身就在轉乘站（臺北→中壢：原本是機捷到老街溪再走到臺鐵中壢）：換完會變成「臺鐵到中壢、走到老街溪又走回中壢」，
+            // 一來一回的步行拿掉後就是臺鐵直達（基本路由本來就有），不另外產生
+            $clean = [];
+            foreach ($alt as $l) {
+                $prev = end($clean);
+                if ($l['Type'] === 'walk' && $prev && $prev['Type'] === 'walk' && $prev['From'] === $l['To']) {
+                    array_pop($clean);
+                    continue;
+                }
+                $clean[] = $l;
+            }
+            if (count($clean) !== count($alt)) {
+                continue;
+            }
             // 換掉了沿途車站（不是在同一串車站上切段），排除規則要重新檢查：重複經過車站（板橋上高鐵到台北、再搭臺鐵經過板橋）、排除名單等。
             // 系統直達段依它的路線串逐段檢查
             $st = appIndexState0($alt[0]['From'], end($alt)['To']);
