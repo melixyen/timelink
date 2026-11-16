@@ -102,6 +102,12 @@
             "default": 25,
             "desc": "journeys 每次最多串接幾條路由（核心 A 取前幾條基本路由，其補充路由另外帶上）；越大越不會漏走法、越吃 CPU"
         },
+        "APP_ROUTE_CACHE_MAX": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 5000,
+            "desc": "journeys 路由清單快取最多保留幾組起訖（download/tdx_proxy_files/cache/app_routes/；離線資料、找路程式、轉乘規則或設定有變時自動失效，超過上限刪掉最久沒用的）；0＝不快取"
+        },
         "APP_JOURNEYS_LIMIT_DEFAULT": {
             "group": "查詢限制",
             "level": "public",
