@@ -554,6 +554,12 @@ const APP_JOURNEY_MODE_TAGS = [
     3 => 'FastestLocal',
 ];
 
+/** full_search 模式（研究工具）：最多算幾秒，超過就停下來回傳已找到的（meta.complete＝false） */
+const APP_JOURNEY_FULL_SECONDS = 12;
+
+/** full_search 的排除條件名稱（meta.modes） */
+const APP_JOURNEY_FULL_MODES = [0 => '全搭', 1 => '不搭臺鐵對號', 2 => '不搭高鐵', 3 => '只搭區間車（不搭高鐵與臺鐵對號）'];
+
 /** search_time 模式：串接只看這個時刻起（抵達模式：往前）幾分鐘內的班次；某條路由在這段時間一班都沒有時，那條路由放寬到系統最長查詢區間 */
 const APP_JOURNEY_AT_HORIZON = 60;
 
@@ -874,6 +880,9 @@ function appTripJourneys()
         appTripJourneysAt($from, $to, $extra, $week, $date);
     }
     list($mode, $start, $end) = appJourneyMode($date);
+    if (appParam('full_search') !== null) {
+        appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $end);
+    }
     $back = $mode === 'arrive' || $mode === 'last';
     $sort = appParamChoice('sort', ['arrival', 'transfers', 'duration'], $back ? 'late' : 'arrival');
     $limit = appParamInt('limit', APP_JOURNEYS_LIMIT_DEFAULT, 1, APP_JOURNEYS_LIMIT_MAX);
@@ -1402,6 +1411,229 @@ function appJourneysAtCompute(array $q)
        + (appTrunkMeta() ? ['trunk' => appTrunkMeta()] : [])
        + ($raptorOn ? ['raptor' => ['seconds' => $raptorSec, 'runs' => $raptorRuns, 'added' => $raptorAdded]] : [])
        + ['timing' => ['routes' => round($tRoutes, 3), 'chain' => round($tChain, 3), 'raptor' => $raptorSec]]
+       + ['seconds' => round(microtime(true) - $t0, 3)]];
+}
+
+// ================================================================
+// full_search=1：時段內完全不漏（使用者規則 2026-11 需求一，研究工具）
+
+/**
+ * journeys?full_search=1（時段參數同 journeys：start、end、by，或 first、last）：把 extra 再加上 0～3 每個排除條件（全搭、不搭對號、
+ * 不搭高鐵、只搭區間車）在時段內所有互不支配的方案都找出來，合成一份清單依 sort 排序。研究工具：需要後臺身分（PAT 或登入），
+ * 最多算 APP_JOURNEY_FULL_SECONDS 秒。每個方案帶 Modes（在哪些排除條件下是互不支配的方案）與 Source（routes／raptor／both）
+ */
+function appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $end)
+{
+    adminRequireUser(false);
+    if (appParam('routes') !== null || appParam('search_time') !== null) {
+        appFail(40020, ['param' => 'full_search', 'detail' => 'full_search 不能和 routes、search_time 一起用']);
+    }
+    $back = $mode === 'arrive' || $mode === 'last';
+    $sort = appParamChoice('sort', ['arrival', 'transfers', 'duration'], $back ? 'late' : 'arrival');
+    $limit = appParamInt('limit', 500, 1, 500);
+    $opt = ['extra' => $extra, 'max_transfers' => appParam('max_transfers') !== null ? appParamInt('max_transfers', null, 0, APP_MAX_TRANSFERS_MAX) : null,
+            'via' => appParam('via') !== null ? appStationParam('via') : null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true,
+            'deeper' => appParamInt('deeper', min(appRouteSearch()['Deeper'], APP_DEEPER_MAX), 0, APP_DEEPER_MAX)];
+    $stops = appParamInt('stops', 1, 0, 1) === 1;
+    list($data, $meta) = appJourneysFullCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'stops'));
+    appSend($data, $meta);
+}
+
+/**
+ * full_search 的計算。$q 同 appJourneysCompute（mode、start、end 是時段，分鐘）。回傳 [data, meta]
+ *  1. 每個排除條件：原本的演算法（appCoreRoutes 依該條件找路由、串時段內所有班次）
+ *  2. 每個排除條件：RAPTOR 掃整個時段——出發時刻模式從時段開始，每次從上一批最早出發的下一分鐘再找，直到時段結束；
+ *     抵達時刻模式從「時段開始前就到得了的最晚出發」掃到時段結束（更早出發的一定被它淘汰）。每班再用固定路由倒回檢查，同時到達時取最晚出發
+ *  3. 合在一起去重；每個排除條件各自在時段內做互不支配（出發不早、到達不晚、轉乘不多），留下的方案標上 Modes
+ */
+function appJourneysFullCompute(array $q)
+{
+    extract($q);
+    @set_time_limit(APP_JOURNEY_FULL_SECONDS + 20);
+    $m = appModel();
+    $t0 = microtime(true);
+    $deadline = $t0 + APP_JOURNEY_FULL_SECONDS;
+    $back = $mode === 'arrive' || $mode === 'last';
+    $d = &appRouterData($week);
+    $masks = [];
+    foreach ([0, 1, 2, 3] as $bits) {
+        $masks[$extra | $bits] = true;
+    }
+    $masks = array_keys($masks);
+    $pool = [];      // _sig => 方案
+    $source = [];    // _sig => ['routes' => true, 'raptor' => true]
+    $add = function (array $j, $src) use (&$pool, &$source) {
+        $k = $j['_sig'];
+        if (!isset($pool[$k]) || $pool[$k]['TransferCount'] > $j['TransferCount']) {
+            $pool[$k] = $j;
+        }
+        $source[$k][$src] = true;
+    };
+    $stopped = null;
+    $stat = ['routes' => 0, 'routeJourneys' => 0, 'raptorRuns' => 0, 'raptorJourneys' => 0];
+    // 1. 原本的演算法
+    foreach ($masks as $mask) {
+        $routes = appCoreRoutesCached($m, $from, $to, ['extra' => $mask] + $opt);
+        $stat['routes'] += count($routes);
+        foreach ($routes as $r) {
+            $chains = $back ? appChainRouteBack($d, $r['legs'], $mask, $start, $end) : appChainRoute($d, $r['legs'], $mask, $start, $end);
+            foreach ($chains as $c) {
+                $add(appJourneyOut($d, $r, $c, $week), 'routes');
+                $stat['routeJourneys']++;
+            }
+        }
+    }
+    $tRoutes = round(microtime(true) - $t0, 3);
+    // 2. RAPTOR 掃整個時段
+    transferLowerBounds($d, $to);
+    transferLowerBounds($d, $from, true);
+    $saved = [$d['tripBan'] ?? null, $d['accel'] ?? null];
+    $d['accel'] = null;
+    try {
+        foreach ($masks as $mask) {
+            if ($stopped !== null) {
+                break;
+            }
+            $d['tripBan'] = appRaptorBan($d, $week, $mask) ?: null;
+            $scanEnd = $end * 60 + 59;
+            if ($back) {
+                // 時段開始前就到得了的最晚出發（各搭車班數取最早的那個）：比它早出發、班數不多的方案一定被它淘汰
+                $floor = null;
+                for ($k = 1; $k <= TRANSFER_MAX_TRIPS; $k++) {
+                    $x = transferLatestDeparture($d, $from, $to, $start * 60 - 1, $k, max(0, $start * 60 - 8 * 3600));
+                    if ($x !== null) {
+                        $floor = $floor === null ? $x : min($floor, $x);
+                    }
+                }
+                $t = $floor ?? max(0, $start * 60 - 8 * 3600);
+            } else {
+                $t = $start * 60;
+            }
+            $t = max($t, APP_SERVICE_DAY_START * 60);   // 營運日 04:00 以前出發搜尋不到任何方案（末班、抵達時刻模式往前推時）
+            while ($t <= $scanEnd) {
+                if (microtime(true) > $deadline) {
+                    $stopped = 'time limit (' . APP_JOURNEY_FULL_SECONDS . ' s) at mode ' . $mask . ' ' . transferHM($t);
+                    break;
+                }
+                $res = transferRaptor($d, $from, $to, $t);
+                $stat['raptorRuns']++;
+                $minDep = null;
+                foreach ($res as $rj) {
+                    if ($rj['_dep'] > $scanEnd) {
+                        continue;
+                    }
+                    $minDep = $minDep === null ? $rj['_dep'] : min($minDep, $rj['_dep']);
+                    $saveBan = $d['tripBan'];
+                    $d['tripBan'] = null;   // 倒回檢查用串接（依 $mask 選班次），不用 RAPTOR 的排除
+                    $j = appRaptorFixedLater($d, $rj, $week, $mask, $back ? null : $end);
+                    $d['tripBan'] = $saveBan;
+                    $j = $j ?? appRaptorJourneyOut($d, $rj, $week);
+                    if (appJourneyAllowed($j, $mask)) {
+                        $add($j, 'raptor');
+                        $stat['raptorJourneys']++;
+                    }
+                }
+                if ($minDep === null) {
+                    break;   // 之後出發的都超過時段（或已經沒有車）
+                }
+                $t = max($t + 60, $minDep + 60);
+            }
+        }
+    } finally {
+        list($d['tripBan'], $d['accel']) = $saved;
+    }
+    $tRaptor = round(microtime(true) - $t0 - $tRoutes, 3);
+    // 3. 每個排除條件各自在時段內做互不支配
+    $inWindow = function ($j) use ($back, $start, $end) {
+        $v = $back ? $j['ArrivalMinute'] : $j['DepartureMinute'];
+        return $v >= $start && $v <= $end;
+    };
+    $all = array_values(array_filter($pool, $inWindow));
+    $modesOf = [];
+    foreach ($masks as $mask) {
+        $cand = array_values(array_filter($all, function ($j) use ($mask) { return appJourneyAllowed($j, $mask); }));
+        foreach ($cand as $i => $a) {
+            $dominated = false;
+            foreach ($cand as $k => $b) {
+                if ($k === $i) {
+                    continue;
+                }
+                $ge = $b['DepartureMinute'] >= $a['DepartureMinute'] && $b['ArrivalMinute'] <= $a['ArrivalMinute'] && $b['TransferCount'] <= $a['TransferCount'];
+                $gt = $b['DepartureMinute'] > $a['DepartureMinute'] || $b['ArrivalMinute'] < $a['ArrivalMinute'] || $b['TransferCount'] < $a['TransferCount'];
+                if ($ge && ($gt || $k < $i)) {
+                    $dominated = true;
+                    break;
+                }
+            }
+            if (!$dominated) {
+                $modesOf[$a['_sig']][] = $mask;
+            }
+        }
+    }
+    $keep = array_values(array_filter($all, function ($j) use ($modesOf) { return isset($modesOf[$j['_sig']]); }));
+    $cmp = [
+        'arrival'   => function ($a, $b) { return [$a['ArrivalMinute'], $a['TransferCount'], -$a['DepartureMinute']] <=> [$b['ArrivalMinute'], $b['TransferCount'], -$b['DepartureMinute']]; },
+        'transfers' => function ($a, $b) { return [$a['TransferCount'], $a['ArrivalMinute']] <=> [$b['TransferCount'], $b['ArrivalMinute']]; },
+        'duration'  => function ($a, $b) { return [$a['TravelMinutes'], $a['TransferCount'], $a['DepartureMinute']] <=> [$b['TravelMinutes'], $b['TransferCount'], $b['DepartureMinute']]; },
+        'late'      => function ($a, $b) { return [-$a['DepartureMinute'], $a['TransferCount'], $a['ArrivalMinute']] <=> [-$b['DepartureMinute'], $b['TransferCount'], $b['ArrivalMinute']]; },
+    ];
+    // 標籤：各排除條件最快（出發時刻模式＝最早到達，抵達時刻模式＝最晚出發）、最短行車時間、最少轉乘、直達
+    $rep = $back ? $cmp['late'] : $cmp['arrival'];
+    $best = [];
+    foreach ($masks as $mask) {
+        $c = array_values(array_filter($keep, function ($j) use ($mask, $modesOf) { return in_array($mask, $modesOf[$j['_sig']], true); }));
+        usort($c, $rep);
+        if (!$c) {
+            continue;
+        }
+        $tag = $mask === $extra ? 'Fastest' : (APP_JOURNEY_MODE_TAGS[$mask & 3] ?? null);
+        if ($tag !== null && ($tag === 'Fastest' || $c[0]['_sig'] !== ($best['Fastest'] ?? null))) {
+            $best[$tag] = $c[0]['_sig'];
+        }
+    }
+    foreach (['ShortestTime' => 'duration', 'FewestTransfers' => 'transfers'] as $tag => $s) {
+        $tmp = array_values(array_filter($keep, function ($j) use ($extra, $modesOf) { return in_array($extra, $modesOf[$j['_sig']], true); }));
+        usort($tmp, $cmp[$s]);
+        if ($tmp) {
+            $best[$tag] = $tmp[0]['_sig'];
+        }
+    }
+    usort($keep, $cmp[$sort]);
+    $total = count($keep);
+    $keep = array_slice($keep, 0, $limit);
+    $picks = [];
+    foreach ($keep as $i => &$j) {
+        $tags = [];
+        foreach ($best as $tag => $sig) {
+            if ($sig === $j['_sig']) {
+                $tags[] = $tag;
+                $picks[$tag] = $i;
+            }
+        }
+        if ($j['TransferCount'] === 0) {
+            $tags[] = 'Direct';
+        }
+        $j['Tags'] = $tags;
+        $j['Modes'] = $modesOf[$j['_sig']];
+        $src = $source[$j['_sig']] ?? [];
+        $j['Source'] = isset($src['routes'], $src['raptor']) ? 'both' : (isset($src['raptor']) ? 'raptor' : 'routes');
+        list($j['Category'], $j['CategoryName']) = appJourneyCategory($j);
+        unset($j['_sig'], $j['_slow'], $j['_raptor']);
+        $j = appJourneyStops($d, $j, $stops);
+    }
+    unset($j);
+    $bySource = array_count_values(array_column($keep, 'Source'));
+    return [[
+        'From' => ['StationUID' => $from, 'StationName' => $m['names'][$from] ?? null],
+        'To' => ['StationUID' => $to, 'StationName' => $m['names'][$to] ?? null],
+        'count' => count($keep), 'picks' => (object) $picks, 'tags' => APP_JOURNEY_TAGS, 'journeys' => $keep,
+        'note' => $keep ? null : ($mode === 'first' || $mode === 'last' ? '這一天找不到可到達的方案' : '這個時段找不到可到達的方案'),
+    ], ['week' => $week, 'weekday' => FINDER_WEEKDAYS[$week], 'date' => $date, 'mode' => $mode, 'full_search' => true]
+       + appTimeWindowMeta($back ? 'arr' : 'dep', $start, $end)
+       + ['sort' => $sort] + appExtraInfo($extra)
+       + ['modes' => array_intersect_key(APP_JOURNEY_FULL_MODES, array_flip(array_map(function ($x) { return $x & 3; }, $masks))),
+          'complete' => $stopped === null] + ($stopped !== null ? ['stopped' => $stopped] : [])
+       + ['found' => $total, 'sources' => $bySource, 'stat' => $stat, 'timing' => ['routes' => $tRoutes, 'raptor' => $tRaptor]]
        + ['seconds' => round(microtime(true) - $t0, 3)]];
 }
 
