@@ -96,6 +96,12 @@
             "default": 30,
             "desc": "journeys full_search（研究工具，一次最多算 12 秒）同一 IP 幾秒內只能執行一次，超過回 HTTP 429（錯誤代碼 42904）；執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP 記在 querylimit.sqlite 的 marks。0＝不限制；後臺身分不受限"
         },
+        "QUERY_MIRROR_IP_SECONDS": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 7200,
+            "desc": "admin_download/mirror（本機同步線上的離線資料，相當於 dump 資料）同一 IP 幾秒內只能取一次清單，超過回 HTTP 429（錯誤代碼 42904）；下載檔案要在這段時間內取過清單（否則 42905）。執行標記 REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP，後臺身分也受限。0＝不限制"
+        },
         "QUERY_MAX_RANGE_MINUTES": {
             "group": "查詢限制",
             "level": "public",

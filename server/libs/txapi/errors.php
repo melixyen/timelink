@@ -56,6 +56,8 @@ const APP_ERRORS = [
               'msg' => '登入失敗太多次：同一 IP 15 分鐘內最多 {max} 次，請 {retry} 秒後再試'],
     42904 => ['http' => 429, 'name' => 'RATE_LIMIT_MARK',
               'msg' => '{feature}：同一 IP {seconds} 秒內只能執行一次，請 {retry} 秒後再試'],
+    42905 => ['http' => 429, 'name' => 'RATE_LIMIT_MARK_SESSION',
+              'msg' => '{feature}：要先取得清單，清單取得後 {seconds} 秒內才能下載檔案'],
     // 503：後臺無法初始化
     50301 => ['http' => 503, 'name' => 'ADMIN_SECRET_MISSING',
               'msg' => '後臺需要 APP_SECRET_KEY，但無法寫入 custom/libs/config.json；請手動加上這一項後再試'],

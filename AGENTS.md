@@ -18,7 +18,9 @@ php server/agent/skills/data-pipeline/scripts/pipeline.php mirror --build
 - 會做什麼：讀 `GET /txapi/admin_download/mirror?service=tdx`（帶 `Authorization: Bearer <PAT>`）的清單，本機沒有或內容不同（大小、sha1）的檔案才下載，
   驗證 sha1、mtime 設成和主機一樣，存到本機資料根目錄的 `download/tdx/`；`--build` 接著重建本機 `sqlite/finder.sqlite`
 - 資料根目錄預設是 `server/`；要放到別處，在 `server/env_path.php`（不進版控）回傳路徑，見 README「資料目錄的位置」
-- 可以重複執行（資料有更新時再跑一次就同步）；`--dry-run` 只列出差異，`--prune` 刪掉主機已不再有的舊檔
+- 可以重複執行（資料有更新時再跑一次就同步）；`--prune` 刪掉主機已不再有的舊檔
+- **主機限制同一 IP 2 小時內只能同步一次**（避免被頻繁 dump；設定 `QUERY_MIRROR_IP_SECONDS`，PAT 也受限）：一次跑完，不要反覆執行；
+  `--dry-run` 也會取清單、算一次
 - 只讀主機既有存檔，不會讓主機向 TDX 下載、不耗 TDX 額度；沒帶 PAT 或錯誤回 401，沒有權限回 403
 - 不同步的：轉乘產生檔（本機第一次查詢自動重建）、加速清單（沒有時不套用加速，結果正確；要一樣就本機另跑 `pipeline.php learn`）、
   `custom/` 的設定與後臺帳號
