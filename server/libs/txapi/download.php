@@ -16,7 +16,7 @@
  *   /txapi/admin_download/refresh?service=tdx&path=…   重新向 TDX 取得並回傳檔案（寫入）
  *   /txapi/admin_download/mirror?service=tdx[&path=…]  鏡像（讀取）：主機上已存檔的清單（大小、mtime、sha1），帶 path 時回傳該存檔；
  *                                                      只提供既有存檔、不向 TDX 取得。本機新環境同步線上的離線資料用；
- *                                                      同一 IP QUERY_MIRROR_IP_SECONDS（7200）秒內最多呼叫 QUERY_MIRROR_IP_TIMES（200）次（清單、檔案各算一次）
+ *                                                      同一 IP QUERY_MIRROR_IP_SECONDS 秒內最多呼叫 QUERY_MIRROR_IP_TIMES 次（清單、檔案各算一次）
  *                                                      （agent/skills/data-pipeline/scripts/pipeline.php mirror）
  *
  * 清單範圍：軌道轉乘查詢（接軌時刻 TimeLink）所需的最小基礎資料：臺鐵、高鐵、臺北捷運、新北捷運（環狀線、三鶯線、
@@ -477,7 +477,7 @@ function actionAdminDownload()
         case 'refresh':
             downloadSend($service, true);
         case 'mirror':
-            // 避免被頻繁 dump（使用者規則 2026-11）：同一 IP 2 小時內最多呼叫 200 次（清單、每個檔案各算一次；後臺身分也受限；QUERY_LIMIT_MARKS）
+            // 避免被頻繁 dump（使用者規則 2026-11）：同一 IP QUERY_MIRROR_IP_SECONDS 秒內最多呼叫 QUERY_MIRROR_IP_TIMES 次（清單、每個檔案各算一次；後臺身分也受限；QUERY_LIMIT_MARKS）
             queryLimitMark('REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP');
             isset($_GET['path']) ? downloadMirrorSend($service) : downloadMirrorList($service);
     }
@@ -807,8 +807,8 @@ function downloadPrune($service)
 function downloadSendHelp()
 {
     $host = $_SERVER['HTTP_HOST'] ?? SITE_HOST;
-    $mirrorSec = defined('QUERY_MIRROR_IP_SECONDS') ? (int) QUERY_MIRROR_IP_SECONDS : 7200;
-    $mirrorTimes = defined('QUERY_MIRROR_IP_TIMES') ? (int) QUERY_MIRROR_IP_TIMES : 200;
+    $mirrorSec = (int) QUERY_MIRROR_IP_SECONDS;
+    $mirrorTimes = (int) QUERY_MIRROR_IP_TIMES;
     $groupRows = '';
     $counts = [];
     $total = ['n' => 0, 'd' => 0, 'b' => 0];

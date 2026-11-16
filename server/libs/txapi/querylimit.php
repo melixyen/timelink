@@ -126,21 +126,22 @@ function queryLimitCheck($action)
 }
 
 /**
- * 執行標記的設定：標記 => [時間窗秒數的設定項目, 可執行次數的設定項目, 預設秒數, 預設次數, 功能名稱（錯誤訊息用）, 後臺身分是否不受限]。
- *   REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP     journeys 的 full_search（研究工具，一次最多算 12 秒）：30 秒內 1 次；後臺身分不受限
- *   REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP    admin_download 的 mirror（本機同步線上的離線資料＝dump）：2 小時內 200 次（清單、每個檔案各算一次）；
+ * 執行標記的設定：標記 => [時間窗秒數的設定項目, 可執行次數的設定項目, 功能名稱（錯誤訊息用）, 後臺身分是否不受限]。
+ * 秒數與次數只寫在設定檔（libs/config.json 的預設值，各站在 custom/libs/config.json 或後臺「設定管理」覆蓋），程式不另存預設值。
+ *   REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP     journeys 的 full_search（研究工具）；後臺身分不受限
+ *   REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP    admin_download 的 mirror（本機同步線上的離線資料＝dump；清單、每個檔案各算一次）；
  *                                              本來就要 PAT，所以後臺身分也受限
  */
 const QUERY_LIMIT_MARKS = [
-    'REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP'  => ['QUERY_FULL_SEARCH_IP_SECONDS', 'QUERY_FULL_SEARCH_IP_TIMES', 30, 1, 'full_search', true],
-    'REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP' => ['QUERY_MIRROR_IP_SECONDS', 'QUERY_MIRROR_IP_TIMES', 7200, 200, 'mirror', false],
+    'REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP'  => ['QUERY_FULL_SEARCH_IP_SECONDS', 'QUERY_FULL_SEARCH_IP_TIMES', 'full_search', true],
+    'REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP' => ['QUERY_MIRROR_IP_SECONDS', 'QUERY_MIRROR_IP_TIMES', 'mirror', false],
 ];
 
-/** 標記的 [時間窗秒數, 可執行次數, 功能名稱, 後臺身分是否不受限]（設定檔沒寫用預設） */
+/** 標記的 [時間窗秒數, 可執行次數, 功能名稱, 後臺身分是否不受限]（秒數、次數讀設定檔） */
 function queryLimitMarkSettings($mark)
 {
-    list($secKey, $timesKey, $sec, $times, $feature, $exempt) = QUERY_LIMIT_MARKS[$mark];
-    return [defined($secKey) ? max(0, (int) constant($secKey)) : $sec, defined($timesKey) ? max(0, (int) constant($timesKey)) : $times, $feature, $exempt];
+    list($secKey, $timesKey, $feature, $exempt) = QUERY_LIMIT_MARKS[$mark];
+    return [max(0, (int) constant($secKey)), max(0, (int) constant($timesKey)), $feature, $exempt];
 }
 
 /**

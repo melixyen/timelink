@@ -549,7 +549,7 @@ function actionAppTrip()
                       'extra' => '排除位元 0～3', 'sort' => 'arrival（預設）／transfers／duration', 'max_transfers' => '最多轉乘次數', 'via' => '經由車站', 'limit' => '最多幾個（1～' . APP_JOURNEYS_LIMIT_MAX . '，預設 ' . APP_JOURNEYS_LIMIT_DEFAULT . '）',
                       'stops' => '1＝搭乘段帶途中各站時刻 StopTimes（預設）、0＝不帶',
                       'search_time' => 'HH:MM：只給一個出發（by=dep）或抵達（by=arr）時刻，列出最快的各種走法（每個走法類別最快一班＋各排除條件最快），不能與 start、end、first、last 併用',
-                      'full_search' => '1＝研究工具：時段內 extra 再加 0～3 每個排除條件所有互不支配的方案，最多算 ' . APP_JOURNEY_FULL_SECONDS . ' 秒；同一 IP ' . (defined('QUERY_FULL_SEARCH_IP_SECONDS') ? (int) QUERY_FULL_SEARCH_IP_SECONDS : 30) . ' 秒內最多 ' . (defined('QUERY_FULL_SEARCH_IP_TIMES') ? (int) QUERY_FULL_SEARCH_IP_TIMES : 1) . ' 次'],
+                      'full_search' => '1＝研究工具：時段內 extra 再加 0～3 每個排除條件所有互不支配的方案，最多算 ' . APP_JOURNEY_FULL_SECONDS . ' 秒；同一 IP ' . (int) QUERY_FULL_SEARCH_IP_SECONDS . ' 秒內最多 ' . (int) QUERY_FULL_SEARCH_IP_TIMES . ' 次'],
                      txapiUrl('app_trip', 'journeys', ['from' => 'TRA-0950', 'to' => 'TRA-1210', 'week' => 1, 'start' => '08:00', 'end' => '10:00'])],
     ]);
 }
