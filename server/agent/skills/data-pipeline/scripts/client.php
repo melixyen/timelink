@@ -64,6 +64,59 @@ class TdxSite
     }
 }
 
+/**
+ * 帶 PAT 下載檔案到 $dest（先寫 $dest.part，成功才改名）；回傳 ['http' => 狀態碼, 'headers' => [小寫名稱 => 值]]。
+ * 狀態碼不是 200 時不留檔（錯誤內容放在 'body'）；連線失敗丟例外
+ */
+function tdxDownloadFile(TdxSite $site, $key, array $params, $dest, $timeout = 600)
+{
+    $action = (string) ($params['action'] ?? '');
+    $func = (string) ($params['func'] ?? '');
+    unset($params['action'], $params['func']);
+    $url = $site->base . '/txapi/' . rawurlencode($action) . ($func !== '' ? '/' . rawurlencode($func) : '') . '?' . http_build_query($params);
+    if (!is_dir(dirname($dest))) {
+        mkdir(dirname($dest), 0755, true);
+    }
+    $part = $dest . '.part';
+    $fh = fopen($part, 'wb');
+    $headers = [];
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_FILE           => $fh,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_CONNECTTIMEOUT => 30,
+        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $key],
+        CURLOPT_USERAGENT      => 'tdx-agent-script/1.0',
+        CURLOPT_HEADERFUNCTION => function ($ch, $line) use (&$headers) {
+            $kv = explode(':', $line, 2);
+            if (count($kv) === 2) {
+                $headers[strtolower(trim($kv[0]))] = trim($kv[1]);
+            }
+            return strlen($line);
+        },
+    ]);
+    $ca = getenv('CURL_CA_BUNDLE') ?: getenv('SSL_CERT_FILE');
+    if ($ca && is_file($ca)) {
+        curl_setopt($ch, CURLOPT_CAINFO, $ca);
+    }
+    $ok = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+    fclose($fh);
+    if ($ok === false) {
+        @unlink($part);
+        throw new RuntimeException("連線失敗：$err（$url）");
+    }
+    if ($code !== 200) {
+        $body = (string) file_get_contents($part);
+        @unlink($part);
+        return ['http' => $code, 'headers' => $headers, 'body' => mb_substr($body, 0, 300)];
+    }
+    rename($part, $dest);
+    return ['http' => $code, 'headers' => $headers];
+}
+
 /** 解析命令列：位置參數與 --name=value／--flag */
 function tdxArgs(array $argv)
 {

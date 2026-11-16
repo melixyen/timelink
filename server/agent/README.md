@@ -21,7 +21,7 @@ PAT 在後臺頁面（網址見 custom/agent/README.md）登入後的「我的�
 
 | skill | 用途 |
 | --- | --- |
-| [data-pipeline](skills/data-pipeline/SKILL.md) | 資料更新流程：離線資料下載（TDX 同步、重建資料庫）與最佳化加速清單演算，可分段或串接執行；腳本 `scripts/pipeline.php`，排程方式 |
+| [data-pipeline](skills/data-pipeline/SKILL.md) | 資料更新流程：離線資料下載（TDX 同步、重建資料庫）與最佳化加速清單演算，可分段或串接執行；本機新環境同步線上的離線資料（`mirror`）；腳本 `scripts/pipeline.php`，排程方式 |
 | [metro-travel-time](skills/metro-travel-time/SKILL.md) | 捷運站間行駛時間（TDX S2STravelTime）存成路線站距表或原始起訖矩陣；獨立驗證腳本 `scripts/s2s_to_offsets.php` |
 | [rail-travel-time](skills/rail-travel-time/SKILL.md) | 各營運公司、各路線的起訖時刻與站間行駛時間：擁有的資料種類（列車時刻表、車站時刻表、路線站間行駛時間、兩站間行駛時間矩陣、營運班距）、取得方法的優先順序（真實 → 真實加推算 → 完全推算）與計算、推算方法；更新資料、新增車站時照做 |
 | [rail-transfer](skills/rail-transfer/SKILL.md) | 軌道轉乘：轉乘群組 TransferGroup 的產生與更新、路網結構搜尋、RAPTOR 時刻表轉乘查詢、固定路由組合的前後班次（func=follow）、車站搜尋（func=stations；字典腳本 `scripts/build_hanzi.php`），以及 railtime／rocptx 轉乘演算法的對照 |

@@ -30,6 +30,7 @@ API 說明在網站的 `/txapi/readme`（內容由 `server/libs/txapi/docs.php` 
 2. 建立 `custom/libs/config.json`，只寫要覆蓋預設值的項目（完整清單與說明在 `libs/config.json`），至少要有 `TDX_CLIENT_ID`、`TDX_CLIENT_SECRET`、`APP_SECRET_KEY`、`SITE_HOST`、`ALLOWED_ORIGINS`
 3. 第一次執行時會自動建立 `custom/`、`download/`、`sqlite/`（預設在網站根目錄，要放到別處見下面「資料目錄的位置」）；後臺的第一個管理者帳號在首次執行後限定時間內建立（細節見 `/txapi/readme` 的「後臺」一節）
 4. 下載離線資料、建立資料庫與轉乘加速清單：見 `server/agent/skills/data-pipeline/SKILL.md`
+   - 本機開發環境要和線上用同一份離線資料時，不必自己向 TDX 下載：`TDX_BASE=<線上主機> TDX_PAT=<後臺 PAT> php server/agent/skills/data-pipeline/scripts/pipeline.php mirror --build`（見 [AGENTS.md](AGENTS.md)）
 
 更新程式時只換 `libs/`、`agent/`、`index.php`、`.htaccess`；設定、資料庫、離線資料與產生檔都在其他目錄，不會被覆蓋。
 

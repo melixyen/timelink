@@ -445,7 +445,7 @@ TRA-0950.TRA.local.TRA-1000.TRA.express.TRA-3300                                
 | `admin_accounts` | `users`、`roles`、`routes`、`logs`、`tokens`；`user_create`、`user_update`、`user_delete`、`role_create`、`role_update`、`role_delete`、`token_revoke` | 帳號、角色與權限、登入紀錄（時間、IP）、所有 PAT |
 | `admin_settings` | `view`、`checklist`；`save`（POST changes）、`download`（POST，整包 custom/） | 設定管理：檢視、初始化檢查清單（新主機上線的步驟與下一步）、項目編輯器、整包下載（不提供上傳，請用 FTP） |
 | `admin_cache` | `summary`、`purge` | 見上方 |
-| `admin_download` | `sync`、`prune`、`refresh` | 見 `/txapi/download` 說明 |
+| `admin_download` | `sync`、`prune`、`refresh`、`mirror` | 見 `/txapi/download` 說明（`mirror`：讀取權限，主機上已存檔的清單與檔案，給本機新環境同步離線資料） |
 | `admin_download_to_sqlite` | `status`、`build` | 見上方 |
 | `admin_transfer` | `build_groups`、`learn`、`history`、`restore` | 轉乘群組產生、加速清單演算、產生檔舊版與換回。`transfer_seed.json` 改過（雜湊與上次重建不同）時，第一次查詢會自動重建轉乘群組與里程（不必手動 `build_groups`）。加速清單不因資料或轉乘群組更新而過期，有就一直使用；要更新才 `learn` 加 `force=1`，要撤銷用 `restore` |
 | `admin_finder` | `status`；其餘同 `/txapi/finder` 的查詢 | 面板「查詢功能」（`admin_finder`）、「查詢測試」（`admin_finder_try`） |

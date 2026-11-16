@@ -14,6 +14,9 @@
  *   /txapi/admin_download/sync?service=tdx             分批向 TDX 取得並存檔（寫入權限，重複呼叫直到 done）
  *   /txapi/admin_download/prune?service=tdx            列出（讀取）／刪除（confirm=1，寫入）不在清單內的舊存檔
  *   /txapi/admin_download/refresh?service=tdx&path=…   重新向 TDX 取得並回傳檔案（寫入）
+ *   /txapi/admin_download/mirror?service=tdx[&path=…]  鏡像（讀取）：主機上已存檔的清單（大小、mtime、sha1），帶 path 時回傳該存檔；
+ *                                                      只提供既有存檔、不向 TDX 取得。本機新環境同步線上的離線資料用
+ *                                                      （agent/skills/data-pipeline/scripts/pipeline.php mirror）
  *
  * 清單範圍：軌道轉乘查詢（接軌時刻 TimeLink）所需的最小基礎資料：臺鐵、高鐵、臺北捷運、新北捷運（環狀線、三鶯線、
  * 淡海輕軌、安坑輕軌）、桃園機場捷運、臺中捷運、高雄捷運、高雄輕軌的車站、路線、站序與里程、轉乘、定期時刻。
@@ -449,20 +452,22 @@ function actionDownload()
  *   func=sync     分批同步（寫入）
  *   func=prune    列出清單外的舊存檔（讀取）；confirm=1 實際刪除（寫入）
  *   func=refresh  重新向 TDX 取得 path 並回傳檔案（寫入）
+ *   func=mirror   鏡像（讀取）：已存檔清單（大小、mtime、sha1）；帶 path 回傳該存檔（不向 TDX 取得）
  */
 function actionAdminDownload()
 {
     $func = strtolower(trim((string) ($_GET['func'] ?? '')));
     $service = strtolower(trim((string) ($_GET['service'] ?? 'tdx')));
-    if (!in_array($func, ['sync', 'prune', 'refresh'], true)) {
+    $funcs = ['sync', 'prune', 'refresh', 'mirror'];
+    if (!in_array($func, $funcs, true)) {
         adminRequire('admin_download', 'read');
         sendJson(400, ['ok' => false, 'error' => $func === '' ? 'Missing func' : 'Unknown func: ' . $func,
-                       'funcs' => ['sync', 'prune', 'refresh'], 'help' => '/txapi/download/help']);
+                       'funcs' => $funcs, 'help' => '/txapi/download/help']);
     }
     if ($service !== 'tdx') {
         sendJson(400, ['ok' => false, 'error' => 'Unknown service: ' . $service, 'services' => ['tdx']]);
     }
-    adminRequire('admin_download', $func === 'prune' && empty($_GET['confirm']) ? 'read' : 'write');
+    adminRequire('admin_download', ($func === 'prune' && empty($_GET['confirm'])) || $func === 'mirror' ? 'read' : 'write');
     switch ($func) {
         case 'sync':
             downloadSync($service);
@@ -470,7 +475,70 @@ function actionAdminDownload()
             downloadPrune($service);
         case 'refresh':
             downloadSend($service, true);
+        case 'mirror':
+            isset($_GET['path']) ? downloadMirrorSend($service) : downloadMirrorList($service);
     }
+}
+
+/**
+ * func=mirror（不帶 path）：主機上已存檔的下載檔清單，給本機新環境同步線上的離線資料（讀取權限）。
+ * 每項帶 file（相對資料根目錄）、size、mtime（Unix 秒）、sha1；清單內還沒存檔的列在 missing（不會觸發 TDX 下載）。
+ * 本機照 file 存放、mtime 設成一樣，finder 資料庫就會依來源檔重建成同一份（finderDbSourceStat 比 mtime 與大小）
+ */
+function downloadMirrorList($service)
+{
+    @set_time_limit(120);
+    $items = [];
+    $missing = [];
+    $bytes = 0;
+    foreach (downloadCatalog($service) as $path => $cfg) {
+        $file = downloadFile($service, $path);
+        clearstatcache(true, $file);
+        if (!is_file($file)) {
+            $missing[] = $path;
+            continue;
+        }
+        $size = filesize($file);
+        $bytes += $size;
+        $items[] = ['path' => $path, 'file' => downloadRelPath($service, $path), 'size' => $size, 'mtime' => filemtime($file),
+                    'saved_at' => downloadFmtTime(filemtime($file)), 'sha1' => sha1_file($file)];
+    }
+    sendJson(200, [
+        'ok'       => true,
+        'action'   => 'admin_download',
+        'func'     => 'mirror',
+        'service'  => $service,
+        'root'     => 'download/' . $service . '/',
+        'summary'  => ['count' => count($items) + count($missing), 'stored' => count($items), 'missing' => count($missing), 'bytes' => $bytes],
+        'sqlite'   => function_exists('finderDbStatus') ? array_intersect_key(finderDbStatus(), array_flip(['exists', 'fresh', 'built_at'])) : null,
+        'items'    => $items,
+        'missing'  => $missing,
+        'file'     => '/txapi/admin_download/mirror?service=' . $service . '&path=<path>',
+    ]);
+}
+
+/** func=mirror&path=…：回傳主機上的存檔（只提供既有存檔，不向 TDX 取得；沒有存檔回 404）；標頭帶 X-Mirror-Mtime、X-Mirror-Sha1 */
+function downloadMirrorSend($service)
+{
+    $found = downloadFind($service, $_GET['path'] ?? '');
+    if ($found === null) {
+        sendJson(404, ['ok' => false, 'error' => 'Path not in download list: ' . (string) ($_GET['path'] ?? '')]);
+    }
+    $file = downloadFile($service, $found[0]);
+    clearstatcache(true, $file);
+    if (!is_file($file)) {
+        sendJson(404, ['ok' => false, 'error' => 'Not stored on this host (mirror never fetches from TDX): ' . $found[0]]);
+    }
+    @set_time_limit(300);
+    http_response_code(200);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Length: ' . filesize($file));
+    header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($file)) . ' GMT');
+    header('Cache-Control: no-store');
+    header('X-Mirror-Mtime: ' . filemtime($file));
+    header('X-Mirror-Sha1: ' . sha1_file($file));
+    readfile($file);
+    exit;
 }
 
 /** 有沒有後臺身分（面板登入或 PAT）：查詢次數與時間範圍不受限制 */
@@ -802,7 +870,7 @@ function downloadSendHelp()
 | 參數 | 必填 | 支援的值 | 說明 |
 | --- | --- | --- | --- |
 | `action` | 是 | `download` | 固定 |
-| `func` | 否 | `help`、`list`、`download`（`admin_download`：`sync`、`prune`、`refresh`） | 省略且沒有其他參數時等同 `help` |
+| `func` | 否 | `help`、`list`、`download`（`admin_download`：`sync`、`prune`、`refresh`、`mirror`） | 省略且沒有其他參數時等同 `help` |
 | `service` | `help` 以外必填 | `tdx` | 資料來源：TDX 運輸資料流通服務 |
 | `path` | `download` 必填 | 見 `func=list` | API 路徑，不分大小寫；不含 `/api/basic` 與查詢參數 |
 | `group` | 否 | 見下方「分組」 | `list`、`sync` 只處理該業者 |
@@ -881,6 +949,22 @@ Authorization: Bearer <PAT>
 ```
 
 - 先向 TDX 重新取得並存檔，再像 `func=download` 一樣回傳檔案
+
+### `func=mirror` — 鏡像主機上的存檔（`/txapi/admin_download`，讀取權限）
+
+```
+GET https://{$host}/txapi/admin_download/mirror?service=tdx                清單
+GET https://{$host}/txapi/admin_download/mirror?service=tdx&path=/v2/Rail/Metro/Station/TRTC   檔案
+Authorization: Bearer <PAT>
+```
+
+讓本機新建的開發環境與主機用同一份離線資料（查詢測試、比對）：
+
+- 不帶 `path`：主機上已存檔的每個檔案（`file` 相對資料根目錄、`size`、`mtime`、`sha1`），還沒存檔的列在 `missing`
+- 帶 `path`：回傳該存檔，標頭 `X-Mirror-Mtime`、`X-Mirror-Sha1`；**只提供既有存檔，不向 TDX 取得、不消耗額度**（沒有存檔回 404）
+- 本機照 `file` 存放並把 mtime 設成一樣，finder 資料庫就會依來源檔重建成同一份。
+  腳本：`TDX_BASE=<主機> TDX_PAT=<PAT> php agent/skills/data-pipeline/scripts/pipeline.php mirror [--build]`
+- 只含 TDX 下載檔；轉乘產生檔（轉乘群組、里程）本機第一次查詢自動重建，加速清單要在本機另跑 `learn`
 
 ## 時刻表
 

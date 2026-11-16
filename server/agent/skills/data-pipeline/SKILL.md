@@ -1,6 +1,6 @@
 ---
 name: data-pipeline
-description: 本站的資料更新流程：離線資料下載（TDX 同步、重建 finder 資料庫）與最佳化加速清單演算（轉乘群組、里程、推薦換車站與走廊），可以只跑其中一段，也可以串起來一段做完再做下一段。更新資料、排程或檢查流程時照做。
+description: 本站的資料更新流程：離線資料下載（TDX 同步、重建 finder 資料庫）、最佳化加速清單演算（轉乘群組、里程、推薦換車站與走廊），以及本機新環境同步線上的離線資料（mirror），可以只跑其中一段，也可以串起來一段做完再做下一段。更新資料、排程、檢查流程或建立本機測試環境時照做。
 ---
 
 # 資料更新流程（可分段、可串接）
@@ -15,6 +15,7 @@ description: 本站的資料更新流程：離線資料下載（TDX 同步、重
 TDX_BASE=https://<本站> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/scripts/pipeline.php download          # 只下載
 TDX_BASE=https://<本站> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/scripts/pipeline.php learn --verify=60 # 只重算加速清單並驗證
 TDX_BASE=https://<本站> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/scripts/pipeline.php download learn    # 先下載，完成後接著重算
+TDX_BASE=https://<線上主機> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/scripts/pipeline.php mirror --build # 本機：同步線上的離線資料並重建本機資料庫
 ```
 
 階段照寫的順序執行，前一個失敗就停下來。過程寫到 STDERR，最後一行 STDOUT 是摘要（JSON）；結束碼 0 成功、1 失敗或驗證不一致、2 用法錯誤。
@@ -27,6 +28,10 @@ TDX_BASE=https://<本站> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/sc
 | `--force` | learn：已有加速清單也重算（加速清單不會過期，不加 force 時 learn 一律跳過） |
 | `--reset` | learn：捨棄沒算完的進度，從頭算 |
 | `--max-minutes=N` | 整個流程最多跑幾分鐘，預設 180；超過就停，進度留在網站上，下次接著做 |
+| `--build` | mirror：同步完立刻重建本機 `sqlite/finder.sqlite`（不加時第一次查詢自動重建） |
+| `--prune` | mirror：刪掉本機 `download/tdx/` 裡主機清單沒有的檔案 |
+| `--dry-run` | mirror：只列出要下載、要刪除的檔案，不寫入 |
+| `--dir=PATH` | mirror：本機資料根目錄，預設 `libs/env_path.php` 的 `appEnvPath()`（`--build` 只能用預設） |
 
 ## 階段一：離線資料下載（download）
 
@@ -42,6 +47,29 @@ TDX_BASE=https://<本站> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/sc
 - 哪些檔案、多久更新一次：`libs/txapi/download.php` 的下載清單（`/txapi/download/list?service=tdx` 可看）
 - 只想重建資料庫：`/txapi/admin_download_to_sqlite/build`（後臺寫入權限）
 - 資料庫重建後，加速清單自動視為過期，查詢改為不套用加速（結果正確，只是慢一點），直到跑完階段二
+
+## 本機同步線上的離線資料（mirror）
+
+新建的本機開發環境（或 AI 代理的工作區）要和線上主機用**同一份離線資料**做查詢測試、比對時用。在本機執行，`TDX_BASE` 指向線上主機：
+
+```
+TDX_BASE=https://<線上主機> TDX_PAT=<後臺 PAT> php agent/skills/data-pipeline/scripts/pipeline.php mirror --build
+```
+
+```
+GET /txapi/admin_download/mirror?service=tdx（Authorization: Bearer <PAT>，admin_download 讀取權限）
+  ├─ 主機上已存檔的 TDX 下載檔清單：file（相對資料根目錄）、size、mtime、sha1；還沒存檔的列在 missing
+  └─ 本機沒有、或大小／sha1 不同的才下載：GET …/mirror?service=tdx&path=<path>（只給既有存檔，不會讓主機向 TDX 下載、不耗額度）
+       ├─ 先寫 .part，sha1 與標頭 X-Mirror-Sha1 相符才改名；mtime 設成主機的 X-Mirror-Mtime
+       └─ 存到本機資料根目錄的 download/tdx/（appEnvPath()，網站根目錄的 env_path.php 可以改位置）
+--build：在本機載入網站程式跑 finderDbEnsure()，依新的來源檔重建 sqlite/finder.sqlite（來源檔 mtime、大小沒變就不重建）
+```
+
+- 需要後臺帳號產生的 PAT（後臺「我的帳號」），角色要有 `admin_download` 的讀取權限；沒帶或錯誤回 401、沒有權限回 403
+- 可以重複執行：已相同的檔案不下載，只補 mtime；中斷後再跑一次會接著同步
+- 只同步 TDX 下載檔。轉乘產生檔（轉乘群組、里程，`custom/libs/txapi/transfer/data/`）本機第一次查詢時自動重建；
+  加速清單（`transfer_accel_learned.json`）沒有時查詢不套用加速（結果正確、比較慢），要一樣就在本機另跑 `learn`
+- 後臺帳號、設定與私密值（`custom/`）不在同步範圍，本機自己建立
 
 ## 階段二：最佳化加速清單演算（learn）
 

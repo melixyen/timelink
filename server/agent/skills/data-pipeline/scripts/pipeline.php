@@ -9,6 +9,10 @@
  * 階段（照寫的順序一個做完再做下一個；前一個失敗就停止）：
  *   download   離線資料下載：重複呼叫 /txapi/admin_download/sync 直到 done（遵守每分鐘 3 次的 TDX 呼叫限制，依 next_in 等待）；
  *              全部同步完成時網站會自動判斷資料有沒有變，有變就重建 sqlite/finder.sqlite
+ *   mirror     本機同步線上的離線資料（新建的開發環境、要和主機用同一份資料做查詢測試時）：讀 /txapi/admin_download/mirror
+ *              的清單（主機上已存檔的 TDX 下載檔），本機沒有或內容不同（大小、sha1）的才下載，下載後驗證 sha1、mtime 設成和主機一樣，
+ *              存到本機資料根目錄的 download/tdx/（libs/env_path.php 的 appEnvPath()，或 --dir=）。只讀主機既有存檔，不會觸發主機向 TDX 下載。
+ *              本機的 finder 資料庫第一次查詢時會依來源檔自動重建；加 --build 立刻重建
  *   learn      最佳化加速清單演算：/txapi/admin_transfer/build_groups（轉乘群組與里程，內容沒變不重寫）→
  *              重複呼叫 /txapi/admin_transfer/learn 直到 done（資料庫與輸入都沒變時直接跳過）；
  *              摘要的 changedFiles 列出這次有變動的產生檔（custom/libs/txapi/transfer/data/，舊版在 history/）
@@ -20,11 +24,16 @@
  *   --reset           learn：捨棄沒算完的進度，從頭算
  *   --verify=N        learn 完成後抽 N 組起訖比對加速開關（verify_accel.php），結果不同時結束碼為 1
  *   --max-minutes=N   整個流程最多跑幾分鐘（預設 180）
+ *   --dir=PATH        mirror：本機資料根目錄（預設 libs/env_path.php 的 appEnvPath()，也就是 server/ 或 env_path.php 指定的位置）
+ *   --prune           mirror：刪掉本機 download/tdx/ 裡主機清單沒有的檔案（主機已不再下載的舊檔）
+ *   --build           mirror：同步完立刻重建本機 sqlite/finder.sqlite（不加時第一次查詢自動重建）
+ *   --dry-run         mirror：只列出要下載、要刪除的檔案，不寫入
  *
  * 例：
  *   php pipeline.php download            只下載（必要時重建資料庫）
  *   php pipeline.php learn --verify=60   只重算加速清單並驗證
  *   php pipeline.php download learn      先下載，完成後接著重算
+ *   php pipeline.php mirror --build      本機新環境：同步線上的離線資料並重建本機資料庫（TDX_BASE 指向線上主機）
  *
  * 結束碼：0 成功、1 失敗或驗證不一致、2 用法錯誤。最後一行 STDOUT 是整個流程的摘要（JSON）。
  */
@@ -32,7 +41,7 @@
 require_once __DIR__ . '/client.php';
 require_once __DIR__ . '/../../rail-transfer-learn/scripts/verify_accel.php';
 
-const PIPELINE_STAGES = ['download', 'learn'];
+const PIPELINE_STAGES = ['download', 'learn', 'mirror'];
 
 /** 階段 download：同步 TDX 下載檔直到完成；回傳摘要 */
 function pipelineDownload(TdxSite $site, $deadline)
@@ -69,6 +78,97 @@ function pipelineDownload(TdxSite $site, $deadline)
         }
         sleep(max(1, (int) ($j['next_in'] ?? 5)));
     }
+}
+
+/** 階段 mirror：把主機上已存檔的 TDX 下載檔同步到本機資料根目錄；回傳摘要 */
+function pipelineMirror(TdxSite $site, $key, array $opt, $deadline)
+{
+    if (!$key) {
+        throw new RuntimeException('需要後臺 PAT：請設定環境變數 TDX_PAT 或使用 --key=');
+    }
+    require_once __DIR__ . '/../../../../libs/env_path.php';
+    $root = rtrim(str_replace('\\', '/', is_string($opt['dir'] ?? null) ? $opt['dir'] : appEnvPath()), '/');
+    $dry = !empty($opt['dry-run']);
+    $list = $site->get(['action' => 'admin_download', 'func' => 'mirror', 'service' => 'tdx'], true, 300);
+    if (empty($list['ok'])) {
+        throw new RuntimeException('/txapi/admin_download/mirror 失敗：' . ($list['error'] ?? 'HTTP ' . ($list['_http'] ?? '?')));
+    }
+    tdxLog(sprintf('mirror：主機上 %d 個存檔（%.1f MB），清單內還沒存檔 %d 個；本機資料根目錄 %s', $list['summary']['stored'],
+                   $list['summary']['bytes'] / 1048576, $list['summary']['missing'], $root));
+    $want = [];
+    $got = 0;
+    $same = 0;
+    $bytes = 0;
+    foreach ($list['items'] as $it) {
+        // 路徑只接受 download/tdx/ 底下、不含 ..（不信任回應內容寫到別處）
+        $rel = (string) $it['file'];
+        if (strncmp($rel, 'download/tdx/', 13) !== 0 || strpos($rel, '..') !== false || substr($rel, -5) !== '.json') {
+            throw new RuntimeException('清單裡的路徑不合法：' . $rel);
+        }
+        $dest = $root . '/' . $rel;
+        $want[$dest] = true;
+        $local = is_file($dest) && filesize($dest) === (int) $it['size'] && sha1_file($dest) === $it['sha1'];
+        if ($local) {
+            if (filemtime($dest) !== (int) $it['mtime'] && !$dry) {
+                touch($dest, (int) $it['mtime']);
+            }
+            $same++;
+            continue;
+        }
+        if (time() > $deadline) {
+            throw new RuntimeException('超過時間上限，同步尚未完成（再執行一次會接著同步）');
+        }
+        if ($dry) {
+            tdxLog('mirror：（dry-run）要下載 ' . $it['path']);
+            $got++;
+            $bytes += $it['size'];
+            continue;
+        }
+        $r = tdxDownloadFile($site, $key, ['action' => 'admin_download', 'func' => 'mirror', 'service' => 'tdx', 'path' => $it['path']], $dest);
+        if ($r['http'] !== 200) {
+            throw new RuntimeException('下載失敗 ' . $it['path'] . '：HTTP ' . $r['http'] . ' ' . ($r['body'] ?? ''));
+        }
+        if (sha1_file($dest) !== ($r['headers']['x-mirror-sha1'] ?? $it['sha1'])) {
+            @unlink($dest);
+            throw new RuntimeException('下載內容的 sha1 不符（傳輸中斷或主機剛好在更新）：' . $it['path']);
+        }
+        touch($dest, (int) ($r['headers']['x-mirror-mtime'] ?? $it['mtime']));
+        $got++;
+        $bytes += filesize($dest);
+        tdxLog(sprintf('mirror：已下載 %s（%.1f MB）', $it['path'], filesize($dest) / 1048576));
+    }
+    $pruned = [];
+    if (!empty($opt['prune']) && is_dir($root . '/download/tdx')) {
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/download/tdx', FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $f) {
+            $p = str_replace('\\', '/', $f->getPathname());
+            if ($f->isFile() && substr($p, -5) === '.json' && !isset($want[$p])) {
+                $pruned[] = substr($p, strlen($root) + 1);
+                if (!$dry) {
+                    unlink($p);
+                }
+            }
+        }
+        tdxLog('mirror：' . ($dry ? '（dry-run）要刪除' : '刪除') . '主機清單沒有的本機檔案 ' . count($pruned) . ' 個');
+    }
+    tdxLog(sprintf('mirror：%s %d 個（%.1f MB），本機已相同 %d 個', $dry ? '（dry-run）要下載' : '下載', $got, $bytes / 1048576, $same));
+    $res = ['root' => $root, 'stored' => $list['summary']['stored'], 'downloaded' => $got, 'unchanged' => $same, 'bytes' => $bytes,
+            'pruned' => $pruned, 'hostMissing' => $list['missing'], 'hostSqlite' => $list['sqlite'] ?? null, 'dryRun' => $dry];
+    if (!empty($opt['build']) && !$dry) {
+        // 在本機載入網站程式，依新的來源檔重建 finder 資料庫（和主機的 /txapi/admin_download_to_sqlite/build 相同）
+        if (is_string($opt['dir'] ?? null) && rtrim($opt['dir'], '/') !== rtrim(appEnvPath(), '/')) {
+            throw new RuntimeException('--build 只能用在本機網站的資料根目錄（--dir 指到別處時請在該環境另外重建）');
+        }
+        $libs = __DIR__ . '/../../../../libs';
+        foreach (['config.php', 'http.php', 'sqlite.php', 'tdx.php', 'proxy.php', 'ratelimit.php', 'railcache.php', 'txapi/txapi.php'] as $lib) {
+            require_once $libs . '/' . $lib;
+        }
+        $t = microtime(true);
+        $e = finderDbEnsure();
+        $res['localSqlite'] = ['rebuilt' => !empty($e['rebuilt']), 'seconds' => round(microtime(true) - $t, 1)];
+        tdxLog('mirror：本機 finder 資料庫' . (!empty($e['rebuilt']) ? sprintf('已重建（%.1f 秒）', microtime(true) - $t) : '已是最新，不必重建'));
+    }
+    return $res;
 }
 
 /** 階段 learn：重建轉乘群組與里程，再重算加速清單；回傳摘要 */
@@ -144,7 +244,7 @@ if (PHP_SAPI === 'cli' && realpath($argv[0] ?? '') === __FILE__) {
     list($stages, $opt) = tdxArgs($argv);
     $bad = array_diff($stages, PIPELINE_STAGES);
     if (!$stages || $bad) {
-        fwrite(STDERR, ($bad ? '不認得的階段：' . implode(', ', $bad) . "\n" : '') . "用法：TDX_BASE=<站址> TDX_PAT=<後臺 PAT> php pipeline.php <download|learn …> [--verify=N] [--force] [--reset] [--base=URL]\n");
+        fwrite(STDERR, ($bad ? '不認得的階段：' . implode(', ', $bad) . "\n" : '') . "用法：TDX_BASE=<站址> TDX_PAT=<後臺 PAT> php pipeline.php <download|learn|mirror …> [--verify=N] [--force] [--reset] [--build] [--prune] [--dry-run] [--dir=PATH] [--base=URL]\n");
         exit(2);
     }
     $site = new TdxSite(tdxBase($opt), tdxCredential($opt));
@@ -155,7 +255,8 @@ if (PHP_SAPI === 'cli' && realpath($argv[0] ?? '') === __FILE__) {
         $t0 = microtime(true);
         tdxLog("== 階段 $st 開始");
         try {
-            $r = $st === 'download' ? pipelineDownload($site, $deadline) : pipelineLearn($site, $opt, $deadline);
+            $r = $st === 'download' ? pipelineDownload($site, $deadline)
+               : ($st === 'mirror' ? pipelineMirror($site, tdxCredential($opt), $opt, $deadline) : pipelineLearn($site, $opt, $deadline));
             $r['ok'] = true;
             if (!empty($r['verify']['diff'])) {
                 $code = 1;
