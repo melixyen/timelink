@@ -10,8 +10,8 @@
  * - 每個回應帶 X-Query-Limit-Minute／X-Query-Remaining-Minute／X-Query-Limit-Hour／X-Query-Remaining-Hour
  *
  * 執行標記（queryLimitMark）：特定的重功能（例如 journeys 的 full_search）另外限制「同一 IP 幾秒內只能執行一次」。
- * 同一個資料庫的 marks 表是執行紀錄（IP 雜湊、標記名稱、時間），一般 API 不寫；帶標記的功能被呼叫時先用 SQL 查這個 IP
- * 在時間內有沒有同一個標記的紀錄，有就回 429（42904），沒有就寫入一筆再開始執行（查與寫在同一個交易，同時送來的請求只有一個會通過）
+ * 同一個資料庫的 marks 表是每個 IP、每個標記最後一次執行的時間（主鍵 IP 雜湊＋標記名稱），一般 API 不寫；帶標記的功能被呼叫時先用 SQL 查這個 IP
+ * 這個標記的時間，在限制秒數內就回 429（42904），否則更新時間（第一次才新增）再開始執行（查與寫在同一個交易，同時送來的請求只有一個會通過）
  */
 
 const QUERY_LIMIT_ACTIONS = ['transfer', 'finder'];
@@ -126,7 +126,7 @@ function queryLimitCheck($action)
 /**
  * 執行標記：同一 IP 在 $seconds 秒內執行過同一個標記（$mark，例如 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP）的功能就回 429（42904）結束；
  * 沒有就寫一筆執行紀錄，呼叫端接著執行。$seconds <= 0 或有後臺身分（面板登入或 PAT）時不限制。
- * 紀錄存在 querylimit.sqlite 的 marks（k＝IP 雜湊、mark、at＝Unix 秒），偶爾清掉一天以前的
+ * 紀錄存在 querylimit.sqlite 的 marks（主鍵 k＝IP 雜湊＋mark，at＝最後一次執行的 Unix 秒；同一 IP 更新、新的 IP 才新增），偶爾清掉一天沒再來的
  */
 function queryLimitMark($mark, $seconds, $feature)
 {
@@ -144,21 +144,26 @@ function queryLimitMark($mark, $seconds, $feature)
                        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 3]);
         $pdo->exec('PRAGMA journal_mode = WAL');
         $pdo->exec('PRAGMA synchronous = NORMAL');
-        $pdo->exec('CREATE TABLE IF NOT EXISTS marks (k TEXT NOT NULL, mark VARCHAR(80) NOT NULL, at INTEGER NOT NULL)');
-        $pdo->exec('CREATE INDEX IF NOT EXISTS marks_k_mark_at ON marks (k, mark, at)');
+        // 每個 IP、每個標記一列（主鍵 k＋mark），at＝最後一次執行；舊版沒有主鍵的 marks（每次一列）直接重建（只是限制頻率用的紀錄）
+        $old = $pdo->query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'marks'")->fetchColumn();
+        if ($old !== false && stripos((string) $old, 'PRIMARY KEY') === false) {
+            $pdo->exec('DROP TABLE marks');
+        }
+        $pdo->exec('CREATE TABLE IF NOT EXISTS marks (k TEXT NOT NULL, mark VARCHAR(80) NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (k, mark)) WITHOUT ROWID');
         $pdo->exec('BEGIN IMMEDIATE');
-        $sel = $pdo->prepare('SELECT MAX(at) FROM marks WHERE k = ? AND mark = ? AND at > ?');
-        $sel->execute([$key, $mark, $now - $seconds]);
+        $sel = $pdo->prepare('SELECT at FROM marks WHERE k = ? AND mark = ?');
+        $sel->execute([$key, $mark]);
         $last = $sel->fetchColumn();
-        if ($last !== null && $last !== false) {
+        if ($last !== false && (int) $last > $now - $seconds) {
             $pdo->exec('COMMIT');
             $retry = max(1, (int) $last + $seconds - $now);
             header('Retry-After: ' . $retry);
             appError(42904, ['feature' => $feature, 'seconds' => $seconds, 'retry' => $retry], ['retryAfter' => $retry, 'mark' => $mark]);
         }
-        $pdo->prepare('INSERT INTO marks (k, mark, at) VALUES (?, ?, ?)')->execute([$key, $mark, $now]);
+        // 同一個 IP、同一個標記已經有紀錄就更新時間，第一次才新增（表的大小只跟 IP 數有關，不會每次呼叫多一列）
+        $pdo->prepare('INSERT INTO marks (k, mark, at) VALUES (?, ?, ?) ON CONFLICT (k, mark) DO UPDATE SET at = excluded.at')->execute([$key, $mark, $now]);
         if (mt_rand(1, 200) === 1) {
-            $pdo->prepare('DELETE FROM marks WHERE at < ?')->execute([$now - 86400]);
+            $pdo->prepare('DELETE FROM marks WHERE at < ?')->execute([$now - 86400]);   // 一天沒再來的 IP
         }
         $pdo->exec('COMMIT');
     } catch (Throwable $e) {

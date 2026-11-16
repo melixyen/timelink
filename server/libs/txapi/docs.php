@@ -275,7 +275,7 @@ GET https://{$host}/txapi/transfer/stations?q=台北                            
 
 - 同一 IP 每分鐘最多 {$qMin}、每小時最多 {$qHour}查詢（說明文件不計），超過回 HTTP 429 與 `Retry-After`；來源網域不限
 - 轉乘查詢（route、follow）的出發時間範圍最長 {$qRange}
-- 特定的重功能另外有執行標記：`journeys` 的 `full_search=1`（標記 `REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP`）同一 IP {$fullIp} 秒內只能執行一次，超過回 429（42904）與 `Retry-After`（`QUERY_FULL_SEARCH_IP_SECONDS`；執行紀錄存在 querylimit.sqlite 的 marks，IP 只存雜湊）
+- 特定的重功能另外有執行標記：`journeys` 的 `full_search=1`（標記 `REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP`）同一 IP {$fullIp} 秒內只能執行一次，超過回 429（42904）與 `Retry-After`（`QUERY_FULL_SEARCH_IP_SECONDS`；querylimit.sqlite 的 marks 每個 IP、每個標記只記最後一次執行的時間，IP 只存雜湊）
 - 上限設定在 `custom/libs/config.json`（`QUERY_RATE_LIMIT_PER_MINUTE`、`QUERY_RATE_LIMIT_PER_HOUR`、`QUERY_MAX_RANGE_MINUTES`）
 - 錯誤回應帶 `errorCode`、`errorName`、`errorMsg`；代碼表 `GET https://{$host}/txapi/errors`（`libs/txapi/errors.php` 的 `APP_ERRORS`）
 
