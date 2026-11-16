@@ -164,6 +164,24 @@ code {
   margin-top: 14px;
 }
 
+/* 時刻檢索：旅客模式／研究模式切換（說明文字跟在按鈕後面，手機時換行） */
+.mode-item {
+  margin-top: 14px;
+}
+
+.mode-hint {
+  margin-left: 10px;
+  font-size: var(--train-ui-font-size-sm);
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .mode-hint {
+    display: block;
+    margin: 6px 0 0;
+  }
+}
+
 /* 起訖站：出發站｜交換鈕｜到達站。交換鈕對齊輸入框（40px）的中線，圖示轉成左右向 */
 .station-pair {
   display: grid;

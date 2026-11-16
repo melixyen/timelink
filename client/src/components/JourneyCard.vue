@@ -12,13 +12,19 @@ const props = defineProps({
   index: { type: Number, default: 0 },
   /** 查詢的星期（0～6）：停靠站視窗查 app_train/stops 時帶入 */
   week: { type: [Number, String], default: null },
+  /** 時刻檢索的旅客模式（search_time）以抵達時刻為準（by=arr）時：Fastest 是「最晚出發」 */
+  latestFirst: { type: Boolean, default: false },
 })
 
 const { t } = useI18n()
 const lineStore = usePublicLineStore()
 
 /** 標記（Fastest、ShortestTime…）改用本地語言 */
-const tagLabels = computed(() => (props.journey.Tags || []).map((tag) => t(`journey.tag.${tag}`)))
+const tagLabels = computed(() =>
+  (props.journey.Tags || []).map((tag) =>
+    tag === 'Fastest' && props.latestFirst ? t('search.quickSort.latest') : t(`journey.tag.${tag}`),
+  ),
+)
 
 const legs = computed(() => props.journey.Legs || [])
 

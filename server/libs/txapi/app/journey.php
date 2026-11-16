@@ -1149,6 +1149,21 @@ function appJourneysCompute(array $q)
         foreach ($diverse as $j) {
             $sel[$j['_sig']] = $j;
         }
+        // 最少轉乘、最短行車時間的第一名也一定附上：前端在最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間之間切換排序時不必重新查詢
+        $fewest = null;
+        $shortest = null;
+        foreach ($pool as $j) {
+            if ($fewest === null || ($back ? [$j['TransferCount'], -$j['DepartureMinute'], $j['ArrivalMinute']] < [$fewest['TransferCount'], -$fewest['DepartureMinute'], $fewest['ArrivalMinute']]
+                                           : [$j['TransferCount'], $j['ArrivalMinute'], -$j['DepartureMinute']] < [$fewest['TransferCount'], $fewest['ArrivalMinute'], -$fewest['DepartureMinute']])) {
+                $fewest = $j;
+            }
+            if ($shortest === null || [$j['TravelMinutes'], $j['TransferCount'], $back ? -$j['DepartureMinute'] : $j['ArrivalMinute']]
+                                      < [$shortest['TravelMinutes'], $shortest['TransferCount'], $back ? -$shortest['DepartureMinute'] : $shortest['ArrivalMinute']]) {
+                $shortest = $j;
+            }
+        }
+        $sel[$fewest['_sig']] = $fewest;
+        $sel[$shortest['_sig']] = $shortest;
         $shortAt = null;
         foreach ($catBestAll + $sel as $j) {
             if ($shortAt === null || [$j['TravelMinutes'], $j['TransferCount']] < [$shortAt['TravelMinutes'], $shortAt['TransferCount']]) {
@@ -1187,6 +1202,12 @@ function appJourneysCompute(array $q)
         if ($j['_sig'] !== $refSig) {
             $best[$tag] = $j['_sig'];
         }
+    }
+    // search_time：三個排序的代表就是選進來的第一名——最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間
+    if (!empty($q['pickAt']) && isset($first)) {
+        $best['Fastest'] = $first['_sig'];
+        $best['FewestTransfers'] = $fewest['_sig'];
+        $best['ShortestTime'] = $shortest['_sig'];
     }
     usort($keep, $cmp[$sort]);
     // 前 limit 個以外，各標籤（最早到達、最短行車時間、最少轉乘）的代表方案也一定附上，接在後面

@@ -4,22 +4,25 @@
  *
  * 依後端給的三個代表方案（Fastest／ShortestTime／FewestTransfers）切換；
  * 再按同一個按鈕取消排序，回到原本的順序。
+ * 抵達時刻模式（by=arr）的 Fastest 是「最晚出發」（後端的代表方案也是最晚出發的那班）。
  */
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
+  by: { type: String, default: 'dep' },
 })
 
 const emit = defineEmits(['update:modelValue'])
 const { t } = useI18n()
 
-const modes = [
-  { value: 'Fastest', labelKey: 'journey.tag.Fastest' },
+const modes = computed(() => [
+  { value: 'Fastest', labelKey: props.by === 'arr' ? 'search.quickSort.latest' : 'journey.tag.Fastest' },
   { value: 'ShortestTime', labelKey: 'journey.tag.ShortestTime' },
   { value: 'FewestTransfers', labelKey: 'journey.tag.FewestTransfers' },
-]
+])
 
 function pick(value) {
   emit('update:modelValue', props.modelValue === value ? '' : value)

@@ -30,16 +30,24 @@ export function byOptions() {
 }
 
 /**
- * 時刻表 / 轉乘查詢。
- * 資料來源：/txapi/app_trip/journeys（路由與時刻表組合由後端計算，前端只負責呈現）
+ * 時刻檢索（轉乘查詢）。
+ * 資料來源：/txapi/app_trip/journeys（路由與時刻表組合由後端計算，前端只負責呈現）；
+ * 旅客模式帶 search_time，研究模式帶 start、end
  */
 export const useSearchStore = defineStore('search', () => {
   const publicStation = usePublicStationStore()
   const publicLine = usePublicLineStore()
+  /**
+   * mode：traveler（旅客模式，預設）只給一個時刻 time，後端 search_time 列出各種走法最接近的那幾班
+   * （by=dep 最早到達、by=arr 最晚出發；最早到達／最少轉乘／最短行車時間的第一名都在結果裡，切換排序不必重新查詢）；
+   * research（研究模式）給 start～end 時段，列出時段內所有班次
+   */
   const form = reactive({
+    mode: 'traveler',
     from: config.defaultFromStation,
     to: config.defaultToStation,
     week: config.defaultWeek,
+    time: config.defaultStartTime,
     start: config.defaultStartTime,
     end: config.defaultEndTime,
     by: 'dep',
@@ -47,6 +55,7 @@ export const useSearchStore = defineStore('search', () => {
     extra: 0,
     limit: config.defaultResultLimit,
   })
+  const isTraveler = computed(() => form.mode !== 'research')
 
   const journeys = ref([])
   const picks = ref({})
@@ -77,6 +86,8 @@ export const useSearchStore = defineStore('search', () => {
    * 用全部方案計算（不受路由勾選影響），與後端一致。
    */
   const slowOver = computed(() => {
+    // 旅客模式（search_time）：每一班都是某種走法或條件的代表，後端不把慢的往後排，前端也不排
+    if (meta.value?.search_time) return Infinity
     let short = null
     journeys.value.forEach((j) => {
       if (typeof j.TravelMinutes !== 'number') return
@@ -100,6 +111,14 @@ export const useSearchStore = defineStore('search', () => {
    */
   function quickCompare(mode, over) {
     const slow = (j) => (j.TravelMinutes > over ? 1 : 0)
+    // 抵達時刻模式（by=arr）的第一個排序是「最晚出發」：同後端代表方案的挑法
+    if (mode === 'Fastest' && meta.value?.by === 'arr') {
+      return (a, b) =>
+        slow(a) - slow(b) ||
+        b.DepartureMinute - a.DepartureMinute ||
+        a.TransferCount - b.TransferCount ||
+        a.ArrivalMinute - b.ArrivalMinute
+    }
     if (mode === 'Fastest') {
       return (a, b) =>
         slow(a) - slow(b) ||
@@ -265,19 +284,31 @@ export const useSearchStore = defineStore('search', () => {
     error.value = ''
     hiddenRoutes.value = new Set()
     quickSort.value = ''
+    // 旅客模式只給一個時刻（search_time），不指定路由（指定路由屬於研究模式）
+    if (isTraveler.value) pickedRoutes.value = []
     const routed = pickedRoutes.value.length > 0
-    const params = {
-      from: form.from,
-      to: form.to,
-      week: form.week,
-      start: form.start,
-      end: form.end,
-      by: form.by,
-      sort: form.sort,
-      extra: form.extra,
-      limit: routed ? config.pickedResultLimit : form.limit,
-      routes: routed ? pickedRoutes.value.join(',') : undefined,
-    }
+    const params = isTraveler.value
+      ? {
+          from: form.from,
+          to: form.to,
+          week: form.week,
+          search_time: form.time,
+          by: form.by,
+          extra: form.extra,
+          limit: form.limit,
+        }
+      : {
+          from: form.from,
+          to: form.to,
+          week: form.week,
+          start: form.start,
+          end: form.end,
+          by: form.by,
+          sort: form.sort,
+          extra: form.extra,
+          limit: routed ? config.pickedResultLimit : form.limit,
+          routes: routed ? pickedRoutes.value.join(',') : undefined,
+        }
     try {
       let res = await api.journeys(params)
       if (routed && !res.meta?.fixed) res = await fetchByRouteTrains(params)
@@ -306,6 +337,7 @@ export const useSearchStore = defineStore('search', () => {
 
   return {
     form,
+    isTraveler,
     journeys,
     picks,
     tags,

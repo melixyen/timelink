@@ -54,10 +54,29 @@ function setNow() {
   const h = now.getHours()
   const m = Math.min(55, Math.ceil(now.getMinutes() / 5) * 5)
   const pad = (n) => String(n).padStart(2, '0')
+  form.time = `${pad(h)}:${pad(m)}`
   form.start = `${pad(h)}:${pad(m)}`
   form.end = `${pad((h + 2) % 24)}:${pad(m)}`
   form.week = now.getDay()
 }
+
+/** 旅客模式（預設，只給一個時刻）／研究模式（給時段） */
+const modeList = computed(() => [
+  { value: 'traveler', label: t('search.mode.traveler') },
+  { value: 'research', label: t('search.mode.research') },
+])
+const isTraveler = computed(() => search.isTraveler)
+
+/**
+ * 旅客模式：改了不搭的列車（extra）就重新查詢（結果依條件不同）；
+ * 切換排序（最早到達、最少轉乘、最短行車時間）只在前端重排，不必重新查詢
+ */
+watch(
+  () => form.extra,
+  () => {
+    if (isTraveler.value && search.searched && !search.loading && search.canSearch) doSearch()
+  },
+)
 
 function exchange() {
   const tmp = form.from
@@ -66,15 +85,19 @@ function exchange() {
 }
 
 function syncUrl() {
+  const traveler = isTraveler.value
   router.replace({
     path: '/search',
     query: {
+      m: traveler ? undefined : 'research',
       a: form.from,
       b: form.to,
       w: String(form.week),
-      startTime: form.start,
-      endTime: form.end,
-      r: search.pickedRoutes.length ? search.pickedRoutes.join(',') : undefined,
+      time: traveler ? form.time : undefined,
+      by: form.by !== 'dep' ? form.by : undefined,
+      startTime: traveler ? undefined : form.start,
+      endTime: traveler ? undefined : form.end,
+      r: !traveler && search.pickedRoutes.length ? search.pickedRoutes.join(',') : undefined,
     },
   })
 }
@@ -124,26 +147,34 @@ onMounted(async () => {
   lineStore.ensureLoaded().catch(() => {})
 
   const q = route.query
+  // 舊網址只有 startTime／endTime（時段）：當研究模式開
+  const mode = q.m === 'research' || (!q.time && (q.startTime || q.endTime)) ? 'research' : 'traveler'
   const from = q.a ? String(q.a) : ''
   const to = q.b ? String(q.b) : ''
   const week = q.w !== undefined ? Number(q.w) : null
+  const time = q.time ? String(q.time) : ''
+  const by = q.by === 'arr' ? 'arr' : 'dep'
   const start = q.startTime ? String(q.startTime) : ''
   const end = q.endTime ? String(q.endTime) : ''
-  const routes = q.r ? String(q.r).split(',').filter(Boolean) : []
+  const routes = mode === 'research' && q.r ? String(q.r).split(',').filter(Boolean) : []
 
   // 條件有變才重設表單；條件相同時沿用既有結果，不重複查詢
   const same =
+    form.mode === mode &&
     form.from === from &&
     form.to === to &&
     form.week === week &&
-    form.start === start &&
-    form.end === end &&
+    form.by === by &&
+    (mode === 'traveler' ? form.time === time : form.start === start && form.end === end) &&
     search.pickedRoutes.join(',') === routes.join(',')
   if (!from || !to) return
   if (same && search.journeys.length) return
+  form.mode = mode
   form.from = from
   form.to = to
+  form.by = by
   if (week !== null) form.week = week
+  if (time) form.time = time
   if (start) form.start = start
   if (end) form.end = end
   if (routes.length) searchRoutes(routes)
@@ -185,15 +216,28 @@ onMounted(async () => {
             <StationSelect v-model="form.to" label-key="search.to" />
           </div>
 
+          <!-- 旅客模式（預設）只給一個時刻；研究模式給時段 -->
+          <train-form-item :label="t('search.mode')" class="mode-item">
+            <train-radio-group v-model="form.mode" :options="modeList" button size="small" />
+            <span class="mode-hint">{{ isTraveler ? t('search.mode.travelerHint') : t('search.mode.researchHint') }}</span>
+          </train-form-item>
+
           <div class="control-grid time-grid">
-            <train-form-item :label="t('search.startFrom')">
-              <train-time-select v-model="form.start" />
+            <train-form-item v-if="isTraveler" :label="t('search.time')">
+              <train-time-select v-model="form.time" />
               <train-button size="small" round icon="clock" @click="setNow">{{ t('search.setNow') }}</train-button>
             </train-form-item>
 
-            <train-form-item :label="t('search.endAt')">
-              <train-time-select v-model="form.end" />
-            </train-form-item>
+            <template v-else>
+              <train-form-item :label="t('search.startFrom')">
+                <train-time-select v-model="form.start" />
+                <train-button size="small" round icon="clock" @click="setNow">{{ t('search.setNow') }}</train-button>
+              </train-form-item>
+
+              <train-form-item :label="t('search.endAt')">
+                <train-time-select v-model="form.end" />
+              </train-form-item>
+            </template>
 
             <train-form-item :label="t('search.week')">
               <train-select v-model="form.week" :options="weekOptions" />
@@ -203,7 +247,7 @@ onMounted(async () => {
               <train-radio-group v-model="form.by" :options="byList" />
             </train-form-item>
 
-            <train-form-item :label="t('search.sort')">
+            <train-form-item v-if="!isTraveler" :label="t('search.sort')">
               <train-select v-model="form.sort" :options="sortList" />
             </train-form-item>
 
@@ -250,7 +294,8 @@ onMounted(async () => {
         {{ t('search.result.title') }}
         <span class="result-count">{{ t('search.result.count', { count: resultCount }) }}</span>
       </template>
-      <template #extra>
+      <!-- 指定路由查詢屬於研究模式（旅客模式只給一個時刻） -->
+      <template v-if="!isTraveler" #extra>
         <train-button type="primary" plain round icon="route" :disabled="search.loading" @click="pickerOpen = true">
           {{ t('picker.open') }}
         </train-button>
@@ -258,17 +303,24 @@ onMounted(async () => {
 
       <p v-if="search.meta" class="meta-line">
         {{
-          t('search.result.cond', {
-            week: weekList[form.week],
-            start: form.start,
-            end: form.end,
-            by: form.by === 'dep' ? t('search.result.byDep') : t('search.result.byArr'),
-            updated: search.meta.dataUpdatedAt || '－',
-          })
+          search.meta.search_time
+            ? t('search.result.condAt', {
+                week: weekList[form.week],
+                time: search.meta.search_time,
+                by: search.meta.by === 'arr' ? t('by.arr') : t('by.dep'),
+                updated: search.meta.dataUpdatedAt || '－',
+              })
+            : t('search.result.cond', {
+                week: weekList[form.week],
+                start: form.start,
+                end: form.end,
+                by: form.by === 'dep' ? t('search.result.byDep') : t('search.result.byArr'),
+                updated: search.meta.dataUpdatedAt || '－',
+              })
         }}
       </p>
 
-      <train-alert v-if="search.pickedRoutes.length" type="info" class="picked-banner">
+      <train-alert v-if="!isTraveler && search.pickedRoutes.length" type="info" class="picked-banner">
         <span>{{ t('search.picked.banner', { count: search.pickedRoutes.length }) }}</span>
         <span class="picked-actions">
           <train-button size="small" type="primary" plain @click="pickerOpen = true">
@@ -285,6 +337,7 @@ onMounted(async () => {
         v-model="search.quickSort"
         class="quick-sort-bar"
         :disabled="search.loading"
+        :by="search.meta?.by === 'arr' ? 'arr' : 'dep'"
       />
 
       <RouteFilter
@@ -308,6 +361,7 @@ onMounted(async () => {
         :journey="journey"
         :index="i"
         :week="search.meta?.week ?? search.form.week"
+        :latest-first="!!search.meta?.search_time && search.meta?.by === 'arr'"
       />
     </train-card>
 

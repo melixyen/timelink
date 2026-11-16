@@ -393,7 +393,8 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
       時間 快取沒命中 0.181→0.187 秒、命中 0.098→0.114 秒
     - `search_time=HH:MM`（＋by=dep|arr）：內部就是一般查詢（appJourneysCompute 的 pickAt）。by=dep 時段＝時刻起系統最長查詢區間，挑每個走法類別（appJourneyCategory：
       主要運具，有高鐵＝高鐵；否則臺鐵分對號／區間＋路線；都沒有＝行車時間最長的捷運）與每個排除條件最早到達的一班；by=arr 時段＝時刻往前，挑最晚出發的一班；
-      超過最短行車時間 2 倍＋60 分又不少轉乘的類別不列。目標是前端只帶一個時間時，第一頁像 ekitan、jorudan 列出各種走法最接近時刻的那幾班。
+      超過最短行車時間 2 倍＋60 分又不少轉乘的類別不列；時段內最少轉乘、最短行車時間的第一名也附上，三個排序標籤標在這三班（by=arr 的 Fastest＝最晚出發），前端切換排序不重查。
+      前端「時刻檢索」頁（日文「乗換案内」）預設旅客模式（只帶 search_time），研究模式才有 start、end。目標是前端只帶一個時間時，第一頁像 ekitan、jorudan 列出各種走法最接近時刻的那幾班。
       試過 search_time 自己的串接（只看 60 分鐘內）＋多條件 RAPTOR（transferRaptorModes，一次算 4 個條件），以及 RAPTOR 主導版（每站依路由組合多標籤、生活圈過濾系統、不重複經過同一站）：
       前者和一般查詢一樣快（讀時刻資料才是大宗），後者組合數爆增、比較慢又會漏（長途只搭區間車被擠掉），都撤掉
     - `full_search=1`（研究工具，公開；同一 IP 在時間窗 QUERY_FULL_SEARCH_IP_SECONDS 秒內最多 QUERY_FULL_SEARCH_IP_TIMES 次（libs/config.json，例如 30 秒 1 次）：執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，querylimit.php 的 queryLimitMark 與 QUERY_LIMIT_MARKS（每個標記的時間窗秒數與可執行次數），querylimit.sqlite 的 marks 表＝每個 IP、每個標記一列（主鍵 IP 雜湊＋標記，start＝時間窗開始、cnt＝次數；時間窗內 cnt＋1、超過重新開始 cnt＝1；同一 IP UPDATE、新的 IP 才 INSERT），查與寫同一個交易；後臺身分不受限）：extra 再加 0～3 每個條件：原本的演算法串整個時段＋RAPTOR 從時段開始每次由上一批最早出發的下一分鐘再找、掃到時段結束
