@@ -1466,3 +1466,27 @@ td.time .stops-trigger {
     scroll-behavior: auto;
   }
 }
+
+/* 時刻檢索：「N 分鐘前｜N 分鐘後」快速重新查詢（比照 ekitan、jorudan） */
+.time-shift {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 4px 0 10px;
+  font-size: var(--train-ui-font-size-sm);
+}
+
+.time-shift-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.time-shift-sep {
+  color: var(--muted);
+}
+
+.base-note {
+  margin-bottom: 10px;
+}

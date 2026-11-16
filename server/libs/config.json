@@ -120,6 +120,12 @@
             "default": 180,
             "desc": "查詢時段的最長範圍（分鐘），也是只給 start（或只給 end）時自動補的長度：app_trip 的 journeys、route_trains（end − start 超過回 40001）、direct、app_line/timetable 只給一端時補這個長度；舊 /txapi/transfer 的 func=route 的 end − start（沒給 end 時最多搜到 start＋這個值）、func=follow 的 before＋after。0＝不限（只給一端時延伸到營運日頭尾）。"
         },
+        "QUERY_NEAR_RANGE_MINUTES": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 30,
+            "desc": "journeys 的 search_time（只給一個時刻）挑最少轉乘、最短行車時間代表方案的範圍（分鐘）：出發時刻模式只在最早出發那班之後這麼多分鐘內出發的班次裡挑，抵達時刻模式只在最晚抵達那班之前這麼多分鐘內抵達的班次裡挑（太遠的班次不算最接近查詢時刻）。0＝不限（整個查詢時段都可以挑）"
+        },
         "APP_JOURNEY_ROUTES": {
             "group": "查詢限制",
             "level": "public",

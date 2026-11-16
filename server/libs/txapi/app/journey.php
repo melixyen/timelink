@@ -1149,10 +1149,21 @@ function appJourneysCompute(array $q)
         foreach ($diverse as $j) {
             $sel[$j['_sig']] = $j;
         }
-        // 最少轉乘、最短行車時間的第一名也一定附上：前端在最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間之間切換排序時不必重新查詢
+        // 最少轉乘、最短行車時間的第一名也一定附上：前端在最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間之間切換排序時不必重新查詢。
+        // 只在接近查詢時刻的班次裡挑（使用者規則 2026-11）：出發時刻模式＝最早出發那班之後 QUERY_NEAR_RANGE_MINUTES 分鐘內出發的，
+        // 抵達時刻模式＝最晚抵達那班之前 QUERY_NEAR_RANGE_MINUTES 分鐘內抵達的；0＝不限
+        $nearMin = max(0, (int) QUERY_NEAR_RANGE_MINUTES);
+        $near = $pool;
+        if ($nearMin > 0) {
+            $edge = $back ? max(array_column($pool, 'ArrivalMinute')) : min(array_column($pool, 'DepartureMinute'));
+            // 最早到達（抵達時刻模式：最晚出發）的那班本身就是最接近查詢時刻的，一定算在內
+            $near = array_filter($pool, function ($j) use ($back, $edge, $nearMin, $first) {
+                return $j['_sig'] === $first['_sig'] || ($back ? $j['ArrivalMinute'] >= $edge - $nearMin : $j['DepartureMinute'] <= $edge + $nearMin);
+            });
+        }
         $fewest = null;
         $shortest = null;
-        foreach ($pool as $j) {
+        foreach ($near as $j) {
             if ($fewest === null || ($back ? [$j['TransferCount'], -$j['DepartureMinute'], $j['ArrivalMinute']] < [$fewest['TransferCount'], -$fewest['DepartureMinute'], $fewest['ArrivalMinute']]
                                            : [$j['TransferCount'], $j['ArrivalMinute'], -$j['DepartureMinute']] < [$fewest['TransferCount'], $fewest['ArrivalMinute'], -$fewest['DepartureMinute']])) {
                 $fewest = $j;
@@ -1268,6 +1279,8 @@ function appJourneysCompute(array $q)
  *   by=dep（預設）：時段＝這個時刻起系統最長查詢區間，挑各組合條件下最早到達的那班；
  *   by=arr：時段＝這個時刻往前系統最長查詢區間（抵達時刻在時段內），挑各組合條件下最晚出發的那班。
  * 組合條件＝每個走法類別（appJourneyCategory：主要運具，臺鐵再分對號、區間與路線）＋每個排除條件（extra 再加 0～3）。
+ * 最少轉乘、最短行車時間的代表只在接近時刻的 QUERY_NEAR_RANGE_MINUTES 分鐘內挑。00:00～03:59 當營運日深夜（＋24 時）；
+ * 這個時刻查不到班次時改以首班車（by=dep）或末班車（by=arr）為起點，meta 帶 base、base_time。
  * 不能和 start、end、depart、arrive、first、last、routes 一起用。回應格式與 journeys 相同（方案帶 Category、CategoryName）
  */
 function appTripJourneysAt($from, $to, $extra, $week, $date)
@@ -1287,12 +1300,45 @@ function appTripJourneysAt($from, $to, $extra, $week, $date)
     $stops = appParamInt('stops', 1, 0, 1) === 1;
     $span = appTimeWindowSpan() ?? (APP_SERVICE_DAY_END - APP_SERVICE_DAY_START);
     $mode = $back ? 'arrive' : 'depart';
-    $start = $back ? max(APP_SERVICE_DAY_START, $time - $span) : $time;
-    $end = $back ? $time : min(APP_SERVICE_DAY_END, $time + $span);
     $fixed = null;
     $pickAt = true;
+    // 00:00～03:59 是營運日的深夜（24 時以後），例如 02:40＝26:40
+    $at = $time < APP_SERVICE_DAY_START ? $time + 1440 : $time;
+    $start = $back ? max(APP_SERVICE_DAY_START, $at - $span) : $at;
+    $end = $back ? $at : min(APP_SERVICE_DAY_END, $at + $span);
     list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops', 'pickAt'));
-    appSend($data, $meta + ['search_time' => appHM($time)]);
+    $base = [];
+    if (!$data['journeys']) {
+        // 這個時刻沒有可搭的班次（例如深夜沒車）：改以營業時段的頭尾為起點（使用者規則 2026-11）——
+        // 出發時刻模式從首班車起查（出發站最早能出發、真的到得了的那班），抵達時刻模式查末班車（抵達站最晚能抵達的那班）。
+        // 用實際的路由查詢推算首末班，比只看車站時刻表準（車站末班車之後可能已經接不上轉乘）
+        // 抵達時刻模式從營運日最後一段時段往前一段一段找，直到找到末班車（捷運、短程的末班車常在營運日結束前好幾個小時）
+        $sec = $meta['seconds'];
+        $end = $back ? APP_SERVICE_DAY_END : min(APP_SERVICE_DAY_END, APP_SERVICE_DAY_START + $span);
+        do {
+            $start = $back ? max(APP_SERVICE_DAY_START, $end - $span) : APP_SERVICE_DAY_START;
+            list($data2, $meta2) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops', 'pickAt'));
+            $sec += $meta2['seconds'];
+            $end = $start;
+        } while ($back && !$data2['journeys'] && $start > max(APP_SERVICE_DAY_START, $at));
+        if ($data2['journeys']) {
+            $edge = $back ? max(array_column($data2['journeys'], 'ArrivalMinute')) : min(array_column($data2['journeys'], 'DepartureMinute'));
+            if ($back) {
+                // 抵達時刻模式：再以末班車的抵達時刻為查詢時刻查一次（營運日最後一段時段只涵蓋得到最晚的幾班）
+                $start = max(APP_SERVICE_DAY_START, $edge - $span);
+                $end = $edge;
+                list($data3, $meta3) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops', 'pickAt'));
+                $sec += $meta3['seconds'];
+                if ($data3['journeys']) {
+                    list($data2, $meta2) = [$data3, $meta3];
+                }
+            }
+            $meta2['seconds'] = round($sec, 3);
+            list($data, $meta) = [$data2, $meta2];
+            $base = ['base' => $back ? 'last' : 'first', 'base_time' => appHM($edge % 1440)];
+        }
+    }
+    appSend($data, $meta + ['search_time' => appHM($time % 1440), 'near_minutes' => max(0, (int) QUERY_NEAR_RANGE_MINUTES)] + $base);
 }
 
 /**

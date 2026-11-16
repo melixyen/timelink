@@ -30,6 +30,23 @@ export function byOptions() {
 }
 
 /**
+ * 研究模式的時段換成營運日時刻（04:00～27:59）：時刻選單只有 00～23 時，
+ * 00:00～03:59 是營運日的深夜（24 時以後）；end 早於 start 表示跨過午夜（例如 23:40～00:10 → 23:40～24:10）
+ */
+function serviceWindow(start, end) {
+  const toMin = (hm) => {
+    const [h, m] = String(hm || '00:00').split(':').map(Number)
+    return h * 60 + m
+  }
+  const toHM = (v) => `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`
+  let s = toMin(start)
+  let e = toMin(end)
+  if (s < 240) s += 1440
+  if (e < 240 || e < s) e += 1440
+  return { start: toHM(s), end: toHM(Math.min(e, 1679)) }
+}
+
+/**
  * 時刻檢索（轉乘查詢）。
  * 資料來源：/txapi/app_trip/journeys（路由與時刻表組合由後端計算，前端只負責呈現）；
  * 旅客模式帶 search_time，研究模式帶 start、end
@@ -287,6 +304,7 @@ export const useSearchStore = defineStore('search', () => {
     // 旅客模式只給一個時刻（search_time），不指定路由（指定路由屬於研究模式）
     if (isTraveler.value) pickedRoutes.value = []
     const routed = pickedRoutes.value.length > 0
+    const win = serviceWindow(form.start, form.end)
     const params = isTraveler.value
       ? {
           from: form.from,
@@ -301,8 +319,8 @@ export const useSearchStore = defineStore('search', () => {
           from: form.from,
           to: form.to,
           week: form.week,
-          start: form.start,
-          end: form.end,
+          start: win.start,
+          end: win.end,
           by: form.by,
           sort: form.sort,
           extra: form.extra,

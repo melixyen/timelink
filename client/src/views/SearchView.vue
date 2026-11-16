@@ -120,6 +120,39 @@ function collapsePanelOnMobile() {
   if (isMobile.value && !search.error) panelOpen.value = false
 }
 
+/**
+ * 快速重新查詢（比照 ekitan、jorudan）：把時刻往前或往後移 N 分鐘，直接重新查詢。
+ * 旅客模式移查詢時刻；研究模式把時段的頭尾一起移。跨過午夜時繞回 00～23 時（營運日深夜，後端當 24 時以後）
+ */
+const shiftSteps = [10, 30, 60]
+function shiftHM(hm, delta) {
+  const [h, m] = String(hm || '00:00').split(':').map(Number)
+  const v = (((h * 60 + m + delta) % 1440) + 1440) % 1440
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`
+}
+function shiftTime(delta) {
+  if (search.loading) return
+  if (isTraveler.value) {
+    form.time = shiftHM(form.time, delta)
+  } else {
+    form.start = shiftHM(form.start, delta)
+    form.end = shiftHM(form.end, delta)
+  }
+  if (!isTraveler.value && search.pickedRoutes.length) searchRoutes(search.pickedRoutes)
+  else doSearch()
+}
+
+/** 查詢時刻沒有可搭的班次時，後端改以首班車（出發時刻模式）或末班車（抵達時刻模式）為起點 */
+const baseNote = computed(() => {
+  const m = search.meta
+  if (!m?.base || !m.base_time) return ''
+  return t(m.base === 'last' ? 'search.result.baseLast' : 'search.result.baseFirst', {
+    time: m.search_time,
+    base: m.base_time,
+  })
+})
+
 const resultCount = computed(() => search.visibleJourneys.length)
 const weekList = computed(() => weekNames())
 const weekOptions = computed(() => weekList.value.map((label, value) => ({ label, value })))
@@ -319,6 +352,20 @@ onMounted(async () => {
               })
         }}
       </p>
+
+      <nav class="time-shift" :aria-label="t('search.shift.title')" :title="t('search.shift.title')">
+        <span v-for="n in shiftSteps" :key="n" class="time-shift-pair">
+          <train-link type="primary" :disabled="search.loading" @click="shiftTime(-n)">
+            {{ t('search.shift.before', { min: n }) }}
+          </train-link>
+          <span class="time-shift-sep">|</span>
+          <train-link type="primary" :disabled="search.loading" @click="shiftTime(n)">
+            {{ t('search.shift.after', { min: n }) }}
+          </train-link>
+        </span>
+      </nav>
+
+      <train-alert v-if="baseNote" type="warning" simple class="base-note">{{ baseNote }}</train-alert>
 
       <train-alert v-if="!isTraveler && search.pickedRoutes.length" type="info" class="picked-banner">
         <span>{{ t('search.picked.banner', { count: search.pickedRoutes.length }) }}</span>
