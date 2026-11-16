@@ -8,6 +8,10 @@
  * - 說明文件類（func=help、finder func=list）與有後臺身分（面板登入或 PAT）的請求不計
  * - 計數要即時才擋得準，所以不像流量紀錄那樣累積後再寫；每次查詢一個交易（synchronous=NORMAL）
  * - 每個回應帶 X-Query-Limit-Minute／X-Query-Remaining-Minute／X-Query-Limit-Hour／X-Query-Remaining-Hour
+ *
+ * 執行標記（queryLimitMark）：特定的重功能（例如 journeys 的 full_search）另外限制「同一 IP 幾秒內只能執行一次」。
+ * 同一個資料庫的 marks 表是執行紀錄（IP 雜湊、標記名稱、時間），一般 API 不寫；帶標記的功能被呼叫時先用 SQL 查這個 IP
+ * 在時間內有沒有同一個標記的紀錄，有就回 429（42904），沒有就寫入一筆再開始執行（查與寫在同一個交易，同時送來的請求只有一個會通過）
  */
 
 const QUERY_LIMIT_ACTIONS = ['transfer', 'finder'];
@@ -118,3 +122,50 @@ function queryLimitCheck($action)
         }
     }
 }
+
+/**
+ * 執行標記：同一 IP 在 $seconds 秒內執行過同一個標記（$mark，例如 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP）的功能就回 429（42904）結束；
+ * 沒有就寫一筆執行紀錄，呼叫端接著執行。$seconds <= 0 或有後臺身分（面板登入或 PAT）時不限制。
+ * 紀錄存在 querylimit.sqlite 的 marks（k＝IP 雜湊、mark、at＝Unix 秒），偶爾清掉一天以前的
+ */
+function queryLimitMark($mark, $seconds, $feature)
+{
+    if ($seconds <= 0 || (function_exists('downloadAdminOk') && downloadAdminOk())) {
+        return;
+    }
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    $key = substr(hash('sha256', 'querylimit|' . $ip . '|' . __DIR__), 0, 32);
+    $now = time();
+    try {
+        if (!is_dir(TDX_CACHE_DIR)) {
+            @mkdir(TDX_CACHE_DIR, 0755, true);
+        }
+        $pdo = new PDO('sqlite:' . TDX_CACHE_DIR . '/querylimit.sqlite', null, null,
+                       [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 3]);
+        $pdo->exec('PRAGMA journal_mode = WAL');
+        $pdo->exec('PRAGMA synchronous = NORMAL');
+        $pdo->exec('CREATE TABLE IF NOT EXISTS marks (k TEXT NOT NULL, mark VARCHAR(80) NOT NULL, at INTEGER NOT NULL)');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS marks_k_mark_at ON marks (k, mark, at)');
+        $pdo->exec('BEGIN IMMEDIATE');
+        $sel = $pdo->prepare('SELECT MAX(at) FROM marks WHERE k = ? AND mark = ? AND at > ?');
+        $sel->execute([$key, $mark, $now - $seconds]);
+        $last = $sel->fetchColumn();
+        if ($last !== null && $last !== false) {
+            $pdo->exec('COMMIT');
+            $retry = max(1, (int) $last + $seconds - $now);
+            header('Retry-After: ' . $retry);
+            appError(42904, ['feature' => $feature, 'seconds' => $seconds, 'retry' => $retry], ['retryAfter' => $retry, 'mark' => $mark]);
+        }
+        $pdo->prepare('INSERT INTO marks (k, mark, at) VALUES (?, ?, ?)')->execute([$key, $mark, $now]);
+        if (mt_rand(1, 200) === 1) {
+            $pdo->prepare('DELETE FROM marks WHERE at < ?')->execute([$now - 86400]);
+        }
+        $pdo->exec('COMMIT');
+    } catch (Throwable $e) {
+        // 紀錄失敗不擋查詢（例如磁碟或鎖定問題）
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+    }
+}
+

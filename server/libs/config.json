@@ -90,6 +90,12 @@
             "default": 1000,
             "desc": "同一 IP 每小時最多幾次查詢（固定時間窗），超過回 HTTP 429（錯誤代碼 42902）。0＝不限制。"
         },
+        "QUERY_FULL_SEARCH_IP_SECONDS": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 30,
+            "desc": "journeys full_search（研究工具，一次最多算 12 秒）同一 IP 幾秒內只能執行一次，超過回 HTTP 429（錯誤代碼 42904）；執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP 記在 querylimit.sqlite 的 marks。0＝不限制；後臺身分不受限"
+        },
         "QUERY_MAX_RANGE_MINUTES": {
             "group": "查詢限制",
             "level": "public",

@@ -1419,12 +1419,14 @@ function appJourneysAtCompute(array $q)
 
 /**
  * journeys?full_search=1（時段參數同 journeys：start、end、by，或 first、last）：把 extra 再加上 0～3 每個排除條件（全搭、不搭對號、
- * 不搭高鐵、只搭區間車）在時段內所有互不支配的方案都找出來，合成一份清單依 sort 排序。研究工具：需要後臺身分（PAT 或登入），
- * 最多算 APP_JOURNEY_FULL_SECONDS 秒。每個方案帶 Modes（在哪些排除條件下是互不支配的方案）與 Source（routes／raptor／both）
+ * 不搭高鐵、只搭區間車）在時段內所有互不支配的方案都找出來，合成一份清單依 sort 排序。研究工具：公開，同一 IP
+ * QUERY_FULL_SEARCH_IP_SECONDS（30）秒內只能執行一次（執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，queryLimitMark），最多算 APP_JOURNEY_FULL_SECONDS 秒。每個方案帶 Modes（在哪些排除條件下是互不支配的方案）與 Source（routes／raptor／both）
  */
 function appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $end)
 {
-    adminRequireUser(false);
+    if (appParam('full_search') !== '1') {
+        appFail(40020, ['param' => 'full_search', 'detail' => '帶 1']);
+    }
     if (appParam('routes') !== null || appParam('search_time') !== null) {
         appFail(40020, ['param' => 'full_search', 'detail' => 'full_search 不能和 routes、search_time 一起用']);
     }
@@ -1435,6 +1437,8 @@ function appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $e
             'via' => appParam('via') !== null ? appStationParam('via') : null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true,
             'deeper' => appParamInt('deeper', min(appRouteSearch()['Deeper'], APP_DEEPER_MAX), 0, APP_DEEPER_MAX)];
     $stops = appParamInt('stops', 1, 0, 1) === 1;
+    // 公開，用 IP 限制頻率（使用者規則 2026-11）：參數都檢查過才記執行標記（參數錯的不佔用次數），同一 IP 30 秒內只能執行一次
+    queryLimitMark('REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP', defined('QUERY_FULL_SEARCH_IP_SECONDS') ? (int) QUERY_FULL_SEARCH_IP_SECONDS : 30, 'full_search');
     list($data, $meta) = appJourneysFullCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'stops'));
     appSend($data, $meta);
 }
