@@ -13,7 +13,7 @@
  *              的清單（主機上已存檔的 TDX 下載檔），本機沒有或內容不同（大小、sha1）的才下載，下載後驗證 sha1、mtime 設成和主機一樣，
  *              存到本機資料根目錄的 download/tdx/（libs/env_path.php 的 appEnvPath()，或 --dir=）。只讀主機既有存檔，不會觸發主機向 TDX 下載。
  *              本機的 finder 資料庫第一次查詢時會依來源檔自動重建；加 --build 立刻重建。
- *              主機限制同一 IP 2 小時（QUERY_MIRROR_IP_SECONDS）只能取一次清單，檔案要在這段時間內下載：同步中斷時這段時間內再跑會被拒絕
+ *              主機限制同一 IP 帶 PAT 30 秒（QUERY_MIRROR_PAT_SECONDS）只能取一次清單，檔案要在取得清單後 2 小時（QUERY_MIRROR_IP_SECONDS）內下載
  *   learn      最佳化加速清單演算：/txapi/admin_transfer/build_groups（轉乘群組與里程，內容沒變不重寫）→
  *              重複呼叫 /txapi/admin_transfer/learn 直到 done（資料庫與輸入都沒變時直接跳過）；
  *              摘要的 changedFiles 列出這次有變動的產生檔（custom/libs/txapi/transfer/data/，舊版在 history/）
@@ -92,9 +92,9 @@ function pipelineMirror(TdxSite $site, $key, array $opt, $deadline)
     $dry = !empty($opt['dry-run']);
     $list = $site->get(['action' => 'admin_download', 'func' => 'mirror', 'service' => 'tdx'], true, 300);
     if (empty($list['ok'])) {
-        // 429（42904）：同一 IP 在主機設定的間隔（QUERY_MIRROR_IP_SECONDS，預設 2 小時）內已經取過清單
+        // 429（42904）：同一 IP 在主機設定的間隔（帶 PAT：QUERY_MIRROR_PAT_SECONDS，預設 30 秒）內已經取過清單
         throw new RuntimeException('/txapi/admin_download/mirror 失敗：' . ($list['error'] ?? 'HTTP ' . ($list['_http'] ?? '?'))
-                                   . (isset($list['retryAfter']) ? '（' . ceil($list['retryAfter'] / 60) . ' 分鐘後才能再同步）' : ''));
+                                   . (isset($list['retryAfter']) ? '（' . $list['retryAfter'] . ' 秒後才能再同步）' : ''));
     }
     tdxLog(sprintf('mirror：主機上 %d 個存檔（%.1f MB），清單內還沒存檔 %d 個；本機資料根目錄 %s', $list['summary']['stored'],
                    $list['summary']['bytes'] / 1048576, $list['summary']['missing'], $root));

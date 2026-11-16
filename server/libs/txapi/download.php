@@ -16,7 +16,8 @@
  *   /txapi/admin_download/refresh?service=tdx&path=…   重新向 TDX 取得並回傳檔案（寫入）
  *   /txapi/admin_download/mirror?service=tdx[&path=…]  鏡像（讀取）：主機上已存檔的清單（大小、mtime、sha1），帶 path 時回傳該存檔；
  *                                                      只提供既有存檔、不向 TDX 取得。本機新環境同步線上的離線資料用；
- *                                                      同一 IP QUERY_MIRROR_IP_SECONDS（7200）秒內只能取一次清單，檔案要在取得清單後這段時間內下載
+ *                                                      同一 IP 取清單的間隔：帶 PAT QUERY_MIRROR_PAT_SECONDS（30）秒、後臺登入 QUERY_MIRROR_IP_SECONDS（7200）秒；
+ *                                                      檔案要在取得清單後 QUERY_MIRROR_IP_SECONDS 秒內下載
  *                                                      （agent/skills/data-pipeline/scripts/pipeline.php mirror）
  *
  * 清單範圍：軌道轉乘查詢（接軌時刻 TimeLink）所需的最小基礎資料：臺鐵、高鐵、臺北捷運、新北捷運（環狀線、三鶯線、
@@ -477,14 +478,17 @@ function actionAdminDownload()
         case 'refresh':
             downloadSend($service, true);
         case 'mirror':
-            // 避免被頻繁 dump（使用者規則 2026-11）：同一 IP QUERY_MIRROR_IP_SECONDS（7200）秒內只能取一次清單（後臺身分也受限）；
-            // 下載檔案要在這段時間內取過清單（不然可以跳過清單直接逐檔抓）
-            $sec = defined('QUERY_MIRROR_IP_SECONDS') ? (int) QUERY_MIRROR_IP_SECONDS : 7200;
+            // 避免被頻繁 dump（使用者規則 2026-11）：同一 IP 取清單的間隔——帶 PAT（腳本）QUERY_MIRROR_PAT_SECONDS（30）秒、
+            // 後臺網頁登入 QUERY_MIRROR_IP_SECONDS（7200）秒（後臺身分也受限）；下載檔案要在取得清單後 QUERY_MIRROR_IP_SECONDS 秒內
+            // （不然可以跳過清單直接逐檔抓；有效時間不跟著縮短：線上同步一次要半分鐘以上）
+            $session = defined('QUERY_MIRROR_IP_SECONDS') ? (int) QUERY_MIRROR_IP_SECONDS : 7200;
             if (isset($_GET['path'])) {
-                queryLimitMarkRequire('REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP', $sec, 'mirror');
+                queryLimitMarkRequire('REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP', $session, 'mirror');
                 downloadMirrorSend($service);
             }
-            queryLimitMark('REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP', $sec, 'mirror', false);
+            $viaPat = (adminCurrent()['via'] ?? null) === 'pat';
+            $interval = $viaPat ? (defined('QUERY_MIRROR_PAT_SECONDS') ? (int) QUERY_MIRROR_PAT_SECONDS : 30) : $session;
+            queryLimitMark('REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP', $interval, 'mirror', false);
             downloadMirrorList($service);
     }
 }
@@ -814,6 +818,7 @@ function downloadSendHelp()
 {
     $host = $_SERVER['HTTP_HOST'] ?? SITE_HOST;
     $mirrorSec = defined('QUERY_MIRROR_IP_SECONDS') ? (int) QUERY_MIRROR_IP_SECONDS : 7200;
+    $mirrorPat = defined('QUERY_MIRROR_PAT_SECONDS') ? (int) QUERY_MIRROR_PAT_SECONDS : 30;
     $groupRows = '';
     $counts = [];
     $total = ['n' => 0, 'd' => 0, 'b' => 0];
@@ -975,8 +980,8 @@ Authorization: Bearer <PAT>
 - 本機照 `file` 存放並把 mtime 設成一樣，finder 資料庫就會依來源檔重建成同一份。
   腳本：`TDX_BASE=<主機> TDX_PAT=<PAT> php agent/skills/data-pipeline/scripts/pipeline.php mirror [--build]`
 - 只含 TDX 下載檔；轉乘產生檔（轉乘群組、里程）本機第一次查詢自動重建，加速清單要在本機另跑 `learn`
-- 避免被頻繁 dump：同一 IP {$mirrorSec} 秒內只能取一次清單（後臺身分也受限，超過回 429、錯誤代碼 42904 與 `Retry-After`），
-  下載檔案要在取得清單後 {$mirrorSec} 秒內（沒取過清單回 42905）；設定 `QUERY_MIRROR_IP_SECONDS`，執行標記 `REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP`
+- 避免被頻繁 dump：同一 IP 取清單的間隔——帶 PAT {$mirrorPat} 秒、後臺網頁登入 {$mirrorSec} 秒（超過回 429、錯誤代碼 42904 與 `Retry-After`）；
+  下載檔案要在取得清單後 {$mirrorSec} 秒內（沒取過清單回 42905）。設定 `QUERY_MIRROR_PAT_SECONDS`、`QUERY_MIRROR_IP_SECONDS`，執行標記 `REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP`
 
 ## 時刻表
 
