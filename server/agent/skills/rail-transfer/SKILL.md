@@ -388,11 +388,14 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
     生活圈端維持每站前 3（試過前 5：組合上限 48 擠掉區間車接力組合，汐止、東湖→愛河之心只搭區間最快晚 11 分，改回 3）。
     嚴格比對：真正漏掉的最佳解 0 筆；剩下的差異都屬於使用者同意不處理的類別（時段最後 5 分鐘、幹線中途換車、不是最佳解、50 筆上限）；新版較好 38 次
   - **journeys 的 search_time 與 full_search（使用者規則 2026-11）**（app/journey.php 的 appJourneysAtCompute、appJourneysFullCompute，回應格式與 journeys 相同）：
-    - `search_time=HH:MM`（＋by=dep|arr，不給 start／end）：一個時刻、最快的各種走法。路由串接只看常數 APP_JOURNEY_AT_HORIZON 分鐘內（journey.php，例如 60 分鐘；沒有班次的路由放寬到系統最長查詢區間），
-      每條路由、每種車種組合只把最快的一組轉成輸出（轉輸出最花時間）。走法類別 appJourneyCategory＝主要運具：有高鐵＝高鐵；否則臺鐵（再分對號／區間＋經過的路線）；
-      都沒有＝行車時間最長的捷運（不能單看最長的一段：轉幾次捷運到高鐵站時捷運段比 20 分的高鐵段長）。每類取最快，超過最短行車時間 2 倍＋60 分又不少轉乘的不列。
-      extra 再加 0～3 每個條件的最快一定列：原本演算法的最快當上界跑 RAPTOR；寬條件已證明最快的方案也符合窄條件時（全搭最快剛好沒搭高鐵）不再跑。標籤 FastestNoExpress（新）。
-      臺北→中壢：臺鐵對號、臺鐵區間、高鐵轉機捷、機捷到老街溪走過去。680 組 × 出發／抵達 × 4 條件比對：沒有一組比 journeys 從同一時刻出發的最快差
+    - 一般 journeys 併入兩個優點（使用者規則 2026-11）：排除條件 extra 再加 1、2、3 的最快各用 RAPTOR 保底（寬條件已證明最快且符合時沿用；新標籤 FastestNoExpress），
+      互不支配清單裡沒有的走法類別附上最快的一班（CategoryPick）。100 組 × extra 0～3 與合併前比：第一筆三種排序 1199/1200 相同（另 1 個早 1 分）、各條件最快 445 相同 55 變好，
+      時間 快取沒命中 0.181→0.187 秒、命中 0.098→0.114 秒
+    - `search_time=HH:MM`（＋by=dep|arr）：內部就是一般查詢（appJourneysCompute 的 pickAt）。by=dep 時段＝時刻起系統最長查詢區間，挑每個走法類別（appJourneyCategory：
+      主要運具，有高鐵＝高鐵；否則臺鐵分對號／區間＋路線；都沒有＝行車時間最長的捷運）與每個排除條件最早到達的一班；by=arr 時段＝時刻往前，挑最晚出發的一班；
+      超過最短行車時間 2 倍＋60 分又不少轉乘的類別不列。目標是前端只帶一個時間時，第一頁像 ekitan、jorudan 列出各種走法最接近時刻的那幾班。
+      試過 search_time 自己的串接（只看 60 分鐘內）＋多條件 RAPTOR（transferRaptorModes，一次算 4 個條件），以及 RAPTOR 主導版（每站依路由組合多標籤、生活圈過濾系統、不重複經過同一站）：
+      前者和一般查詢一樣快（讀時刻資料才是大宗），後者組合數爆增、比較慢又會漏（長途只搭區間車被擠掉），都撤掉
     - `full_search=1`（研究工具，公開；同一 IP 在時間窗 QUERY_FULL_SEARCH_IP_SECONDS 秒內最多 QUERY_FULL_SEARCH_IP_TIMES 次（libs/config.json，例如 30 秒 1 次）：執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，querylimit.php 的 queryLimitMark 與 QUERY_LIMIT_MARKS（每個標記的時間窗秒數與可執行次數），querylimit.sqlite 的 marks 表＝每個 IP、每個標記一列（主鍵 IP 雜湊＋標記，start＝時間窗開始、cnt＝次數；時間窗內 cnt＋1、超過重新開始 cnt＝1；同一 IP UPDATE、新的 IP 才 INSERT），查與寫同一個交易；後臺身分不受限）：extra 再加 0～3 每個條件：原本的演算法串整個時段＋RAPTOR 從時段開始每次由上一批最早出發的下一分鐘再找、掃到時段結束
       （抵達時刻模式從「時段開始前就到得了的最晚出發」起掃，掃描起點不早於營運日 04:00——更早出發 RAPTOR 找不到任何方案），每班再用固定路由倒回取同時到達的最晚出發；
       各條件各自在時段內互不支配，方案帶 Modes、Source（routes／raptor／both）。計算時間上限是常數 APP_JOURNEY_FULL_SECONDS（journey.php，例如 12 秒），沒算完 meta.complete＝false。
