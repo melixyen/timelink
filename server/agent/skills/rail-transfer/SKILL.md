@@ -71,7 +71,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 4. 改 seed 後部署 seed，再跑 `pipeline.php learn`（或 `func=build_groups` 後 `func=learn`）
    **自動重建（2026-11 使用者要求）**：部署 seed 後不必手動 build_groups——查詢讀群組時（transferLoadGroups → transferEnsureGroups）比對 seed 的 sha1 與
    `custom/…/transfer_groups_stamp.json` 記錄的不同，就自動跑一次（transferRebuildGroups，與 func=build_groups 共用；檔案鎖同時只有一個請求重建，
-   有舊群組時其他請求不等；失敗用舊群組、同一份 seed 600 秒內不重試）。加速清單不因群組更新而過期（見 rail-transfer-learn）
+   有舊群組時其他請求不等；失敗用舊群組、同一份 seed 在 `TRANSFER_AUTO_REBUILD_RETRY` 秒內不重試（transfer.php 的常數，例如 10 分鐘））。加速清單不因群組更新而過期（見 rail-transfer-learn）
 5. 驗證：`func=groups&station=<UID>`、`func=network`、`func=route` 幾組代表路線（見下方）
 
 ## 路網結構搜尋（func=network）
@@ -86,7 +86,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 
 ## 時刻表轉乘（func=route，RAPTOR）
 
-- 第 k 輪＝搭第 k 班車（最多 6 班），出發後 12 小時內
+- 第 k 輪＝搭第 k 班車（最多 `Router.MaxTrips` 班），出發後 `Router.HorizonSeconds` 秒內到達（transfer_settings.json；例如 6 班、12 小時）
 - 列車（臺鐵、高鐵）：`train`、`train_stop` 依星期篩選，每班一條 trip；到站秒＝離站 sort_min×60 −（離站−到站）
 - 捷運、輕軌：營運路線＝`metro_travel` 的站距表（route／direction／train_type），機捷、淡海、安坑用 `metro_travel_od`
   以 `StationOfRoute` 站序、首站到各站秒數為偏移。在 j 站上車＝j 站 `metro_dep` 下一班（同路線、終點在本營運路線 j 站之後；
@@ -278,9 +278,9 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 
 ### 查詢限制與錯誤代碼（2026-10 使用者要求）
 
-- 同一 IP 每分鐘 60 次、每小時 1000 次（`libs/txapi/querylimit.php`，`/txapi/transfer`、`/txapi/finder` 合計，func=help／list 與帶管理密碼不計），來源網域不限；
+- 同一 IP 每分鐘、每小時的查詢次數上限（`libs/txapi/querylimit.php`，設定見下方，例如每分鐘 60 次、每小時 1000 次；`/txapi/transfer`、`/txapi/finder` 與 public_、app_ 合計，func=help／list 與後臺身分不計），來源網域不限；
   IP 用 REMOTE_ADDR（主機前面的 CDN 需已換成真實 IP），計數存 `download/tdx_proxy_files/cache/querylimit.sqlite`（只存雜湊）
-- 出發時間範圍最長 3 小時（使用者：回歸 railtime 原本「間隔不要超過三小時」）：route 的 end − start，沒給 end 時最多搜到 start＋3 小時（`searchUntil`）；follow 的 before＋after，不提供 all=1，用班數時回傳跨度也限 3 小時
+- 出發時間範圍有上限（`QUERY_MAX_RANGE_MINUTES`；使用者當初的決定是回歸 railtime 原本「間隔不要超過三小時」，例如 180 分鐘）：route 的 end − start，沒給 end 時最多搜到 start＋上限（`searchUntil`）；follow 的 before＋after，不提供 all=1，用班數時回傳跨度也受同一個上限
 - 上限在 `custom/libs/config.json`（沒寫的用 `libs/config.json` 預設值）（QUERY_RATE_LIMIT_PER_MINUTE、QUERY_RATE_LIMIT_PER_HOUR、QUERY_MAX_RANGE_MINUTES）；錯誤代碼表 `libs/txapi/errors.php` 的 `APP_ERRORS`（40001～40003、42901、42902），`/txapi/errors` 查詢
 - 驗證腳本（verify_accel.php）要帶管理密碼，才不受次數與範圍限制
 
@@ -388,17 +388,17 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
     生活圈端維持每站前 3（試過前 5：組合上限 48 擠掉區間車接力組合，汐止、東湖→愛河之心只搭區間最快晚 11 分，改回 3）。
     嚴格比對：真正漏掉的最佳解 0 筆；剩下的差異都屬於使用者同意不處理的類別（時段最後 5 分鐘、幹線中途換車、不是最佳解、50 筆上限）；新版較好 38 次
   - **journeys 的 search_time 與 full_search（使用者規則 2026-11）**（app/journey.php 的 appJourneysAtCompute、appJourneysFullCompute，回應格式與 journeys 相同）：
-    - `search_time=HH:MM`（＋by=dep|arr，不給 start／end）：一個時刻、最快的各種走法。路由串接只看 60 分鐘內（APP_JOURNEY_AT_HORIZON；沒有班次的路由放寬到系統最長查詢區間），
+    - `search_time=HH:MM`（＋by=dep|arr，不給 start／end）：一個時刻、最快的各種走法。路由串接只看常數 APP_JOURNEY_AT_HORIZON 分鐘內（journey.php，例如 60 分鐘；沒有班次的路由放寬到系統最長查詢區間），
       每條路由、每種車種組合只把最快的一組轉成輸出（轉輸出最花時間）。走法類別 appJourneyCategory＝主要運具：有高鐵＝高鐵；否則臺鐵（再分對號／區間＋經過的路線）；
       都沒有＝行車時間最長的捷運（不能單看最長的一段：轉幾次捷運到高鐵站時捷運段比 20 分的高鐵段長）。每類取最快，超過最短行車時間 2 倍＋60 分又不少轉乘的不列。
       extra 再加 0～3 每個條件的最快一定列：原本演算法的最快當上界跑 RAPTOR；寬條件已證明最快的方案也符合窄條件時（全搭最快剛好沒搭高鐵）不再跑。標籤 FastestNoExpress（新）。
       臺北→中壢：臺鐵對號、臺鐵區間、高鐵轉機捷、機捷到老街溪走過去。680 組 × 出發／抵達 × 4 條件比對：沒有一組比 journeys 從同一時刻出發的最快差
-    - `full_search=1`（研究工具，公開；同一 IP 30 秒內 1 次：執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，querylimit.php 的 queryLimitMark 與 QUERY_LIMIT_MARKS（每個標記的時間窗秒數與可執行次數），querylimit.sqlite 的 marks 表＝每個 IP、每個標記一列（主鍵 IP 雜湊＋標記，start＝時間窗開始、cnt＝次數；時間窗內 cnt＋1、超過重新開始 cnt＝1；同一 IP UPDATE、新的 IP 才 INSERT），查與寫同一個交易；後臺身分不受限）：extra 再加 0～3 每個條件：原本的演算法串整個時段＋RAPTOR 從時段開始每次由上一批最早出發的下一分鐘再找、掃到時段結束
+    - `full_search=1`（研究工具，公開；同一 IP 在時間窗 QUERY_FULL_SEARCH_IP_SECONDS 秒內最多 QUERY_FULL_SEARCH_IP_TIMES 次（libs/config.json，例如 30 秒 1 次）：執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，querylimit.php 的 queryLimitMark 與 QUERY_LIMIT_MARKS（每個標記的時間窗秒數與可執行次數），querylimit.sqlite 的 marks 表＝每個 IP、每個標記一列（主鍵 IP 雜湊＋標記，start＝時間窗開始、cnt＝次數；時間窗內 cnt＋1、超過重新開始 cnt＝1；同一 IP UPDATE、新的 IP 才 INSERT），查與寫同一個交易；後臺身分不受限）：extra 再加 0～3 每個條件：原本的演算法串整個時段＋RAPTOR 從時段開始每次由上一批最早出發的下一分鐘再找、掃到時段結束
       （抵達時刻模式從「時段開始前就到得了的最晚出發」起掃，掃描起點不早於營運日 04:00——更早出發 RAPTOR 找不到任何方案），每班再用固定路由倒回取同時到達的最晚出發；
-      各條件各自在時段內互不支配，方案帶 Modes、Source（routes／raptor／both）。上限 APP_JOURNEY_FULL_SECONDS（12 秒），沒算完 meta.complete＝false。
+      各條件各自在時段內互不支配，方案帶 Modes、Source（routes／raptor／both）。計算時間上限是常數 APP_JOURNEY_FULL_SECONDS（journey.php，例如 12 秒），沒算完 meta.complete＝false。
       驗證：175 次（出發 120、抵達 40、末班 15）一般 journeys 的每個方案 full_search 都有同樣好或更好的；3 小時時段中位數 0.7～0.9 秒，整天（first／last）最慢 10.5 秒
     - 路由清單快取 appCoreRoutesCached（journeys、search_time、full_search）：鍵＝起訖、找路參數、appRouteCacheStamp（資料建置時間＋app/、transfer/ 程式、轉乘規則與產生檔、設定檔的修改時間），
-      存 TDX_CACHE_DIR/app_routes/，最多 APP_ROUTE_CACHE_MAX（5000）組。命中時 journeys 0.26→0.14 秒；冷的一次查詢大部分時間其實是時刻資料的載入（快取找路後，省下的時間有一部分移到串接與 RAPTOR）
+      存 TDX_CACHE_DIR/app_routes/，最多 APP_ROUTE_CACHE_MAX 組（libs/config.json，例如 5000）。命中時 journeys 0.26→0.14 秒；冷的一次查詢大部分時間其實是時刻資料的載入（快取找路後，省下的時間有一部分移到串接與 RAPTOR）
   - 驗證（2026-11 本機，嚴格標準：dev 的每個方案新版都有出發不早、到達不晚、轉乘不多的方案，各標籤不變差）：
     出發時刻：同站（臺鐵與捷運同轉乘群組：板橋、南港、松山、臺北、萬華、鶯歌、中壢 × 21 個捷運站，往返 × 2 時段 × 2 種排除）1176 次變差 27、回歸 80 次變差 1、全台隨機 400 次變差 16、山海線 1024 次變差 4，
     幾乎都是使用者同意不處理的（時段最後 5 分鐘、幹線中途換車、50 筆上限、不是最佳解）；新版較好 38 次；計算時間 dev 577 秒、新版 554 秒。

@@ -16,7 +16,7 @@ description: 本站 軌道起訖時刻與站間行駛時間的資料與算法總
    推算值一律標示來源（`source` 欄位），不混在原始資料裡，也不會蓋過真實資料
 4. 站間行駛時間的儲存型態依「能否無損」決定：路線站距表能完全重現原始矩陣才存站距表，否則存原始矩陣
 5. 票價不推算（沒有公式就不能推導，價錢不能有任何錯誤）
-6. 向 TDX 發請求每分鐘最多 3 次（目前金鑰上限每分鐘 5 次）
+6. 向 TDX 發請求每分鐘不超過設定 `DOWNLOAD_MAX_PER_MINUTE` 次（libs/config.json，例如 3 次；比金鑰本身的上限低）
 
 ## 取得方法的優先順序
 
@@ -250,7 +250,7 @@ API 輸出為 `ArrivalTimeSource`／`DepartureTimeSource`：
 1. **看現況**（不消耗 TDX 額度）：
    `/txapi/ratelimit`、`/txapi/download/list?service=tdx`、`/txapi/finder/list`、
    `/txapi/finder/metro_travel_time?system=<SYS>`（看 `storage[]`）
-2. **確認 TDX 支援範圍**（需要時）：透過 proxy 每次 `$top=1`，**每分鐘最多 3 次**。
+2. **確認 TDX 支援範圍**（需要時）：透過 proxy 每次 `$top=1`，**每分鐘不超過 `DOWNLOAD_MAX_PER_MINUTE` 次**。
    S2STravelTime 打不支援的代碼（例如 `NTDLRT`）會回 400 並列出全部支援的系統。
    某系統新增或停止提供某種資料時，依上方總表找到對應算法，改程式：
    - `libs/txapi/download.php`：`DOWNLOAD_METRO_APIS` 各 API 的系統陣列

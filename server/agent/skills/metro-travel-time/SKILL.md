@@ -23,8 +23,8 @@ description: 取得或更新捷運站間行駛時間（TDX S2STravelTime），�
 - 寫檔、備份、還原的方式與站址：見 `custom/agent/` 的私密筆記。密碼、PAT **不要寫進進版控的檔案**
 - 網站程式：`libs/txapi/download.php`（下載清單、同步、每分鐘呼叫上限）、`libs/txapi/finderdb.php`（轉換成 SQLite）、
   `libs/txapi/finder.php`（`metro_travel_time` 查詢）
-- 目前金鑰 TDX 上限每分鐘 5 次。**向 TDX 發請求一律每分鐘最多 3 次**（下載功能已內建 `DOWNLOAD_MAX_PER_MINUTE = 3`；
-  手動透過 proxy 試打時自己控制：打 3 次就 `sleep 60`）
+- **向 TDX 發請求要遵守每分鐘上限**：下載功能自己的上限是設定 `DOWNLOAD_MAX_PER_MINUTE`（libs/config.json，例如 3 次，比金鑰本身的上限低、
+  留給一般 proxy 使用者）；手動透過 proxy 試打時自己控制在同樣的次數內，打滿就 `sleep 60`
 - 開始前先看額度：`GET https://<本站>/txapi/ratelimit`（不消耗 TDX 額度）
 
 ## 目前狀態（2026-10）
@@ -53,7 +53,7 @@ GET https://<本站>/txapi/finder/metro_travel_time?system=TRTC
 
 ### 2. （需要時）試打 TDX，確認支援的系統
 
-透過 proxy、每次只取 1 筆，**每分鐘最多 3 次**：
+透過 proxy、每次只取 1 筆，**每分鐘不超過 `DOWNLOAD_MAX_PER_MINUTE` 次**：
 
 ```
 GET https://<本站>/api/basic/v2/Rail/Metro/S2STravelTime/{SYS}?$top=1&$format=JSON
@@ -69,7 +69,7 @@ GET https://<本站>/api/basic/v2/Rail/Metro/S2STravelTime/{SYS}?$top=1&$format=
 
 **注意**：下載清單多了項目而檔案還沒下載時，finder 會判定資料不完整（回 503），所以部署後要**立刻**做第 4 步。
 
-### 4. 同步（自動遵守每分鐘 3 次）
+### 4. 同步（自動遵守 `DOWNLOAD_MAX_PER_MINUTE`）
 
 ```
 GET https://<本站>/txapi/admin_download/sync?service=tdx&category=traveltime&force=1

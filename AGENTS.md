@@ -19,8 +19,9 @@ php server/agent/skills/data-pipeline/scripts/pipeline.php mirror --build
   驗證 sha1、mtime 設成和主機一樣，存到本機資料根目錄的 `download/tdx/`；`--build` 接著重建本機 `sqlite/finder.sqlite`
 - 資料根目錄預設是 `server/`；要放到別處，在 `server/env_path.php`（不進版控）回傳路徑，見 README「資料目錄的位置」
 - 可以重複執行（資料有更新時再跑一次就同步）；`--prune` 刪掉主機已不再有的舊檔
-- 主機限制同一 IP **2 小時內最多呼叫 mirror 200 次**（避免被頻繁 dump；清單與每個檔案各算一次，全新環境同步一次約 60 次；PAT 也受限；
-  設定 `QUERY_MIRROR_IP_SECONDS`、`QUERY_MIRROR_IP_TIMES`）。不要反覆執行；被拒時回應會說還要等幾秒
+- 主機限制同一 IP 在一段時間內最多呼叫 mirror 幾次（避免被頻繁 dump；PAT 也受限）：時間窗秒數 `QUERY_MIRROR_IP_SECONDS`、次數 `QUERY_MIRROR_IP_TIMES`，
+  實際值看 `server/libs/config.json`（預設值；各站在 `custom/libs/config.json` 或後臺「設定管理」覆蓋），例如「2 小時內 200 次」。清單與每個檔案各算一次，全新環境同步一次＝下載清單的檔案數＋1。
+  不要反覆執行；超過回 429，回應會說還要等幾秒
 - 只讀主機既有存檔，不會讓主機向 TDX 下載、不耗 TDX 額度；沒帶 PAT 或錯誤回 401，沒有權限回 403
 - 不同步的：轉乘產生檔（本機第一次查詢自動重建）、加速清單（沒有時不套用加速，結果正確；要一樣就本機另跑 `pipeline.php learn`）、
   `custom/` 的設定與後臺帳號

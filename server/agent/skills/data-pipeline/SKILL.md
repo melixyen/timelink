@@ -37,7 +37,8 @@ TDX_BASE=https://<線上主機> TDX_PAT=<後臺 PAT> php agent/skills/data-pipel
 
 ```
 重複 GET /txapi/admin_download/sync?service=tdx（Authorization: Bearer <PAT>）
-  ├─ 每次最多抓 4 個到期的檔案；TDX 每分鐘最多 3 次呼叫、保留流量餘額，超過就停，回應 next_in 秒後再呼叫
+  ├─ 每次最多抓 limit 個到期的檔案（參數，預設與上限見 download.php）；向 TDX 的呼叫受 `DOWNLOAD_MAX_PER_MINUTE`（每分鐘幾次，例如 3 次）限制、
+  │  保留 `DOWNLOAD_RATE_RESERVE` 的流量餘額（都在 libs/config.json），超過就停，回應 next_in 秒後再呼叫
   ├─ 連續 3 次都有檔案失敗就停止
   └─ remaining = 0（done）時，網站自動判斷下載檔有沒有變：
         有變 → 重建 sqlite/finder.sqlite（等同 /txapi/admin_download_to_sqlite/build），_meta.built_at 更新
@@ -67,8 +68,9 @@ GET /txapi/admin_download/mirror?service=tdx（Authorization: Bearer <PAT>，adm
 
 - 需要後臺帳號產生的 PAT（後臺「我的帳號」），角色要有 `admin_download` 的讀取權限；沒帶或錯誤回 401、沒有權限回 403
 - 可以重複執行：已相同的檔案不下載，只補 mtime
-- 避免被頻繁 dump：主機限制同一 IP **2 小時內最多呼叫 mirror 200 次**（`QUERY_MIRROR_IP_SECONDS`、`QUERY_MIRROR_IP_TIMES`；清單與每個檔案各算一次，
-  全新環境同步一次約 60 次、之後只下載有變的檔案；後臺身分也受限），超過回 429（錯誤代碼 42904，附 `Retry-After`）
+- 避免被頻繁 dump：主機限制同一 IP 在時間窗 `QUERY_MIRROR_IP_SECONDS` 秒內最多呼叫 mirror `QUERY_MIRROR_IP_TIMES` 次（libs/config.json，
+  各站可覆蓋；例如「2 小時內 200 次」）。清單與每個檔案各算一次（全新環境＝檔案數＋1，之後只下載有變的檔案）；後臺身分也受限；
+  超過回 429（錯誤代碼 42904，附 `Retry-After`）
 - 只同步 TDX 下載檔。轉乘產生檔（轉乘群組、里程，`custom/libs/txapi/transfer/data/`）本機第一次查詢時自動重建；
   加速清單（`transfer_accel_learned.json`）沒有時查詢不套用加速（結果正確、比較慢），要一樣就在本機另跑 `learn`
 - 後臺帳號、設定與私密值（`custom/`）不在同步範圍，本機自己建立
