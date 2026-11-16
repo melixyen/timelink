@@ -1583,11 +1583,64 @@ function appRouteVia(array $m, array $legs, $via)
 }
 
 /**
- * 營運單位的基本速度等級：路由清單轉乘次數相同時，經由等級高的排前面（高鐵 > 臺鐵 > 各縣市捷運 > 輕軌）。
- * 沒列的系統（捷運）用 APP_ROUTE_SPEED_DEFAULT
+ * 轉乘最少的走法保留（使用者規則 2026-11）：路由清單依綜合指數排序後，轉乘少但慢的走法（臺鐵直達、區間車接力）會排到很後面，
+ * 取前 limit 條時可能被擠掉。依「轉乘次數 → 綜合指數」排序（原本先比轉乘次數的順序）的前這麼多條一定在前 limit 條內。
+ * 只保留「最少轉乘 8 條、多一次 3 條」不夠：同轉乘次數的走法很多時（機場第二航廈→臺中捷運：中壢區間車接力、機捷先回台北再南下…），
+ * 實際有直通車、班次轉乘比路由少的區間車接力排在第 10 條，被擠掉
  */
-const APP_ROUTE_SPEED_RANK = ['THSR' => 4, 'TRA' => 3, 'NTDLRT' => 1, 'NTALRT' => 1, 'KLRT' => 1];
-const APP_ROUTE_SPEED_DEFAULT = 2;
+const APP_ROUTE_KEEP_FEWEST = 12;
+
+/**
+ * 依 APP_ROUTE_KEEP_FEWEST 調整順序：要保留、卻排在 limit 以外的路由，移到第 limit 條的位置之前（擠出排在最後、不必保留的路由），
+ * 其他路由順序不變。$list 已依綜合指數排好；回傳調整後的清單
+ */
+function appRouteKeepFewest(array $list, $limit)
+{
+    $list = array_values($list);
+    if (!$list || $limit === null || count($list) <= $limit) {
+        return $list;
+    }
+    $order = array_keys($list);
+    usort($order, function ($a, $b) use ($list) {
+        return [$list[$a]['TransferCount'], $list[$a]['Index'] ?? INF, $a] <=> [$list[$b]['TransferCount'], $list[$b]['Index'] ?? INF, $b];
+    });
+    $keep = array_fill_keys(array_slice($order, 0, min(APP_ROUTE_KEEP_FEWEST, $limit)), true);
+    $late = array_values(array_filter(array_keys($keep), function ($i) use ($limit) { return $i >= $limit; }));
+    if (!$late) {
+        return $list;
+    }
+    // 前 limit 條裡從後面數、不必保留的，讓出位置
+    $head = array_slice($list, 0, $limit, true);
+    $drop = [];
+    foreach (array_reverse(array_keys($head)) as $i) {
+        if (count($drop) >= count($late)) {
+            break;
+        }
+        if (!isset($keep[$i])) {
+            $drop[] = $i;
+        }
+    }
+    $front = [];
+    foreach ($head as $i => $r) {
+        if (!in_array($i, $drop, true)) {
+            $front[] = $r;
+        }
+    }
+    foreach ($late as $i) {
+        $front[] = $list[$i];
+    }
+    $rest = [];
+    foreach ($list as $i => $r) {
+        if ($i >= $limit && !isset($keep[$i])) {
+            $rest[] = $r;
+        } elseif (in_array($i, $drop, true)) {
+            $rest[] = $r;
+        }
+    }
+    // 讓出位置的接在後面，維持指數順序
+    usort($rest, function ($a, $b) { return [$a['Index'] ?? INF, $a['TransferCount']] <=> [$b['Index'] ?? INF, $b['TransferCount']]; });
+    return array_merge($front, $rest);
+}
 
 /**
  * 路由的主幹：搭乘里程加總最多的系統（有一段算不出里程時改用行駛分鐘）。
@@ -1615,12 +1668,6 @@ function appRouteMainSystem(array $legs)
     return array_key_first($w);
 }
 
-/** 路由主幹（appRouteMainSystem）的速度等級（APP_ROUTE_SPEED_RANK） */
-function appRouteSpeedRank(array $legs)
-{
-    $main = appRouteMainSystem($legs);
-    return $main === null ? 0 : (APP_ROUTE_SPEED_RANK[$main] ?? APP_ROUTE_SPEED_DEFAULT);
-}
 
 /** 營運業者保底時，主幹再依車種等級分開保底的系統（臺鐵：對號、非對號各要一條） */
 const APP_ROUTE_COVER_CLASS_SYSTEMS = ['TRA'];
@@ -1924,26 +1971,19 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             }
             unset($l);
             $dist = appRouteDistance($m, $legs);
-            $out[$code] = ['route' => $code, 'legs' => $legs, 'TransferCount' => $tc, 'EstimatedMinutes' => $est, 'Index' => appRouteIndex($m, $legs),
+            $out[$code] = ['route' => $code, 'legs' => $legs, 'TransferCount' => $tc, 'EstimatedMinutes' => $est, 'Index' => appRouteIndex($m, $legs, true),
                            'DistanceKm' => $dist[0] ?? null, 'DistanceSource' => $dist[1] ?? null,
                            'Supplement' => $variant['Name'], 'BaseRoute' => $baseCode, 'Rescued' => isset($x[3])];
         }
     }
     $out = array_values($out);
-    // 排序：轉乘次數 → 經由的營運單位速度等級（高鐵 > 臺鐵 > 捷運 > 輕軌）→ 里程（繞遠的排後面；算不出里程的排最後）→ 估計分鐘。
-    // 路由不排除繞遠的走法，真的比較快的由 journeys 依時刻挑出
-    foreach ($out as &$r) {
-        $r['_speed'] = appRouteSpeedRank($r['legs']);
-    }
-    unset($r);
+    // 排序（使用者規則 2026-11）：綜合指數（appRouteIndex：行車分鐘依車種等級＋轉乘步行＋轉乘候車，見 indexroute.php）由小到大，
+    // 不先比轉乘次數——轉乘要多走路、多等車，已經算在指數裡；算不出指數的排最後 → 轉乘次數 → 里程 → 估計分鐘。
+    // 轉乘最少的走法另外保留（appRouteKeepFewest），路由不排除繞遠的走法，真的比較快的由 journeys 依時刻挑出
     usort($out, function ($a, $b) {
-        return [$a['TransferCount'], -$a['_speed'], $a['DistanceKm'] ?? INF, $a['EstimatedMinutes']]
-           <=> [$b['TransferCount'], -$b['_speed'], $b['DistanceKm'] ?? INF, $b['EstimatedMinutes']];
+        return [$a['Index'] ?? INF, $a['TransferCount'], $a['DistanceKm'] ?? INF, $a['EstimatedMinutes']]
+           <=> [$b['Index'] ?? INF, $b['TransferCount'], $b['DistanceKm'] ?? INF, $b['EstimatedMinutes']];
     });
-    foreach ($out as &$r) {
-        unset($r['_speed']);
-    }
-    unset($r);
     $minKm = null;
     foreach ($out as $r) {
         if ($r['DistanceKm'] !== null && ($minKm === null || $r['DistanceKm'] < $minKm)) {
@@ -1961,6 +2001,7 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
         return [$a['TransferCount'], $a['EstimatedMinutes']] <=> [$b['TransferCount'], $b['EstimatedMinutes']];
     };
     if (empty($opt['variants'])) {
+        $out = appRouteKeepFewest($out, $limit);
         $sel = [];
         foreach (appRouteCoverPick($out, $limit, $legsOf, $better) as $i) {
             $sel[] = $out[$i];
@@ -1982,6 +2023,7 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             $baseList[] = $r;
         }
     }
+    $baseList = appRouteKeepFewest($baseList, $limit);
     $bases = [];
     $present = [];
     foreach ($baseList as $r) {

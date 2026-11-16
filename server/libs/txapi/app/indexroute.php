@@ -135,8 +135,42 @@ function appIndexRide(array $m, $line, $a, $b)
     return $cache[$k] = $t + max(0, count($st) - 2) * appIndexConfig()['StopMinutes'];
 }
 
-/** 路由（段落陣列，系統直達段用 Path）的綜合指數；算不出回 null */
-function appRouteIndex(array $m, array $legs)
+/** 跨生活圈改用快車的里程門檻（公里）：上下車站有一邊不在任何生活圈時，搭乘里程達到這個值也當跨生活圈 */
+const APP_INDEX_EXPRESS_KM = 60;
+
+/**
+ * 生活圈內搭高鐵的上車成本（分鐘，使用者規則 2026-11）：買票或劃位、進站閘門、月台較深，路由排序用的指數另外加上。
+ * 只加在上下車站同一個生活圈的高鐵段（南港、台北、板橋之間）；中長途這點時間相對整段車程很小，不加
+ */
+const APP_INDEX_HSR_LOCAL_BOARD = 3;
+
+/**
+ * 路由排序用的搭乘段行駛分鐘（使用者規則 2026-11）：各系統都用實際的行駛分鐘（含途中停靠，appLegMinutes），不用逐站累加＋每站停靠
+ * （逐站累加把停靠算了兩次，捷運多 15～25%；臺鐵逐站取最快的車再加停靠，跟真正搭得到的車差更多，兩者混用會偏向某一邊）。
+ * 臺鐵、高鐵依車種等級：生活圈內用慢車（區間車）、跨生活圈用快車（對號）的最短行駛分鐘；段落已指定等級（補充路由切出的快慢車段）就用該等級，
+ * 沒有該等級的車時用不限等級的最短分鐘。機場捷運跨生活圈用直達車（快車站之間）。查不到回 null（呼叫端改用逐站累加）
+ */
+function appIndexLegClassMinutes(array $l)
+{
+    $sys = $l['System'] ?? strtok($l['LineUID'], '-');
+    $cls = $l['Class'] ?? null;
+    if ($cls === null && (in_array($sys, ['TRA', 'THSR'], true) || appClassHasSplit($sys))) {
+        $ra = appRegionOf($l['From']);
+        $rb = appRegionOf($l['To']);
+        $cross = ($ra !== null && $rb !== null) ? $ra !== $rb : (float) ($l['DistanceKm'] ?? 0) >= APP_INDEX_EXPRESS_KM;
+        $cls = $cross ? APP_CLASS_EXPRESS : APP_CLASS_LOCAL;
+    }
+    $t = $cls === null ? null : appLegMinutes($l['LineUID'], $l['From'], $l['To'], $cls);
+    $t = $t ?? appLegMinutes($l['LineUID'], $l['From'], $l['To']);
+    return $t === null ? null : (float) $t;
+}
+
+/**
+ * 路由（段落陣列，系統直達段用 Path）的綜合指數；算不出回 null。
+ * $byClass＝true（路由清單排序用）：臺鐵、高鐵、機場捷運的搭乘段改用依車種等級的實際行駛分鐘（appIndexLegClassMinutes）；
+ * 找路（A*、轉乘一次、最少轉乘層）用 false，維持逐站行駛分鐘＋每站停靠，與 A* 的啟發值一致
+ */
+function appRouteIndex(array $m, array $legs, $byClass = false)
 {
     $cfg = appIndexConfig();
     $total = 0.0;
@@ -153,6 +187,15 @@ function appRouteIndex(array $m, array $legs)
         // 候車：轉乘上車；臺鐵第一次上車也算（班次少、要照時刻表趕車，終點端從幹線站出來的第一次上車其實是轉乘）
         if (($prevRide && empty($l['Through'])) || (!$prevRide && ($l['System'] ?? '') === 'TRA')) {
             $total += appIndexWait($l['From']);
+        }
+        $r = $byClass ? appIndexLegClassMinutes($l) : null;
+        if ($r !== null) {
+            $total += $r;
+            if (($l['System'] ?? '') === 'THSR' && ($rg = appRegionOf($l['From'])) !== null && $rg === appRegionOf($l['To'])) {
+                $total += APP_INDEX_HSR_LOCAL_BOARD;
+            }
+            $prevRide = true;
+            continue;
         }
         $pieces = $l['Path'] ?? [['LineUID' => $l['LineUID'], 'From' => $l['From'], 'To' => $l['To']]];
         foreach ($pieces as $i => $p) {

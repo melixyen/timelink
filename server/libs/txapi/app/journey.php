@@ -1150,12 +1150,13 @@ function appJourneysCompute(array $q)
             $sel[$j['_sig']] = $j;
         }
         // 最少轉乘、最短行車時間的第一名也一定附上：前端在最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間之間切換排序時不必重新查詢。
-        // 只在接近查詢時刻的班次裡挑（使用者規則 2026-11）：出發時刻模式＝最早出發那班之後 QUERY_NEAR_RANGE_MINUTES 分鐘內出發的，
+        // 只在接近查詢時刻的班次裡挑（使用者規則 2026-11）：出發時刻模式＝最早到達那班出發之後 QUERY_NEAR_RANGE_MINUTES 分鐘內出發的，
         // 抵達時刻模式＝最晚抵達那班之前 QUERY_NEAR_RANGE_MINUTES 分鐘內抵達的；0＝不限
         $nearMin = max(0, (int) QUERY_NEAR_RANGE_MINUTES);
         $near = $pool;
         if ($nearMin > 0) {
-            $edge = $back ? max(array_column($pool, 'ArrivalMinute')) : min(array_column($pool, 'DepartureMinute'));
+            // 出發時刻模式以最早到達那班的出發時刻為起點（不用所有班次裡最早出發的：轉乘多、慢的走法常有比較早出發的一班，會把範圍拉早）
+            $edge = $back ? max(array_column($pool, 'ArrivalMinute')) : $first['DepartureMinute'];
             // 最早到達（抵達時刻模式：最晚出發）的那班本身就是最接近查詢時刻的，一定算在內
             $near = array_filter($pool, function ($j) use ($back, $edge, $nearMin, $first) {
                 return $j['_sig'] === $first['_sig'] || ($back ? $j['ArrivalMinute'] >= $edge - $nearMin : $j['DepartureMinute'] <= $edge + $nearMin);
