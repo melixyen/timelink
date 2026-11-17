@@ -7,7 +7,7 @@
  */
 
 import { config } from '@/config'
-import { toTai, toTaiDeep } from '@/utils/tai'
+import { toTaiNames } from '@/utils/tai'
 
 /** API 網址前綴（設定於 .env 的 VITE_TDX_BASE_URL；空字串＝同源 /txapi） */
 export const API_BASE = config.apiBaseUrl
@@ -63,16 +63,15 @@ async function send(url) {
   }
 
   if (!response.ok || !body || body.ok === false) {
-    const message = toTai(
-      (body && (body.errorMsg || body.error || body.Message)) || `查詢服務回應錯誤（HTTP ${response.status}）`,
-    )
+    const message =
+      (body && (body.errorMsg || body.error || body.Message)) || `查詢服務回應錯誤（HTTP ${response.status}）`
     const error = new TxApiError(message, (body && body.errorCode) || response.status, body)
     error.status = response.status
     throw error
   }
 
-  // 顯示用字：回應裡的「臺」一律顯示成「台」（utils/tai.js）
-  return toTaiDeep(body)
+  // 顯示用字：站名、路線名、營運系統名稱的「臺」顯示成「台」（utils/tai.js；備註、錯誤訊息等自由文字不轉）
+  return toTaiNames(body)
 }
 
 async function request(path, params = {}) {
