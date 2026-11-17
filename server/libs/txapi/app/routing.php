@@ -1966,14 +1966,16 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
                 }
                 $supCount[$variant['Name']] = ($supCount[$variant['Name']] ?? 0) + 1;
             }
+            $railAccess = false;
             foreach ($legs as &$l) {
-                unset($l['_part'], $l['_relayOnly']);   // 中長途分解的段落標記（只給補充資料判斷用）
+                $railAccess = $railAccess || !empty($l['_railAccess']);
+                unset($l['_part'], $l['_relayOnly'], $l['_railAccess']);   // 中長途分解的段落標記（只給補充資料判斷用）
             }
             unset($l);
             $dist = appRouteDistance($m, $legs);
             $out[$code] = ['route' => $code, 'legs' => $legs, 'TransferCount' => $tc, 'EstimatedMinutes' => $est, 'Index' => appRouteIndex($m, $legs, true),
                            'DistanceKm' => $dist[0] ?? null, 'DistanceSource' => $dist[1] ?? null,
-                           'Supplement' => $variant['Name'], 'BaseRoute' => $baseCode, 'Rescued' => isset($x[3])];
+                           'Supplement' => $variant['Name'], 'BaseRoute' => $baseCode, 'Rescued' => isset($x[3]), 'RailAccess' => $railAccess];
         }
     }
     $out = array_values($out);
@@ -2018,13 +2020,18 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     }
     $standIdx = array_flip($stand);
     $baseList = [];
+    $bases = [];
     foreach ($out as $i => $r) {
+        if (!empty($r['RailAccess'])) {
+            // 中長途的臺鐵接駁（app/trunk.php 的 AccessRail）：不佔前 limit 條的名額，一律帶上（不擠掉原本選得到的路由）
+            $bases[$r['BaseRoute']] = true;
+            continue;
+        }
         if ($r['Supplement'] === null || isset($standIdx[$i])) {
             $baseList[] = $r;
         }
     }
     $baseList = appRouteKeepFewest($baseList, $limit);
-    $bases = [];
     $present = [];
     foreach ($baseList as $r) {
         $present[$r['BaseRoute']] = true;

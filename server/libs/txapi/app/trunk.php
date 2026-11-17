@@ -18,6 +18,8 @@ const APP_TRUNK_DEFAULTS = [
     'Candidates'       => ['TRA' => 4, 'THSR' => 3],   // 每端先依距離取最近的幾個幹線站做短程找路（起站本身另外算）
     'Keep'             => ['TRA' => 4, 'THSR' => 3],   // 每端依估計留下幾個幹線站（起站本身另外算）
     'AccessPerStation' => 3,                           // 每個幹線站留幾條生活圈端路由（原本演算法排序的前幾名）
+    'AccessRail'       => true,                        // 幹線站不是臺鐵時（高鐵），前幾名都沒搭臺鐵就再留一條有搭臺鐵的接駁（松山搭臺鐵到臺北轉高鐵）
+    'RailCombos'       => 4,                           // 上面那種接駁的組合不參加 MaxCombos 的排名，另外依估計保留幾條（不擠掉原本選得到的組合）
     'TrunkPerPair'     => 2,                           // 每一對幹線站留幾條幹線路由
     'MaxCombos'        => 48,                          // 組合後最多交出幾條基本路由（依估計，臺鐵幹線、高鐵幹線各至少一半）
     'TransferMinutes'  => 10,                          // 估計排序時每次轉乘加幾分
@@ -173,10 +175,31 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
             }
         }
     }
+    // 臺鐵接駁保留（使用者規則 2026-11，AccessRail）：接到高鐵站時前幾名都是捷運，再留指數最好、有搭臺鐵的一條（一般參加組合）。
+    // 台北小巨蛋→苗栗：松山新店線到松山搭臺鐵到臺北轉高鐵排第 4，平常比捷運到台北慢，但接得上早一班高鐵（高鐵苗栗一小時一班）
+    if ($mode === 'index' && !empty($cfg['AccessRail']) && appTrunkSystemOf($x) !== 'TRA') {
+        $hasTra = function ($r) {
+            foreach ($r['legs'] as $l) {
+                if ($l['Type'] === 'ride' && ($l['System'] ?? '') === 'TRA') {
+                    return true;
+                }
+            }
+            return false;
+        };
+        if (!array_filter($pick, $hasTra)) {
+            foreach ($ok as $r) {
+                if ($hasTra($r)) {
+                    $pick[] = $r + ['_rail' => true];
+                    break;
+                }
+            }
+        }
+    }
     $out = [];
     foreach ($pick as $r) {
         $out[] = ['legs' => $r['legs'], 'est' => (float) $r['EstimatedMinutes'], 'tc' => $r['TransferCount'],
-                  'score' => (float) $r['EstimatedMinutes'] + $cfg['TransferMinutes'] * $r['TransferCount'], 'extra' => !empty($r['_extra'])];
+                  'score' => (float) $r['EstimatedMinutes'] + $cfg['TransferMinutes'] * $r['TransferCount'], 'extra' => !empty($r['_extra']),
+                  'rail' => !empty($r['_rail'])];
     }
     return $cache[$k] = $out;
 }
@@ -451,8 +474,8 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
             foreach (appTrunkLegs($m, $s, $t, $extra, $eastWest) as $tr) {
                 foreach ($ends['A'][$s]['acc'] as $a) {
                     foreach ($ends['B'][$t]['acc'] as $b) {
-                        $legs = array_merge(array_map(function ($l) { return $l + ['_part' => 'access']; }, $a['legs']), $tr['legs'],
-                                            array_map(function ($l) { return $l + ['_part' => 'egress']; }, $b['legs']));
+                        $legs = array_merge(array_map(function ($l) use ($a) { return $l + ['_part' => 'access'] + (!empty($a['rail']) ? ['_railAccess' => true] : []); }, $a['legs']), $tr['legs'],
+                                            array_map(function ($l) use ($b) { return $l + ['_part' => 'egress'] + (!empty($b['rail']) ? ['_railAccess' => true] : []); }, $b['legs']));
                         if (!appTrunkHsrOk($m, $from, $to, $legs)) {
                             continue;
                         }
@@ -462,7 +485,8 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
                         }
                         $rides = count(array_filter($legs, function ($l) { return $l['Type'] === 'ride' && empty($l['Through']); }));
                         $combos[] = ['legs' => $legs, 'score' => $a['est'] + $tr['est'] + $b['est'] + $tc * max(0, $rides - 1),
-                                     'sys' => $tr['legs'][0]['System'], 'rides' => $rides, 'extra' => !empty($a['extra']) || !empty($b['extra'])];
+                                     'sys' => $tr['legs'][0]['System'], 'rides' => $rides, 'extra' => !empty($a['extra']) || !empty($b['extra']),
+                                     'rail' => !empty($a['rail']) || !empty($b['rail'])];
                     }
                 }
             }
@@ -475,7 +499,7 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     $pickA = [];
     $bySys = [];
     foreach ($combos as $i => $c) {
-        if (!$c['extra'] && ($bySys[$c['sys']] = ($bySys[$c['sys']] ?? 0) + 1) <= $half) {
+        if (!$c['extra'] && !$c['rail'] && ($bySys[$c['sys']] = ($bySys[$c['sys']] ?? 0) + 1) <= $half) {
             $pickA[$i] = true;
         }
     }
@@ -483,8 +507,19 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
         if (count($pickA) >= $cfg['MaxCombos']) {
             break;
         }
-        if (!$c['extra']) {
+        if (!$c['extra'] && !$c['rail']) {
             $pickA[$i] = true;
+        }
+    }
+    // 臺鐵接駁（appTrunkAccess 的 AccessRail）的組合：另外依估計保留 RailCombos 條，不參加上面的排名
+    $railLeft = (int) ($cfg['RailCombos'] ?? 0);
+    foreach ($combos as $i => $c) {
+        if ($railLeft <= 0) {
+            break;
+        }
+        if ($c['rail'] && !$c['extra'] && !isset($pickA[$i])) {
+            $pickA[$i] = true;
+            $railLeft--;
         }
     }
     // 最少轉乘保底：搭乘段數最少的組合一條都沒選到時，每個幹線系統補估計最好的一條（使用者選「轉乘最少」排序時第一筆與原本一致）
