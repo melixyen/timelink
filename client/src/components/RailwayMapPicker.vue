@@ -3,7 +3,8 @@
  * 路網圖選站：滿版的 canvasTaiwanRailwayMap。
  *
  * - 右上角的 X：關閉，不選任何車站。
- * - 最下面一排操作列：左邊是地區（下拉選單），右邊是選到的車站與「確定」。
+ * - 最下面一排操作列：左邊是「切換地區」大按鈕（吃滿操作列高度、深藍靛到黑呼吸、黃字），
+ *   按下去從底部浮出地區選單（全國一列；西部各組一列、東部直排一欄佔滿高度，寬 3:1）；右邊是選到的車站與「確定」。
  * - 圖在 div 範圍內捲動：桌機用捲軸／滑鼠滾輪，手機用拖曳。
  * - 點了車站或站名：在那一站旁邊空白最多的一側顯示選站小卡（站名＋路線＋確定）。
  *   轉乘站（大圈圈起來的車站）可以在小卡上左右滑動切換，左右露出鄰站約 1/5 的殘影，兩側有雙箭頭按鈕；
@@ -48,7 +49,38 @@ const failed = ref('')
 /** 路網圖 library 載入了沒有：window 上的 library 不是 reactive，用到它的 computed 要靠這個在載入後重算 */
 const libReady = ref(false)
 
-const areaOptions = computed(() => AREAS.map((a) => ({ label: t(a.labelKey), value: a.value })))
+const areaLabel = computed(() => t((AREAS.find((a) => a.value === area.value) || AREAS[0]).labelKey))
+/** 選單裡西部各組：每兩個生活圈名換一行 */
+const westAreas = computed(() => AREAS.filter((a) => /^r[1-5]$/.test(a.value)).map((a) => ({ ...a, lines: pairLines(t(a.labelKey)) })))
+const eastArea = AREAS.find((a) => a.value === 'r6')
+const menuOpen = ref(false)
+
+/** 地區名稱拆成每兩個生活圈一行：有分隔號（· ・）照分隔號拆；中文沒有分隔號就兩個字一個生活圈 */
+function pairLines(label) {
+  const text = String(label)
+  const sep = /s*[·・]s*/
+  let names = text.split(sep)
+  let join = text.includes('・') ? '・' : ' · '
+  if (names.length < 2 && /^[一-鿿]+$/.test(text)) {
+    names = text.match(/.{1,2}/g) || [text]
+    join = ''
+  }
+  const out = []
+  for (let i = 0; i < names.length; i += 2) out.push(names.slice(i, i + 2).join(join))
+  return out
+}
+
+/** 全部是漢字／假名：直排時一個字一個字立著排 */
+function isCjk(text) {
+  return /^[぀-ヿ一-鿿・]+$/.test(String(text))
+}
+
+function pickArea(value) {
+  menuOpen.value = false
+  if (area.value === value) return
+  area.value = value
+  changeArea()
+}
 const currentRegions = computed(() => (AREAS.find((a) => a.value === area.value) || AREAS[0]).regions)
 
 /** 營運系統名稱（後端還沒載入時先用預設） */
@@ -178,6 +210,7 @@ watch(
   (v) => {
     if (v) {
       area.value = DEFAULT_AREA
+      menuOpen.value = false
       openMap()
     } else {
       destroyMap()
@@ -487,6 +520,45 @@ function onClickCapture(e) {
         </button>
       </div>
 
+      <!-- 地區選單：從底部浮出，按一下就切換 -->
+      <Transition name="railway-map-menu">
+        <div v-if="menuOpen" class="railway-map__menu-mask" @click.self="menuOpen = false">
+          <div class="railway-map__menu" role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              class="railway-map__menu-btn is-all"
+              :class="{ 'is-current': area === 'all' }"
+              @click="pickArea('all')"
+            >
+              {{ t('station.map.all') }}
+            </button>
+            <div class="railway-map__menu-west">
+              <button
+                v-for="a in westAreas"
+                :key="a.value"
+                type="button"
+                role="menuitem"
+                class="railway-map__menu-btn"
+                :class="{ 'is-current': area === a.value }"
+                @click="pickArea(a.value)"
+              >
+                <span v-for="(ln, i) in a.lines" :key="i" class="railway-map__menu-line">{{ ln }}</span>
+              </button>
+            </div>
+            <button
+              type="button"
+              role="menuitem"
+              class="railway-map__menu-btn is-east"
+              :class="{ 'is-current': area === eastArea.value, 'is-cjk': isCjk(t(eastArea.labelKey)) }"
+              @click="pickArea(eastArea.value)"
+            >
+              {{ t(eastArea.labelKey) }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+
       <div v-if="loading" class="railway-map__overlay">
         <train-spinner :text="t('common.loading')" />
       </div>
@@ -497,10 +569,14 @@ function onClickCapture(e) {
 
     <template #footer>
       <div class="railway-map__bar">
-        <div class="railway-map__area">
-          <span class="railway-map__area-label">{{ t('station.map.area') }}</span>
-          <train-select v-model="area" :options="areaOptions" @change="changeArea" />
-        </div>
+        <button
+          type="button"
+          class="railway-map__area-btn"
+          :aria-expanded="menuOpen ? 'true' : 'false'"
+          @click="menuOpen = !menuOpen"
+        >
+          {{ t('station.map.switchArea', { name: areaLabel }) }}
+        </button>
         <div class="railway-map__result">
           <span
             v-if="pickedInfo"
@@ -565,16 +641,155 @@ function onClickCapture(e) {
   flex-wrap: wrap;
 }
 
-.railway-map__area {
+/* 操作列：左邊的切換地區按鈕吃滿整個操作列的高度（footer 的上下左邊留白拿掉，改由右邊自己留） */
+.train-modal__footer:has(> .railway-map__bar) {
+  padding-top: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: 0;
+}
+
+.railway-map__bar {
+  align-self: stretch;
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.railway-map__result {
+  padding: 10px 0;
+}
+
+/* 切換地區：深藍靛色到黑色之間呼吸、黃字 */
+.railway-map__area-btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 56px;
+  padding: 0 18px;
+  border: 0;
+  background: #283593;
+  color: #ffd83d;
+  font-family: inherit;
+  font-size: var(--train-ui-font-size-base);
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  animation: railway-map-breathe 3.2s ease-in-out infinite;
+}
+
+.railway-map__area-btn:hover {
+  filter: brightness(1.15);
+}
+
+@keyframes railway-map-breathe {
+  0%,
+  100% {
+    background-color: #283593;
+  }
+  50% {
+    background-color: #05060f;
+  }
+}
+
+/* 地區選單：從底部浮出 */
+.railway-map__menu-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  background: rgba(10, 14, 30, 0.35);
+}
+
+.railway-map__menu {
+  width: 100%;
+  max-width: 640px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 8px;
+  padding: 12px;
+  background: #0d1030;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.3);
+}
+
+.railway-map__menu-west {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.railway-map__area-label {
-  color: var(--train-ui-text-color-secondary);
-  font-size: var(--train-ui-font-size-sm);
-  white-space: nowrap;
+.railway-map__menu-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 6px 10px;
+  border: 1px solid #3d2a1a;
+  border-radius: 8px;
+  background: #24160b;
+  color: #ffd83d;
+  font-family: inherit;
+  font-size: calc(var(--train-ui-font-size-base) * 1.3);
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.railway-map__menu-btn:hover {
+  filter: brightness(1.2);
+}
+
+.railway-map__menu-btn.is-current {
+  background: #ffd83d;
+  border-color: #ffd83d;
+  color: #24160b;
+}
+
+.railway-map__menu-btn.is-all {
+  grid-column: 1 / -1;
+  font-size: calc(var(--train-ui-font-size-base) * 2);
+}
+
+/* 東部：直排，高度跟西部整欄一樣 */
+.railway-map__menu-btn.is-east {
+  writing-mode: vertical-rl;
+  letter-spacing: 0.25em;
+}
+
+.railway-map__menu-btn.is-east.is-cjk {
+  text-orientation: upright;
+}
+
+.railway-map__menu-line {
+  display: block;
+}
+
+.railway-map-menu-enter-active,
+.railway-map-menu-leave-active {
+  transition: opacity 0.2s;
+}
+
+.railway-map-menu-enter-active .railway-map__menu,
+.railway-map-menu-leave-active .railway-map__menu {
+  transition: transform 0.22s ease-out;
+}
+
+.railway-map-menu-enter-from,
+.railway-map-menu-leave-to {
+  opacity: 0;
+}
+
+.railway-map-menu-enter-from .railway-map__menu,
+.railway-map-menu-leave-to .railway-map__menu {
+  transform: translateY(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .railway-map__area-btn {
+    animation: none;
+  }
 }
 
 .railway-map__result {

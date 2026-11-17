@@ -346,6 +346,17 @@ for (const [pair, turns] of Object.entries(layout.legs || {})) {
   legs[b + '|' + a] = turns.slice().reverse();
 }
 
+// 手調版面：局部拉長（stretch）
+function stretchY(x, y) {
+  for (const st of layout.stretch || []) {
+    if (x < st.x[0] || x > st.x[1] || y <= st.from) { continue; }
+    y = y >= st.to ? y + st.add : st.from + (y - st.from) * (1 + st.add / (st.to - st.from));
+  }
+  return y;
+}
+for (const uid of Object.keys(xy)) { xy[uid] = [xy[uid][0], stretchY(xy[uid][0], xy[uid][1])]; }
+for (const k of Object.keys(legs)) { legs[k] = legs[k].map((p) => [p[0], stretchY(p[0], p[1])]); }
+
 // =====================================================================
 // 5. 每條後端路線的「站鏈」（真正的相鄰關係）
 //    後端的 Stations 只是車站清單，支線排在最後面（淡水之後接新北投、松山之後接小碧潭…），
@@ -821,7 +832,7 @@ for (const s of Object.values(stations)) {
 
 // 手調版面指定的站名位置（自動排的位置不理想時用）
 for (const [id, lp] of Object.entries(layout.labels || {})) {
-  const pos = [Number(lp[0]), Number(lp[1]), lp[2] || 'left'].concat(lp[3] ? [lp[3]] : []);
+  const pos = [Number(lp[0]), stretchY(Number(lp[0]), Number(lp[1])), lp[2] || 'left'].concat(lp[3] ? [lp[3]] : []);
   const node = nodes.find((n) => n.id === id);
   if (node) { node.lp = pos; continue; }
   // 不是節點 id：看是不是轉乘站裡某個成員自己的小字站名（用那個成員的 StationUID 指定）

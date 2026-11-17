@@ -28,10 +28,10 @@
 
     // <railway-data> 以下到 </railway-data> 由 tools/build.mjs 產生，請勿手改
     var DATA = {
-      "generatedAt": "2026-11-17T02:44:30Z",
+      "generatedAt": "2026-11-17T18:09:23Z",
       "systems": {"THSR":["高鐵",5],"TRA":["台鐵",4],"TRTC":["捷運",3],"NTMC":["捷運",3],"TYMC":["捷運",3],"TMRT":["捷運",3],"KRTC":["捷運",3],"KLRT":["輕軌",2],"NTALRT":["輕軌",2],"NTDLRT":["輕軌",2]},
       "regions": {
-        "taipei": {"name":"北北基","nameEn":"","center":[75,33]},
+        "taipei": {"name":"北北基","nameEn":"","center":[75,34]},
         "taoyuan": {"name":"桃園市","nameEn":"","center":[-430,696]},
         "hsinchu": {"name":"新竹","nameEn":"","center":[-54,1064]},
         "miaoli": {"name":"苗栗縣","nameEn":"","center":[-255,1277]},
@@ -40,7 +40,7 @@
         "yunlin": {"name":"雲林縣","nameEn":"","center":[-203,2129]},
         "chiayi": {"name":"嘉義","nameEn":"","center":[-199,2268]},
         "tainan": {"name":"台南市","nameEn":"","center":[-297,2524]},
-        "kaohsiung": {"name":"高雄市","nameEn":"","center":[-287,3058]},
+        "kaohsiung": {"name":"高雄市","nameEn":"","center":[-286,3072]},
         "pingtung": {"name":"屏東縣","nameEn":"","center":[577,3159]},
         "yilan": {"name":"宜蘭縣","nameEn":"","center":[836,336]},
         "hualien": {"name":"花蓮縣","nameEn":"","center":[820,1057]},
@@ -376,7 +376,7 @@
         "TRTC-BR20": {"n":"大湖公園","e":"Dahu Park","s":"TRTC","l":["TRTC-BR"],"r":"taipei","x":520,"y":-205,"c":"#b57a25"},
         "TRTC-BR21": {"n":"葫洲","e":"Huzhou","s":"TRTC","l":["TRTC-BR"],"r":"taipei","x":540,"y":-175,"c":"#b57a25"},
         "TRTC-BR22": {"n":"東湖","e":"Donghu","s":"TRTC","l":["TRTC-BR"],"r":"taipei","x":550,"y":-150,"c":"#b57a25"},
-        "TRTC-BR23": {"n":"南港軟體園區","e":"Nangang Software Park","s":"TRTC","l":["TRTC-BR"],"r":"taipei","x":550,"y":-85,"c":"#b57a25"},
+        "TRTC-BR23": {"n":"南港軟體園區","e":"Nangang Software Park","s":"TRTC","l":["TRTC-BR"],"r":"taipei","x":550,"y":-120,"c":"#b57a25"},
         "TRTC-BR24": {"n":"南港展覽館","e":"Taipei Nangang Exhibition Center","s":"TRTC","l":["TRTC-BR"],"r":"taipei","x":550,"y":-74,"c":"#b57a25","g":"TRANSGRP_nangangzhanlanguan"},
         "TRTC-G01": {"n":"新店","e":"Xindian","s":"TRTC","l":["TRTC-G"],"r":"taipei","x":140,"y":460,"c":"#107547"},
         "TRTC-G02": {"n":"新店區公所","e":"Xindian District Office","s":"TRTC","l":["TRTC-G"],"r":"taipei","x":140,"y":430,"c":"#107547"},
@@ -493,14 +493,14 @@
         "NTDLRT-V28": {"n":"台北海洋大學","e":"Taipei University of Marine Technology","s":"NTDLRT","l":["NTDLRT-V"],"r":"taipei","x":-490,"y":-365,"c":"#ff2a00"},
         "NTDLRT-V27": {"n":"沙崙","e":"Shalun","s":"NTDLRT","l":["NTDLRT-V"],"r":"taipei","x":-490,"y":-345,"c":"#ff2a00"},
         "NTDLRT-V26": {"n":"淡水漁人碼頭","e":"Tamsui Fisherman's Wharf","s":"NTDLRT","l":["NTDLRT-V"],"r":"taipei","x":-490,"y":-325,"c":"#ff2a00"},
-        "NTALRT-K01": {"n":"雙城","e":"Shuangcheng","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":175,"y":530,"c":"#9e925e"},
-        "NTALRT-K02": {"n":"玫瑰中國城","e":"Rose China Town","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":125,"y":530,"c":"#9e925e"},
-        "NTALRT-K03": {"n":"台北小城","e":"Taipei Xiaocheng","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":530,"c":"#9e925e"},
-        "NTALRT-K04": {"n":"耕莘安康院區","e":"Cardinal Tien Hospital An Kang Branch","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":510,"c":"#9e925e"},
-        "NTALRT-K05": {"n":"景文科大","e":"Jinwen University of Science and Technology","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":490,"c":"#9e925e"},
-        "NTALRT-K06": {"n":"安康","e":"Ankang","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":470,"c":"#9e925e"},
-        "NTALRT-K07": {"n":"陽光運動公園","e":"Sunshine Sports Park","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":450,"c":"#9e925e"},
-        "NTALRT-K08": {"n":"新和國小","e":"Xinhe Elementary School","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":430,"c":"#9e925e"},
+        "NTALRT-K01": {"n":"雙城","e":"Shuangcheng","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":175,"y":562,"c":"#9e925e"},
+        "NTALRT-K02": {"n":"玫瑰中國城","e":"Rose China Town","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":120,"y":562,"c":"#9e925e"},
+        "NTALRT-K03": {"n":"台北小城","e":"Taipei Xiaocheng","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":562,"c":"#9e925e"},
+        "NTALRT-K04": {"n":"耕莘安康院區","e":"Cardinal Tien Hospital An Kang Branch","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":532,"c":"#9e925e"},
+        "NTALRT-K05": {"n":"景文科大","e":"Jinwen University of Science and Technology","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":502,"c":"#9e925e"},
+        "NTALRT-K06": {"n":"安康","e":"Ankang","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":472,"c":"#9e925e"},
+        "NTALRT-K07": {"n":"陽光運動公園","e":"Sunshine Sports Park","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":442,"c":"#9e925e"},
+        "NTALRT-K08": {"n":"新和國小","e":"Xinhe Elementary School","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":412,"c":"#9e925e"},
         "NTALRT-K09": {"n":"十四張","e":"Shisizhang","s":"NTALRT","l":["NTALRT-K"],"r":"taipei","x":65,"y":384,"c":"#9e925e","g":"TRANSGRP_shisizhang"},
         "KRTC-O1": {"n":"哈瑪星","e":"Hamasen","s":"KRTC","l":["KRTC-O"],"r":"kaohsiung","x":-501,"y":3135,"c":"#ff9300","g":"TRANSGRP_hamasen"},
         "KRTC-O2": {"n":"鹽埕埔","e":"Yanchengpu","s":"KRTC","l":["KRTC-O"],"r":"kaohsiung","x":-420,"y":3135,"c":"#ff9300"},
@@ -515,15 +515,15 @@
         "KRTC-O12": {"n":"鳳山","e":"Fongshan","s":"KRTC","l":["KRTC-O"],"r":"kaohsiung","x":90,"y":3135,"c":"#ff9300"},
         "KRTC-O13": {"n":"大東","e":"Dadong","s":"KRTC","l":["KRTC-O"],"r":"kaohsiung","x":150,"y":3135,"c":"#ff9300"},
         "KRTC-O14": {"n":"鳳山國中","e":"Fongshan Junior High School","s":"KRTC","l":["KRTC-O"],"r":"kaohsiung","x":200,"y":3135,"c":"#ff9300"},
-        "KRTC-OT1": {"n":"大寮","e":"Daliao","s":"KRTC","l":["KRTC-O"],"r":"kaohsiung","x":230,"y":3165,"c":"#ff9300"},
-        "KRTC-R3": {"n":"小港","e":"Siaogang","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-65,"y":3300,"c":"#f7005c"},
-        "KRTC-R4": {"n":"高雄國際機場","e":"Kaohsiung International Airport","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-125,"y":3300,"c":"#f7005c"},
-        "KRTC-R4A": {"n":"草衙","e":"Caoya","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-195,"y":3300,"c":"#f7005c"},
-        "KRTC-R5": {"n":"前鎮高中","e":"Cianjhen Senior High School","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-225,"y":3275,"c":"#f7005c"},
-        "KRTC-R6": {"n":"凱旋","e":"Kaisyuan","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-255,"y":3240,"c":"#f7005c","g":"TRANSGRP_kaisyuan"},
-        "KRTC-R7": {"n":"獅甲","e":"Shihjia","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-285,"y":3210,"c":"#f7005c"},
-        "KRTC-R8": {"n":"三多商圈","e":"Sanduo Shopping District","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-315,"y":3185,"c":"#f7005c"},
-        "KRTC-R9": {"n":"中央公園","e":"Central Park","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-315,"y":3160,"c":"#f7005c"},
+        "KRTC-OT1": {"n":"大寮","e":"Daliao","s":"KRTC","l":["KRTC-O"],"r":"kaohsiung","x":230,"y":3175.6,"c":"#ff9300"},
+        "KRTC-R3": {"n":"小港","e":"Siaogang","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-65,"y":3400,"c":"#f7005c"},
+        "KRTC-R4": {"n":"高雄國際機場","e":"Kaohsiung International Airport","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-125,"y":3400,"c":"#f7005c"},
+        "KRTC-R4A": {"n":"草衙","e":"Caoya","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-195,"y":3400,"c":"#f7005c"},
+        "KRTC-R5": {"n":"前鎮高中","e":"Cianjhen Senior High School","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-225,"y":3358.44,"c":"#f7005c"},
+        "KRTC-R6": {"n":"凱旋","e":"Kaisyuan","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-262.22,"y":3288.26,"c":"#f7005c","g":"TRANSGRP_kaisyuan"},
+        "KRTC-R7": {"n":"獅甲","e":"Shihjia","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-285,"y":3250.4,"c":"#f7005c"},
+        "KRTC-R8": {"n":"三多商圈","e":"Sanduo Shopping District","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-315,"y":3208.84,"c":"#f7005c"},
+        "KRTC-R9": {"n":"中央公園","e":"Central Park","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-315,"y":3167.28,"c":"#f7005c"},
         "KRTC-R10": {"n":"美麗島","e":"Formosa Boulevard","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-315,"y":3149,"c":"#f7005c","g":"TRANSGRP_meilidao"},
         "KRTC-R11": {"n":"高雄車站","e":"Kaohsiung Main Station","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-315,"y":3094,"c":"#f7005c","g":"TRANSGRP_kaohsiung"},
         "KRTC-R12": {"n":"後驛","e":"Houyi","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-315,"y":3045,"c":"#f7005c"},
@@ -541,19 +541,19 @@
         "KRTC-R23": {"n":"橋頭火車站","e":"Ciaotou Station","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-420,"y":2775,"c":"#f7005c","g":"TRANSGRP_qiaotou"},
         "KRTC-R24": {"n":"岡山高醫","e":"Kaohsiung Medical University Gangshan Hospital","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-420,"y":2752,"c":"#f7005c"},
         "KRTC-RK1": {"n":"岡山車站","e":"Gangshan Station","s":"KRTC","l":["KRTC-R"],"r":"kaohsiung","x":-420,"y":2730,"c":"#f7005c","g":"TRANSGRP_gangshan"},
-        "KLRT-C1": {"n":"籬仔內","e":"Lizihnei","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-155,"y":3240,"c":"#61c851"},
-        "KLRT-C2": {"n":"凱旋瑞田","e":"Kaisyuan Rueitian","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-208,"y":3240,"c":"#61c851"},
-        "KLRT-C3": {"n":"前鎮之星","e":"Cianjhen Star","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-265.41,"y":3249.37,"c":"#61c851","g":"TRANSGRP_kaisyuan"},
-        "KLRT-C4": {"n":"凱旋中華","e":"Kaisyuan Jhonghua","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-305,"y":3285,"c":"#61c851"},
-        "KLRT-C5": {"n":"夢時代","e":"Dream Mall","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-355,"y":3285,"c":"#61c851"},
-        "KLRT-C6": {"n":"經貿園區","e":"Commerce and Trade Park","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-365,"y":3262,"c":"#61c851"},
-        "KLRT-C7": {"n":"軟體園區","e":"Software Technology Park","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-375,"y":3239,"c":"#61c851"},
-        "KLRT-C8": {"n":"高雄展覽館","e":"Kaohsiung Exhibition Center","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-385,"y":3216,"c":"#61c851"},
-        "KLRT-C9": {"n":"旅運中心","e":"Cruise Terminal","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-395,"y":3193,"c":"#61c851"},
-        "KLRT-C10": {"n":"光榮碼頭","e":"Glory Pier","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-395,"y":3170,"c":"#61c851"},
-        "KLRT-C11": {"n":"真愛碼頭","e":"Love Pier","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-455,"y":3170,"c":"#61c851"},
-        "KLRT-C12": {"n":"駁二大義","e":"Dayi Pier-2","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-515,"y":3170,"c":"#61c851"},
-        "KLRT-C13": {"n":"駁二蓬萊","e":"Penglai Pier-2","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-515,"y":3153,"c":"#61c851"},
+        "KLRT-C1": {"n":"籬仔內","e":"Lizihnei","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-155,"y":3300.26,"c":"#61c851"},
+        "KLRT-C2": {"n":"凱旋瑞田","e":"Kaisyuan Rueitian","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-208,"y":3300.26,"c":"#61c851"},
+        "KLRT-C3": {"n":"前鎮之星","e":"Cianjhen Star","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-255,"y":3300.26,"c":"#61c851","g":"TRANSGRP_kaisyuan"},
+        "KLRT-C4": {"n":"凱旋中華","e":"Kaisyuan Jhonghua","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-305,"y":3375.07,"c":"#61c851"},
+        "KLRT-C5": {"n":"夢時代","e":"Dream Mall","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-355,"y":3375.07,"c":"#61c851"},
+        "KLRT-C6": {"n":"經貿園區","e":"Commerce and Trade Park","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-365,"y":3336.83,"c":"#61c851"},
+        "KLRT-C7": {"n":"軟體園區","e":"Software Technology Park","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-375,"y":3298.6,"c":"#61c851"},
+        "KLRT-C8": {"n":"高雄展覽館","e":"Kaohsiung Exhibition Center","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-385,"y":3260.37,"c":"#61c851"},
+        "KLRT-C9": {"n":"旅運中心","e":"Cruise Terminal","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-395,"y":3222.14,"c":"#61c851"},
+        "KLRT-C10": {"n":"光榮碼頭","e":"Glory Pier","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-395,"y":3183.91,"c":"#61c851"},
+        "KLRT-C11": {"n":"真愛碼頭","e":"Love Pier","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-455,"y":3183.91,"c":"#61c851"},
+        "KLRT-C12": {"n":"駁二大義","e":"Dayi Pier-2","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-515,"y":3183.91,"c":"#61c851"},
+        "KLRT-C13": {"n":"駁二蓬萊","e":"Penglai Pier-2","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-515,"y":3155.65,"c":"#61c851"},
         "KLRT-C14": {"n":"哈瑪星","e":"Hamasen","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-515,"y":3135,"c":"#61c851","g":"TRANSGRP_hamasen"},
         "KLRT-C15": {"n":"壽山公園站","e":"Shoushan Park","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-505,"y":3100,"c":"#61c851"},
         "KLRT-C16": {"n":"文武聖殿站","e":"Wenwu Temple","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-495,"y":3078,"c":"#61c851"},
@@ -562,8 +562,8 @@
         "KLRT-C19": {"n":"馬卡道","e":"Makadao","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-475,"y":3012,"c":"#61c851"},
         "KLRT-C20": {"n":"臺鐵美術館","e":"TRA Museum of Fine Arts","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-475,"y":2990,"c":"#61c851","g":"TRANSGRP_meishuguan"},
         "KLRT-C21A": {"n":"內惟藝術中心","e":"Neiwei Arts Center","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-465,"y":2968,"c":"#61c851"},
-        "KLRT-C21": {"n":"美術館","e":"Kaohsiung Museum of Fine Arts","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-410,"y":2968,"c":"#61c851"},
-        "KLRT-C22": {"n":"聯合醫院","e":"Kaohsiung Municipal United Hospital","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-410,"y":2990,"c":"#61c851"},
+        "KLRT-C21": {"n":"美術館","e":"Kaohsiung Museum of Fine Arts","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-392,"y":2968,"c":"#61c851"},
+        "KLRT-C22": {"n":"聯合醫院","e":"Kaohsiung Municipal United Hospital","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-392,"y":2990,"c":"#61c851"},
         "KLRT-C23": {"n":"龍華國小","e":"Longhua Elementary School","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-353,"y":2990,"c":"#61c851"},
         "KLRT-C24": {"n":"愛河之心","e":"Heart of Love River","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-329,"y":2990,"c":"#61c851","g":"TRANSGRP_aozihdi"},
         "KLRT-C25": {"n":"新上國小","e":"Sinshang Elementary School","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-234,"y":2990,"c":"#61c851"},
@@ -573,12 +573,12 @@
         "KLRT-C29": {"n":"樹德家商","e":"Shu-Te Home-Economics & Commercial High School","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-114,"y":3036,"c":"#61c851"},
         "KLRT-C30": {"n":"科工館","e":"Science and Technology Museum","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-114,"y":3066,"c":"#61c851","g":"TRANSGRP_kegongguan"},
         "KLRT-C31": {"n":"聖功醫院","e":"St.Joseph Hospital","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-164,"y":3110,"c":"#61c851"},
-        "KLRT-C32": {"n":"凱旋公園站","e":"Kaisyuan Park","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-164,"y":3153,"c":"#61c851"},
-        "KLRT-C33": {"n":"衛生局站","e":"Department of Health","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-164,"y":3175,"c":"#61c851"},
-        "KLRT-C34": {"n":"五權國小站","e":"Wucyuan Elementary School","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3175,"c":"#61c851"},
-        "KLRT-C35": {"n":"凱旋武昌站","e":"Kaisyuan Wuchang","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3197,"c":"#61c851"},
-        "KLRT-C36": {"n":"凱旋二聖站","e":"Kaisyuan Ersheng","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3219,"c":"#61c851"},
-        "KLRT-C37": {"n":"輕軌機廠站","e":"LRT Depot","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3241,"c":"#61c851"},
+        "KLRT-C32": {"n":"凱旋公園站","e":"Kaisyuan Park","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-164,"y":3155.65,"c":"#61c851"},
+        "KLRT-C33": {"n":"衛生局站","e":"Department of Health","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-164,"y":3192.22,"c":"#61c851"},
+        "KLRT-C34": {"n":"五權國小站","e":"Wucyuan Elementary School","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3192.22,"c":"#61c851"},
+        "KLRT-C35": {"n":"凱旋武昌站","e":"Kaisyuan Wuchang","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3228.79,"c":"#61c851"},
+        "KLRT-C36": {"n":"凱旋二聖站","e":"Kaisyuan Ersheng","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3265.36,"c":"#61c851"},
+        "KLRT-C37": {"n":"輕軌機廠站","e":"LRT Depot","s":"KLRT","l":["KLRT-C"],"r":"kaohsiung","x":-104,"y":3301.93,"c":"#61c851"},
         "TYMC-A1": {"n":"台北車站","e":"Taipei Main Station","s":"TYMC","l":["TYMC-A"],"r":"taipei","x":-16,"y":14,"c":"#8246af","g":"TRANSGRP_taipei"},
         "TYMC-A2": {"n":"三重站","e":"Sanchong Station","s":"TYMC","l":["TYMC-A"],"r":"taipei","x":-141.65,"y":-25.77,"c":"#8246af","g":"TRANSGRP_sanchong"},
         "TYMC-A3": {"n":"新北產業園區站","e":"New Taipei Industrial Park Station","s":"TYMC","l":["TYMC-A"],"r":"taipei","x":-300.84,"y":-88.87,"c":"#8246af","g":"TRANSGRP_xinbeichanyeyuanqu"},
@@ -776,9 +776,9 @@
         {"id":"TRANSGRP_kegongguan","m":["TRA-4420","KLRT-C30"],"name":"科工館","en":"Science And Technolog…","cls":3,"r":"kaohsiung","g":"TRANSGRP_kegongguan"},
         {"id":"TRANSGRP_liujia","m":["THSR-1030","TRA-1194"],"name":"高鐵新竹","en":"Hsinchu","cls":2,"r":"hsinchu","g":"TRANSGRP_liujia","main":["THSR-1030"],"sub":[{"m":["TRA-1194"],"name":"六家","en":"Liujia"}]},
         {"id":"TRANSGRP_meilidao","m":["KRTC-O5","KRTC-R10"],"name":"美麗島","en":"Formosa Boulevard","cls":3,"r":"kaohsiung","g":"TRANSGRP_meilidao"},
-        {"id":"TRANSGRP_meishuguan","m":["TRA-4370","KLRT-C20"],"name":"美術館","en":"Museum of Fine Arts","cls":3,"r":"kaohsiung","g":"TRANSGRP_meishuguan","main":["TRA-4370"],"sub":[{"m":["KLRT-C20"],"name":"台鐵美術館","en":"TRA Museum of Fine Ar…"}]},
+        {"id":"TRANSGRP_meishuguan","m":["TRA-4370","KLRT-C20"],"name":"美術館","en":"Museum of Fine Arts","cls":3,"r":"kaohsiung","g":"TRANSGRP_meishuguan","main":["TRA-4370"],"sub":[{"m":["KLRT-C20"],"name":"台鐵美術館","en":"TRA Museum of Fine Ar…","lp":[-469,2990,"left","zh"]}]},
         {"id":"TRANSGRP_minquanxilu","m":["TRTC-R13","TRTC-O11"],"name":"民權西路","en":"Minquan W. Rd.","cls":3,"r":"taipei","g":"TRANSGRP_minquanxilu","lp":[22,-121.5,"left","zh"]},
-        {"id":"TRANSGRP_nangangzhanlanguan","m":["TRTC-BL23","TRTC-BR24"],"name":"南港展覽館","en":"Taipei Nangang Exhibi…","cls":3,"r":"taipei","g":"TRANSGRP_nangangzhanlanguan"},
+        {"id":"TRANSGRP_nangangzhanlanguan","m":["TRTC-BL23","TRTC-BR24"],"name":"南港展覽館","en":"Taipei Nangang Exhibi…","cls":3,"r":"taipei","g":"TRANSGRP_nangangzhanlanguan","lp":[550,-95,"center"]},
         {"id":"TRANSGRP_nanjingfuxing","m":["TRTC-BR11","TRTC-G16"],"name":"南京復興","en":"Nanjing Fuxing","cls":3,"r":"taipei","g":"TRANSGRP_nanjingfuxing"},
         {"id":"TRANSGRP_qiaotou","m":["TRA-4320","KRTC-R23"],"name":"橋頭","en":"Qiaotou","cls":3,"r":"kaohsiung","g":"TRANSGRP_qiaotou","main":["TRA-4320"],"sub":[{"m":["KRTC-R23"],"name":"橋頭火車站","en":"Ciaotou Station"}]},
         {"id":"TRANSGRP_sanchong","m":["TRTC-O15","TYMC-A2"],"name":"三重","en":"Sanchong","cls":3,"r":"taipei","g":"TRANSGRP_sanchong"},
@@ -919,7 +919,7 @@
         {"id":"TRA-4330","m":["TRA-4330"],"name":"楠梓","en":"Nanzi","cls":4,"r":"kaohsiung"},
         {"id":"TRA-4350","m":["TRA-4350"],"name":"左營","en":"Zuoying","cls":4,"r":"kaohsiung"},
         {"id":"TRA-4360","m":["TRA-4360"],"name":"內惟","en":"Neiwei","cls":4,"r":"kaohsiung"},
-        {"id":"TRA-4390","m":["TRA-4390"],"name":"三塊厝","en":"Sankuaicuo","cls":4,"r":"kaohsiung"},
+        {"id":"TRA-4390","m":["TRA-4390"],"name":"三塊厝","en":"Sankuaicuo","cls":4,"r":"kaohsiung","lp":[-400,3049,"center"]},
         {"id":"TRA-4410","m":["TRA-4410"],"name":"民族","en":"Minzu","cls":4,"r":"kaohsiung"},
         {"id":"TRA-4430","m":["TRA-4430"],"name":"正義","en":"Zhengyi","cls":4,"r":"kaohsiung"},
         {"id":"TRA-4440","m":["TRA-4440"],"name":"鳳山","en":"Fongshan","cls":4,"r":"kaohsiung"},
@@ -1057,7 +1057,7 @@
         {"id":"TRTC-BR20","m":["TRTC-BR20"],"name":"大湖公園","en":"Dahu Park","cls":4,"r":"taipei"},
         {"id":"TRTC-BR21","m":["TRTC-BR21"],"name":"葫洲","en":"Huzhou","cls":4,"r":"taipei"},
         {"id":"TRTC-BR22","m":["TRTC-BR22"],"name":"東湖","en":"Donghu","cls":4,"r":"taipei"},
-        {"id":"TRTC-BR23","m":["TRTC-BR23"],"name":"南港軟體園區","en":"Nangang Software Park","cls":4,"r":"taipei"},
+        {"id":"TRTC-BR23","m":["TRTC-BR23"],"name":"南港軟體園區","en":"Nangang Software Park","cls":4,"r":"taipei","lp":[538,-120,"right"]},
         {"id":"TRTC-G01","m":["TRTC-G01"],"name":"新店","en":"Xindian","cls":3,"r":"taipei"},
         {"id":"TRTC-G02","m":["TRTC-G02"],"name":"新店區公所","en":"Xindian District Offi…","cls":4,"r":"taipei","lp":[190,434,"left"]},
         {"id":"TRTC-G03","m":["TRTC-G03"],"name":"七張","en":"Qizhang","cls":4,"r":"taipei","lp":[148,400,"left"]},
@@ -1189,15 +1189,15 @@
         {"id":"KLRT-C10","m":["KLRT-C10"],"name":"光榮碼頭","en":"Glory Pier","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C11","m":["KLRT-C11"],"name":"真愛碼頭","en":"Love Pier","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C12","m":["KLRT-C12"],"name":"駁二大義","en":"Dayi Pier-2","cls":5,"r":"kaohsiung"},
-        {"id":"KLRT-C13","m":["KLRT-C13"],"name":"駁二蓬萊","en":"Penglai Pier-2","cls":5,"r":"kaohsiung","lp":[-510,3153,"left","zh"]},
+        {"id":"KLRT-C13","m":["KLRT-C13"],"name":"駁二蓬萊","en":"Penglai Pier-2","cls":5,"r":"kaohsiung","lp":[-510,3155.6490066225165,"left","zh"]},
         {"id":"KLRT-C15","m":["KLRT-C15"],"name":"壽山公園","en":"Shoushan Park","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C16","m":["KLRT-C16"],"name":"文武聖殿","en":"Wenwu Temple","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C17","m":["KLRT-C17"],"name":"鼓山區公所","en":"Gushan District Office","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C19","m":["KLRT-C19"],"name":"馬卡道","en":"Makadao","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C21A","m":["KLRT-C21A"],"name":"內惟藝術中心","en":"Neiwei Arts Center","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C21","m":["KLRT-C21"],"name":"美術館","en":"Kaohsiung Museum of F…","cls":5,"r":"kaohsiung"},
-        {"id":"KLRT-C22","m":["KLRT-C22"],"name":"聯合醫院","en":"Kaohsiung Municipal U…","cls":5,"r":"kaohsiung"},
-        {"id":"KLRT-C23","m":["KLRT-C23"],"name":"龍華國小","en":"Longhua Elementary Sc…","cls":5,"r":"kaohsiung"},
+        {"id":"KLRT-C22","m":["KLRT-C22"],"name":"聯合醫院","en":"Kaohsiung Municipal U…","cls":5,"r":"kaohsiung","lp":[-392,3004,"center","zh"]},
+        {"id":"KLRT-C23","m":["KLRT-C23"],"name":"龍華國小","en":"Longhua Elementary Sc…","cls":5,"r":"kaohsiung","lp":[-353,2977,"center","zh"]},
         {"id":"KLRT-C25","m":["KLRT-C25"],"name":"新上國小","en":"Sinshang Elementary S…","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C26","m":["KLRT-C26"],"name":"大順民族","en":"Dashun Minzu","cls":5,"r":"kaohsiung"},
         {"id":"KLRT-C27","m":["KLRT-C27"],"name":"灣仔內(大順鼎山)","en":"Wanzihnei(Dashun Ding…","cls":5,"r":"kaohsiung"},
@@ -1288,7 +1288,7 @@
           [[-300,316,"taipei","TRTC-BL01"],[-300,300,"taipei","TRTC-BL02"],[-300,275,"taipei","TRTC-BL03"],[-300,250,"taipei","TRTC-BL04"],[-300,225,"taipei","TRTC-BL05"],[-300,200,"taipei","TRTC-BL06"],[-300,138,"taipei","TRTC-BL07"],[-220,138,"taipei","TRTC-BL08"],[-175,138,"taipei","TRTC-BL09"],[-120,138,"taipei","TRTC-BL10"],[-80,100,"taipei","TRTC-BL11"],[-40,60,"taipei",null],[-14,60,"taipei","TRTC-BL12"],[90,60,"taipei","TRTC-BL13"],[150,60,"taipei","TRTC-BL14"],[220,60,"taipei","TRTC-BL15"],[282,60,"taipei","TRTC-BL16"],[346,60,"taipei","TRTC-BL17"],[407,60,"taipei","TRTC-BL18"],[450,60,"taipei","TRTC-BL19"],[500,60,"taipei","TRTC-BL20"],[550,60,"taipei","TRTC-BL21"],[550,30,"taipei","TRTC-BL22"],[550,-60,"taipei","TRTC-BL23"]]
         ],
         "TRTC-BR": [
-          [[400,420,"taipei","TRTC-BR01"],[360,380,"taipei","TRTC-BR02"],[340,350,"taipei","TRTC-BR03"],[340,320,"taipei","TRTC-BR04"],[340,290,"taipei","TRTC-BR05"],[340,260,"taipei","TRTC-BR06"],[280,230,"taipei","TRTC-BR07"],[220,230,"taipei",null],[220,200,"taipei","TRTC-BR08"],[220,150,"taipei","TRTC-BR09"],[220,74,"taipei","TRTC-BR10"],[220,60,"taipei",null],[220,-55,"taipei","TRTC-BR11"],[220,-105,"taipei","TRTC-BR12"],[220,-130,"taipei","TRTC-BR13"],[220,-185,"taipei","TRTC-BR14"],[300,-235,"taipei","TRTC-BR15"],[350,-235,"taipei","TRTC-BR16"],[400,-235,"taipei","TRTC-BR17"],[450,-235,"taipei","TRTC-BR18"],[500,-235,"taipei","TRTC-BR19"],[520,-205,"taipei","TRTC-BR20"],[540,-175,"taipei","TRTC-BR21"],[550,-150,"taipei","TRTC-BR22"],[550,-85,"taipei","TRTC-BR23"],[550,-74,"taipei","TRTC-BR24"]]
+          [[400,420,"taipei","TRTC-BR01"],[360,380,"taipei","TRTC-BR02"],[340,350,"taipei","TRTC-BR03"],[340,320,"taipei","TRTC-BR04"],[340,290,"taipei","TRTC-BR05"],[340,260,"taipei","TRTC-BR06"],[280,230,"taipei","TRTC-BR07"],[220,230,"taipei",null],[220,200,"taipei","TRTC-BR08"],[220,150,"taipei","TRTC-BR09"],[220,74,"taipei","TRTC-BR10"],[220,60,"taipei",null],[220,-55,"taipei","TRTC-BR11"],[220,-105,"taipei","TRTC-BR12"],[220,-130,"taipei","TRTC-BR13"],[220,-185,"taipei","TRTC-BR14"],[300,-235,"taipei","TRTC-BR15"],[350,-235,"taipei","TRTC-BR16"],[400,-235,"taipei","TRTC-BR17"],[450,-235,"taipei","TRTC-BR18"],[500,-235,"taipei","TRTC-BR19"],[520,-205,"taipei","TRTC-BR20"],[540,-175,"taipei","TRTC-BR21"],[550,-150,"taipei","TRTC-BR22"],[550,-120,"taipei","TRTC-BR23"],[550,-74,"taipei","TRTC-BR24"]]
         ],
         "TRTC-G": [
           [[140,460,"taipei","TRTC-G01"],[140,430,"taipei","TRTC-G02"],[140,400,"taipei","TRTC-G03"],[140,370,"taipei","TRTC-G04"],[140,335,"taipei","TRTC-G05"],[120,310,"taipei","TRTC-G06"],[100,280,"taipei","TRTC-G07"],[80,250,"taipei","TRTC-G08"],[50,220,"taipei","TRTC-G09"],[10,170,"taipei",null],[-1.71,162.32,"taipei","TRTC-G10"],[-51,130,"taipei","TRTC-G11"],[-70.27,110.07,"taipei","TRTC-G12"],[-80,100,"taipei",null],[-80,-45,"taipei","TRTC-G13"],[10,-55,"taipei","TRTC-G14"],[150,-55,"taipei","TRTC-G15"],[206,-55,"taipei","TRTC-G16"],[220,-55,"taipei",null],[300,-55,"taipei","TRTC-G17"],[370,-55,"taipei","TRTC-G18"],[450,-47,"taipei","TRTC-G19"]],
@@ -1313,16 +1313,16 @@
           [[-530,-385,"taipei","NTDLRT-V09"],[-560,-365,"taipei","NTDLRT-V10"],[-560,-345,"taipei","NTDLRT-V11"]]
         ],
         "NTALRT-K": [
-          [[175,530,"taipei","NTALRT-K01"],[125,530,"taipei","NTALRT-K02"],[65,530,"taipei","NTALRT-K03"],[65,510,"taipei","NTALRT-K04"],[65,490,"taipei","NTALRT-K05"],[65,470,"taipei","NTALRT-K06"],[65,450,"taipei","NTALRT-K07"],[65,430,"taipei","NTALRT-K08"],[65,384,"taipei","NTALRT-K09"]]
+          [[175,562,"taipei","NTALRT-K01"],[120,562,"taipei","NTALRT-K02"],[65,562,"taipei","NTALRT-K03"],[65,532,"taipei","NTALRT-K04"],[65,502,"taipei","NTALRT-K05"],[65,472,"taipei","NTALRT-K06"],[65,442,"taipei","NTALRT-K07"],[65,412,"taipei","NTALRT-K08"],[65,384,"taipei","NTALRT-K09"]]
         ],
         "KRTC-O": [
-          [[-501,3135,"kaohsiung","KRTC-O1"],[-420,3135,"kaohsiung","KRTC-O2"],[-370,3135,"kaohsiung","KRTC-O4"],[-315,3135,"kaohsiung","KRTC-O5"],[-260,3135,"kaohsiung","KRTC-O6"],[-200,3135,"kaohsiung","KRTC-O7"],[-130,3135,"kaohsiung","KRTC-O8"],[-80,3135,"kaohsiung","KRTC-O9"],[-30,3135,"kaohsiung","KRTC-O10"],[30,3135,"kaohsiung","KRTC-O11"],[90,3135,"kaohsiung","KRTC-O12"],[150,3135,"kaohsiung","KRTC-O13"],[200,3135,"kaohsiung","KRTC-O14"],[230,3165,"kaohsiung","KRTC-OT1"]]
+          [[-501,3135,"kaohsiung","KRTC-O1"],[-420,3135,"kaohsiung","KRTC-O2"],[-370,3135,"kaohsiung","KRTC-O4"],[-315,3135,"kaohsiung","KRTC-O5"],[-260,3135,"kaohsiung","KRTC-O6"],[-200,3135,"kaohsiung","KRTC-O7"],[-130,3135,"kaohsiung","KRTC-O8"],[-80,3135,"kaohsiung","KRTC-O9"],[-30,3135,"kaohsiung","KRTC-O10"],[30,3135,"kaohsiung","KRTC-O11"],[90,3135,"kaohsiung","KRTC-O12"],[150,3135,"kaohsiung","KRTC-O13"],[200,3135,"kaohsiung","KRTC-O14"],[230,3175.6,"kaohsiung","KRTC-OT1"]]
         ],
         "KRTC-R": [
-          [[-65,3300,"kaohsiung","KRTC-R3"],[-125,3300,"kaohsiung","KRTC-R4"],[-195,3300,"kaohsiung","KRTC-R4A"],[-225,3275,"kaohsiung","KRTC-R5"],[-255,3240,"kaohsiung","KRTC-R6"],[-285,3210,"kaohsiung","KRTC-R7"],[-315,3185,"kaohsiung","KRTC-R8"],[-315,3160,"kaohsiung","KRTC-R9"],[-315,3149,"kaohsiung","KRTC-R10"],[-315,3135,"kaohsiung",null],[-315,3094,"kaohsiung","KRTC-R11"],[-315,3080,"kaohsiung",null],[-315,3045,"kaohsiung","KRTC-R12"],[-315,2990,"kaohsiung","KRTC-R13"],[-315,2935,"kaohsiung","KRTC-R14"],[-315,2910,"kaohsiung","KRTC-R15"],[-386.61,2888.1,"kaohsiung","KRTC-R16"],[-400,2884,"kaohsiung",null],[-480,2884,"kaohsiung","KRTC-R17"],[-530,2884,"kaohsiung","KRTC-R18"],[-530,2862,"kaohsiung","KRTC-R19"],[-530,2840,"kaohsiung","KRTC-R20"],[-480,2840,"kaohsiung","KRTC-R21"],[-480,2819,"kaohsiung","KRTC-R22"],[-480,2797,"kaohsiung","KRTC-R22A"],[-420,2775,"kaohsiung","KRTC-R23"],[-420,2752,"kaohsiung","KRTC-R24"],[-420,2730,"kaohsiung","KRTC-RK1"]]
+          [[-65,3400,"kaohsiung","KRTC-R3"],[-125,3400,"kaohsiung","KRTC-R4"],[-195,3400,"kaohsiung","KRTC-R4A"],[-225,3358.44,"kaohsiung","KRTC-R5"],[-255,3300.26,"kaohsiung",null],[-262.22,3288.26,"kaohsiung","KRTC-R6"],[-285,3250.4,"kaohsiung","KRTC-R7"],[-315,3208.84,"kaohsiung","KRTC-R8"],[-315,3167.28,"kaohsiung","KRTC-R9"],[-315,3149,"kaohsiung","KRTC-R10"],[-315,3135,"kaohsiung",null],[-315,3094,"kaohsiung","KRTC-R11"],[-315,3080,"kaohsiung",null],[-315,3045,"kaohsiung","KRTC-R12"],[-315,2990,"kaohsiung","KRTC-R13"],[-315,2935,"kaohsiung","KRTC-R14"],[-315,2910,"kaohsiung","KRTC-R15"],[-386.61,2888.1,"kaohsiung","KRTC-R16"],[-400,2884,"kaohsiung",null],[-480,2884,"kaohsiung","KRTC-R17"],[-530,2884,"kaohsiung","KRTC-R18"],[-530,2862,"kaohsiung","KRTC-R19"],[-530,2840,"kaohsiung","KRTC-R20"],[-480,2840,"kaohsiung","KRTC-R21"],[-480,2819,"kaohsiung","KRTC-R22"],[-480,2797,"kaohsiung","KRTC-R22A"],[-420,2775,"kaohsiung","KRTC-R23"],[-420,2752,"kaohsiung","KRTC-R24"],[-420,2730,"kaohsiung","KRTC-RK1"]]
         ],
         "KLRT-C": [
-          [[-155,3240,"kaohsiung","KLRT-C1"],[-208,3240,"kaohsiung","KLRT-C2"],[-255,3240,"kaohsiung",null],[-265.41,3249.37,"kaohsiung","KLRT-C3"],[-305,3285,"kaohsiung","KLRT-C4"],[-355,3285,"kaohsiung","KLRT-C5"],[-365,3262,"kaohsiung","KLRT-C6"],[-375,3239,"kaohsiung","KLRT-C7"],[-385,3216,"kaohsiung","KLRT-C8"],[-395,3193,"kaohsiung","KLRT-C9"],[-395,3170,"kaohsiung","KLRT-C10"],[-455,3170,"kaohsiung","KLRT-C11"],[-515,3170,"kaohsiung","KLRT-C12"],[-515,3153,"kaohsiung","KLRT-C13"],[-515,3135,"kaohsiung","KLRT-C14"],[-505,3100,"kaohsiung","KLRT-C15"],[-495,3078,"kaohsiung","KLRT-C16"],[-485,3056,"kaohsiung","KLRT-C17"],[-475,3034,"kaohsiung","KLRT-C18"],[-475,3012,"kaohsiung","KLRT-C19"],[-475,2990,"kaohsiung","KLRT-C20"],[-465,2968,"kaohsiung","KLRT-C21A"],[-410,2968,"kaohsiung","KLRT-C21"],[-410,2990,"kaohsiung","KLRT-C22"],[-353,2990,"kaohsiung","KLRT-C23"],[-329,2990,"kaohsiung","KLRT-C24"],[-315,2990,"kaohsiung",null],[-234,2990,"kaohsiung","KLRT-C25"],[-174,2990,"kaohsiung","KLRT-C26"],[-114,2990,"kaohsiung","KLRT-C27"],[-114,3013,"kaohsiung","KLRT-C28"],[-114,3036,"kaohsiung","KLRT-C29"],[-114,3066,"kaohsiung","KLRT-C30"],[-114,3080,"kaohsiung",null],[-164,3110,"kaohsiung","KLRT-C31"],[-164,3153,"kaohsiung","KLRT-C32"],[-164,3175,"kaohsiung","KLRT-C33"],[-104,3175,"kaohsiung","KLRT-C34"],[-104,3197,"kaohsiung","KLRT-C35"],[-104,3219,"kaohsiung","KLRT-C36"],[-104,3241,"kaohsiung","KLRT-C37"],[-155,3240,"kaohsiung","KLRT-C1"]]
+          [[-155,3300.26,"kaohsiung","KLRT-C1"],[-208,3300.26,"kaohsiung","KLRT-C2"],[-255,3300.26,"kaohsiung","KLRT-C3"],[-305,3375.07,"kaohsiung","KLRT-C4"],[-355,3375.07,"kaohsiung","KLRT-C5"],[-365,3336.83,"kaohsiung","KLRT-C6"],[-375,3298.6,"kaohsiung","KLRT-C7"],[-385,3260.37,"kaohsiung","KLRT-C8"],[-395,3222.14,"kaohsiung","KLRT-C9"],[-395,3183.91,"kaohsiung","KLRT-C10"],[-455,3183.91,"kaohsiung","KLRT-C11"],[-515,3183.91,"kaohsiung","KLRT-C12"],[-515,3155.65,"kaohsiung","KLRT-C13"],[-515,3135,"kaohsiung","KLRT-C14"],[-505,3100,"kaohsiung","KLRT-C15"],[-495,3078,"kaohsiung","KLRT-C16"],[-485,3056,"kaohsiung","KLRT-C17"],[-475,3034,"kaohsiung","KLRT-C18"],[-475,3012,"kaohsiung","KLRT-C19"],[-475,2990,"kaohsiung","KLRT-C20"],[-465,2968,"kaohsiung","KLRT-C21A"],[-392,2968,"kaohsiung","KLRT-C21"],[-392,2990,"kaohsiung","KLRT-C22"],[-353,2990,"kaohsiung","KLRT-C23"],[-329,2990,"kaohsiung","KLRT-C24"],[-315,2990,"kaohsiung",null],[-234,2990,"kaohsiung","KLRT-C25"],[-174,2990,"kaohsiung","KLRT-C26"],[-114,2990,"kaohsiung","KLRT-C27"],[-114,3013,"kaohsiung","KLRT-C28"],[-114,3036,"kaohsiung","KLRT-C29"],[-114,3066,"kaohsiung","KLRT-C30"],[-114,3080,"kaohsiung",null],[-164,3110,"kaohsiung","KLRT-C31"],[-164,3155.65,"kaohsiung","KLRT-C32"],[-164,3192.22,"kaohsiung","KLRT-C33"],[-104,3192.22,"kaohsiung","KLRT-C34"],[-104,3228.79,"kaohsiung","KLRT-C35"],[-104,3265.36,"kaohsiung","KLRT-C36"],[-104,3301.93,"kaohsiung","KLRT-C37"],[-155,3300.26,"kaohsiung","KLRT-C1"]]
         ],
         "TYMC-A": [
           [[-16,14,"taipei","TYMC-A1"],[-141.65,-25.77,"taipei","TYMC-A2"],[-155,-30,"taipei",null],[-290,-80,"taipei",null],[-300.84,-88.87,"taipei","TYMC-A3"],[-345,-125,"taipei","TYMC-A4"],[-395,-125,"taipei","TYMC-A5"],[-445,-125,"taipei","TYMC-A6"],[-550,-125,null,null],[-550,350,"taoyuan","TYMC-A7"],[-550,380,"taoyuan","TYMC-A8"],[-550,410,"taoyuan","TYMC-A9"],[-550,440,"taoyuan","TYMC-A10"],[-550,470,"taoyuan","TYMC-A11"],[-550,500,"taoyuan","TYMC-A12"],[-550,530,"taoyuan","TYMC-A13"],[-550,590,"taoyuan","TYMC-A14a"],[-550,690,"taoyuan","TYMC-A15"],[-550,720,"taoyuan","TYMC-A16"],[-550,750,"taoyuan","TYMC-A17"],[-550,780,"taoyuan","TYMC-A18"],[-550,830,"taoyuan","TYMC-A19"],[-480,830,"taoyuan","TYMC-A20"],[-400,830,"taoyuan","TYMC-A21"],[-262,830,"taoyuan","TYMC-A22"]]
@@ -1624,7 +1624,8 @@
             ctx.font = ln.font;
             ln.w = ctx.measureText(ln.text).width;
             w = Math.max(w, ln.w);
-            h += i === 0 ? ln.size : ln.size * 1.05;
+            // 第二行畫在第一行下方 0.62 倍字高（見 render），外框跟著實際的字收，不多留底部空白
+            h += i === 0 ? ln.size : (i === 1 ? lines[0].size * 0.12 + ln.size * 0.5 : ln.size * 1.05);
         });
         return { w: w, h: h + lines[0].size * 0.2, lines: lines };
     }
@@ -1710,16 +1711,24 @@
                 return false;
             });
             // 站名離別站的站點比離自己的站點還近（或差不多近）：容易看錯是哪一站的
+            //   比自己的站點近越多扣越重：離自己 30、離別站 4 的位置，要比壓到幾段線還糟
             var near = 0;
             if (!onDot) {
                 var ox = Math.max(anchor.x1 - box.x2, box.x1 - anchor.x2, 0), oy = Math.max(anchor.y1 - box.y2, box.y1 - anchor.y2, 0);
-                var lim = Math.sqrt(ox * ox + oy * oy) + env.nearDot;
+                // 比較「站名中心 → 站點中心」：站名斜斜地放在自己站點的右上，卻正對著上一站，也算看錯
+                var ownD = Math.sqrt(ox * ox + oy * oy), lim = ownD + env.nearDot, worse = -Infinity;
+                var mx = (box.x1 + box.x2) / 2, my = (box.y1 + box.y2) / 2;
+                var ownC = Math.hypot(mx - cx, my - cy);
                 env.boxes.each(box.x1 - lim, box.y1 - lim, box.x2 + lim, box.y2 + lim, function (b) {
                     if (!b.dot || own.indexOf(b) >= 0) { return false; }
                     var dx = Math.max(b.x1 - box.x2, box.x1 - b.x2, 0), dy = Math.max(b.y1 - box.y2, box.y1 - b.y2, 0);
-                    if (Math.sqrt(dx * dx + dy * dy) < lim) { near = 1; return true; }
+                    var d = Math.sqrt(dx * dx + dy * dy);
+                    if (d >= lim) { return false; }
+                    var c = Math.hypot(mx - (b.x1 + b.x2) / 2, my - (b.y1 + b.y2) / 2);
+                    worse = Math.max(worse, ownD - d, ownC - c);
                     return false;
                 });
+                if (worse > -Infinity) { near = 1 + 6 * Math.min(1, Math.max(0, worse) / Math.max(8, m.lines[0].size)); }
             }
             var score = (onDot ? 300 + 700 * Math.min(1, onDot) : 0) + (lap ? 15 + 250 * Math.min(1, lap) : 0) +
                 near * 14 + cross * 10 + base;
@@ -1745,8 +1754,14 @@
                 { x: cx, y: T - 2, align: 'center', va: 'bottom' },
                 { x: cx, y: B + 2, align: 'center', va: 'top' }
             ];
-            (flat ? over.concat(corner, side) : side.concat(corner, over)).forEach(function (c) {
-                if (!done && test(boxOf(c, m), c.x, c.align, i++) === 0) { done = true; }
+            // 正左右、正上下優先；斜角（右上、左下…）看起來會像隔壁站的站名，寧可跟別的站名稍微重疊也不放，除非四周都會蓋到站點
+            // 直向的線：正上方／正下方會壓在線上、夾在兩站中間（分不出是哪一站），比跟別的站名稍微重疊還糟
+            (flat ? over.concat(side) : side.concat(over)).forEach(function (c) {
+                var extra = !flat && c.align === 'center' ? 25 : 0;
+                if (!done && test(boxOf(c, m), c.x, c.align, extra + i++) === 0) { done = true; }
+            });
+            corner.forEach(function (c) {
+                if (!done) { test(boxOf(c, m), c.x, c.align, 100 + i++); }
             });
         });
         if (best.score < 10) { return best; }
@@ -1756,19 +1771,22 @@
         // wide：附近真的都滿了，再往外多找兩圈（站名離站點遠一點，總比不畫好）
         var gaps = [2, m.lines[0].size * 0.9, m.lines[0].size * 2];
         if (wide) { gaps.push(m.lines[0].size * 3.2, m.lines[0].size * 4.5); }
+        // 滑動只在「正左右」「正上下」的範圍內：左右的站名一定要跨過站點的水平中線、上下的一定要跨過垂直中線，
+        // 不會斜斜地飄到隔壁站旁邊；寧可貼近自己稍微重疊，也不要離得遠
+        var mY = Math.min(m.h / 2, m.lines[0].size * 0.4), mX = Math.min(m.w / 2, m.lines[0].size);
         gaps.forEach(function (gap, ring) {
-            var x, y, far = ring * 4;
+            var x, y, far = ring * 8;
             function near(box) {
                 var dx = (box.x1 + box.x2) / 2 - cx, dy = (box.y1 + box.y2) / 2 - cy;
-                return 16 + far + Math.min(8, Math.sqrt(dx * dx + dy * dy) / 12);
+                return 16 + far + Math.min(12, Math.sqrt(dx * dx + dy * dy) / 6);
             }
-            for (y = anchor.y1 - m.h; y <= anchor.y2 + 0.01; y += step) {
+            for (y = cy - m.h + mY; y <= cy - mY + 0.01; y += step) {
                 var bl = { x1: anchor.x2 + gap, y1: y, x2: anchor.x2 + gap + m.w, y2: y + m.h };
                 test(bl, bl.x1, 'left', near(bl));
                 var br = { x1: anchor.x1 - gap - m.w, y1: y, x2: anchor.x1 - gap, y2: y + m.h };
                 test(br, br.x2, 'right', near(br));
             }
-            for (x = anchor.x1 - m.w; x <= anchor.x2 + 0.01; x += step * 2) {
+            for (x = cx - m.w + mX; x <= cx - mX + 0.01; x += step * 2) {
                 var bt = { x1: x, y1: anchor.y1 - gap - m.h, x2: x + m.w, y2: anchor.y1 - gap };
                 test(bt, x + m.w / 2, 'center', near(bt));
                 var bb = { x1: x, y1: anchor.y2 + gap, x2: x + m.w, y2: anchor.y2 + gap + m.h };
