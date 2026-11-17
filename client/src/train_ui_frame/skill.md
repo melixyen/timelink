@@ -12,7 +12,7 @@ description: 接軌時刻前端（client/）的共用 UI 元件庫 Train UI Fram
 train_ui_frame/
   index.js        install 外掛：自動全域註冊 components/train_*.vue，並載入 train_ui.css
   train_ui.css    元件的基礎樣式＋所有 --train-ui-* CSS 變數
-  utils.js        trainUid、trainTextOn、useTrainClickOutside、trainLockScroll／trainUnlockScroll
+  utils.js        trainUid、trainTextOn、trainLuminance、useTrainClickOutside、trainLockScroll／trainUnlockScroll
   components/     train_xxx.vue，一個元件一個檔
   skill.md        本文件
 ```
@@ -181,7 +181,7 @@ train_ui_frame/
 ## 工具（`import { … } from '@/train_ui_frame'`）
 
 - `trainUid(prefix)`：頁面內唯一 id
-- `trainTextOn(hex)`：依底色回傳適合的文字色
+- `trainTextOn(hex, dark = '#1f2a3d')`：依底色回傳文字色，白字與深灰字（判斷基準固定 #3c4a5e）取對比度（WCAG）高的——深底白字、淺底回 dark；`trainLuminance(hex)` 回相對亮度
 - `useTrainClickOutside(elRef, handler)`：在 setup 裡呼叫，點元素外面時執行
 - `trainLockScroll()`／`trainUnlockScroll()`：鎖定頁面捲動（可重疊呼叫）
 

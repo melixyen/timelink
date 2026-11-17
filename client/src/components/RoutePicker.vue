@@ -55,7 +55,7 @@ const transferOptions = computed(() => {
   ]
 })
 
-const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '')
+const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '').replace(/臺/g, '台') // 臺、台視為同一字
 
 function searchText(route) {
   return norm(

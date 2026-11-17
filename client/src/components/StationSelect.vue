@@ -1,12 +1,14 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePublicStationStore } from '@/stores/publicStation'
 import { usePublicInfoStore } from '@/stores/publicInfo'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { config, groupByOperator } from '@/config'
-import { nameOf, textOn } from '@/utils/format'
+import { nameOf } from '@/utils/format'
 import RailwayMapPicker from '@/components/RailwayMapPicker.vue'
+import { useIsMobile } from '@/utils/media'
+import { trainLockScroll, trainTextOn, trainUnlockScroll } from '@/train_ui_frame/utils'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -42,7 +44,27 @@ const lineGroups = computed(() =>
   })),
 )
 
-const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '')
+/**
+ * 路線按鈕的顏色：有路線顏色（#RRGGBB）的用路線顏色當底色，深色底配白字、淺色底配按鈕原本的深灰字；
+ * 沒有路線顏色的維持按鈕預設樣式（回 null）
+ */
+const CHIP_DARK_TEXT = '#3c4a5e' // 按鈕原本的深灰字（--train-ui-text-color-regular）
+
+function chipStyle(color) {
+  if (!/^#[0-9a-f]{6}$/i.test(color || '')) return null
+  // 白字與深灰字取對比度高的：深色底白字、淺色底深灰字
+  const fg = trainTextOn(color, CHIP_DARK_TEXT) === '#fff' ? '#fff' : 'var(--train-ui-text-color-regular)'
+  return {
+    '--tb-bg': color,
+    '--tb-border': color,
+    '--tb-hover-bg': color,
+    '--tb-hover-border': color,
+    '--tb-color': fg,
+    '--tb-hover-color': fg,
+  }
+}
+
+const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '').replace(/臺/g, '台') // 臺、台視為同一字
 
 function matchStation(station, q) {
   const key = norm(q)
@@ -180,11 +202,129 @@ function chooseFromMap(uid) {
   keyword.value = ''
 }
 
-onBeforeUnmount(() => clearTimeout(timer))
+/**
+ * 下拉面板的位置與高度（桌面版）：面板要能完整看到搜尋列、路線區與車站清單。
+ * 1. 下拉位置到畫面底部放得下（最多 PANEL_MAX 高）：照常往下開
+ * 2. 放不下：先縮短高度，最短到「搜尋列＋路線區＋車站清單最少 MIN_LIST_HEIGHT」的最小高度
+ * 3. 縮到最小高度還放不下：往上移，讓面板底部貼齊畫面底部
+ * 4. 畫面高度連最小高度都不夠：放在畫面頂端（top＝0），不再調整
+ * 手機版（useIsMobile）直接全螢幕，不用計算
+ */
+const PANEL_MAX = 580
+const PANEL_GAP = 6
+const VIEW_MARGIN = 8
+const MIN_LIST_HEIGHT = 150
+
+const isMobile = useIsMobile()
+const rootEl = ref(null)
+const panelEl = ref(null)
+const panelTop = ref(null)
+const panelMaxHeight = ref(null)
+
+function measureMinHeight(panel) {
+  const cs = getComputedStyle(panel)
+  const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+  const gap = parseFloat(cs.rowGap) || 0
+  const kids = [...panel.children]
+  let h = pad + gap * Math.max(0, kids.length - 1)
+  for (const el of kids) {
+    h += el.classList.contains('option-list') ? MIN_LIST_HEIGHT : el.offsetHeight
+  }
+  return Math.ceil(h)
+}
+
+function measureNaturalHeight(panel) {
+  const cs = getComputedStyle(panel)
+  const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+  const gap = parseFloat(cs.rowGap) || 0
+  const kids = [...panel.children]
+  let h = pad + gap * Math.max(0, kids.length - 1)
+  for (const el of kids) {
+    h += el.classList.contains('option-list') ? Math.max(el.scrollHeight, MIN_LIST_HEIGHT) : el.offsetHeight
+  }
+  return Math.ceil(h)
+}
+
+function placePanel() {
+  if (!open.value || isMobile.value || !rootEl.value || !panelEl.value) return
+  // 面板以下拉元件（train-dropdown，不含上方的欄位標題）為定位基準
+  const anchor = rootEl.value.querySelector('.train-dropdown') || rootEl.value
+  const rect = anchor.getBoundingClientRect()
+  const vh = window.innerHeight
+  const minH = measureMinHeight(panelEl.value)
+  const want = Math.min(PANEL_MAX, measureNaturalHeight(panelEl.value))
+  const below = vh - rect.bottom - PANEL_GAP - VIEW_MARGIN
+  let top = rect.height + PANEL_GAP // 相對下拉元件頂端
+  let height = want
+  if (below < want) {
+    if (below >= minH) {
+      height = below
+    } else if (vh - VIEW_MARGIN * 2 >= minH) {
+      height = minH
+      top = vh - VIEW_MARGIN - minH - rect.top
+    } else {
+      height = minH
+      top = -rect.top
+    }
+  }
+  panelTop.value = top
+  panelMaxHeight.value = height
+}
+
+function resetPanel() {
+  panelTop.value = null
+  panelMaxHeight.value = null
+}
+
+const panelStyle = computed(() =>
+  isMobile.value || panelMaxHeight.value === null ? null : { maxHeight: `${panelMaxHeight.value}px` },
+)
+
+function onViewportChange() {
+  placePanel()
+}
+
+watch(open, async (v) => {
+  if (v) {
+    if (isMobile.value) trainLockScroll()
+    resetPanel()
+    await nextTick()
+    placePanel()
+    window.addEventListener('resize', onViewportChange)
+    window.addEventListener('scroll', onViewportChange, true)
+  } else {
+    window.removeEventListener('resize', onViewportChange)
+    window.removeEventListener('scroll', onViewportChange, true)
+    trainUnlockScroll()
+  }
+})
+
+// 清單內容變了（切換路線、搜尋）：重新計算高度與位置
+watch([selectedLine, kw, () => stationStore.loading], async () => {
+  if (!open.value) return
+  await nextTick()
+  placePanel()
+})
+
+watch(isMobile, () => {
+  if (open.value) placePanel()
+})
+
+onBeforeUnmount(() => {
+  clearTimeout(timer)
+  window.removeEventListener('resize', onViewportChange)
+  window.removeEventListener('scroll', onViewportChange, true)
+  if (open.value) trainUnlockScroll()
+})
 </script>
 
 <template>
-  <div class="station-select">
+  <div
+    ref="rootEl"
+    class="station-select"
+    :class="{ 'is-mobile': isMobile }"
+    :style="!isMobile && panelTop !== null ? { '--station-panel-top': `${panelTop}px` } : null"
+  >
     <div v-if="fieldLabel" class="field-label">{{ fieldLabel }}</div>
     <train-dropdown v-model="open">
       <template #trigger="{ toggle }">
@@ -195,15 +335,35 @@ onBeforeUnmount(() => clearTimeout(timer))
         </button>
       </template>
 
-      <div class="station-panel">
-        <train-input
-          v-model="keyword"
-          class="search"
-          type="search"
-          prefix-icon="search"
-          clearable
-          :placeholder="t('station.search', { count: stationStore.stations.length })"
-        />
+      <div ref="panelEl" class="station-panel" :style="panelStyle">
+        <!-- 手機版全螢幕：上方標題列＋關閉鈕 -->
+        <div v-if="isMobile" class="panel-head">
+          <span class="panel-title">{{ fieldLabel }}</span>
+          <train-button
+            size="small"
+            circle
+            icon="close"
+            :aria-label="t('common.close')"
+            :title="t('common.close')"
+            @click="open = false"
+          />
+        </div>
+
+        <!-- 搜尋列：搜尋框＋路網圖按鈕（同一排，按鈕在最右邊） -->
+        <div class="search-row">
+          <train-input
+            v-model="keyword"
+            class="search"
+            type="search"
+            prefix-icon="search"
+            clearable
+            :placeholder="t('station.search', { count: stationStore.stations.length })"
+          />
+          <button type="button" class="map-btn" :title="t('station.map')" @click="openMap">
+            <train-icon name="route" />
+            <span>{{ t('station.mapShort') }}</span>
+          </button>
+        </div>
 
         <!-- 路線切換器：全部 / 指定路線 -->
         <div class="line-switch">
@@ -228,11 +388,11 @@ onBeforeUnmount(() => clearTimeout(timer))
                   size="small"
                   round
                   class="line-chip"
-                  :class="{ active: selectedLine === line.uid }"
-                  :style="selectedLine === line.uid ? { '--tb-bg': line.color, '--tb-border': line.color, '--tb-hover-bg': line.color, '--tb-hover-border': line.color, '--tb-color': textOn(line.color), '--tb-hover-color': textOn(line.color) } : null"
+                  :class="{ active: selectedLine === line.uid, colored: !!chipStyle(line.color) }"
+                  :style="chipStyle(line.color)"
                   @click="selectedLine = selectedLine === line.uid ? '' : line.uid"
                 >
-                  <span class="bar" :style="{ background: line.color }"></span>
+                  <span v-if="!chipStyle(line.color)" class="bar" :style="{ background: line.color }"></span>
                   {{ line.name }}
                 </train-button>
               </div>
@@ -287,9 +447,6 @@ onBeforeUnmount(() => clearTimeout(timer))
 
         <div class="panel-foot">
           <train-link @click="clear">{{ t('station.clear') }}</train-link>
-          <train-button size="small" plain type="primary" icon="route" @click="openMap">
-            {{ t('station.map') }}
-          </train-button>
         </div>
       </div>
     </train-dropdown>

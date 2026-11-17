@@ -70,6 +70,7 @@ canvas 由 library 建立，大小由 library 決定（剛好容納要畫的路�
   station,         // 點到的車站；點在空白是 undefined
   group,           // 車站所屬的 TransferGroup；沒有就是 undefined
   candidates,      // 點站名時：共用這個站名的 StationUID（依優先順序）；其他情況就是 [station.StationUID] 或 []
+  ring,            // 跟點到的車站圈在同一個大圈（共構）的 StationUID（依優先順序）；不是轉乘站就是 [station.StationUID]
   originalEvent
 }
 // station：{ StationUID, StationName: { Zh_tw, En }, name, System, SystemName, Lines, Region, TransferGroupID, x, y }
@@ -80,18 +81,17 @@ canvas 由 library 建立，大小由 library 決定（剛好容納要畫的路�
   **站點優先於站名**：站名蓋到或緊貼站點時，點在站點附近（滑鼠 5px、手指 10px 內）一律算站點。
 - 點在**站名**或轉乘站的大圈上 → 依優先順序（高鐵 > 台鐵 > 捷運 > 輕軌 > 其他）的第一順位。
   站名不同的成員自己的小字（例：新烏日）點下去是它自己。
-- **好幾個系統共用同一個站名**（沒有各自顯示站名）時，再點一次同一個站名會換下一個，輪完回到第一個：
-  板橋＝高鐵 → 台鐵 → 板南線 → 環狀線；台北＝高鐵 ↔ 台鐵；捷運的「台北車站」＝板南線 ↔ 淡水信義線（跟「台北」分開輪）。
-  「輪到誰」的判斷：目前標示的車站在這個站名底下就從它的下一個開始；否則看上一次點這個站名選了誰
-  （所以 `selectOnClick: false`、由外面控制選取時也會輪）。點別的地方或 `select()` 改選別站後重新從第一位開始。
+- **好幾個系統共用同一個站名**（板橋＝高鐵、台鐵、板南線、環狀線）：點站名一律選優先順序第一位。
+  2.1.0 起不再「再點一次同一個站名換下一個」；要讓使用者在轉乘站的各系統之間切換，用 `e.ring`（或 `canvasTaiwanRailwayMap.ring(uid)`）
+  自己做介面（TimeLink 的選站小卡是左右滑動）。
 
 ### 方法
 
-`map.select(uid, { scroll: true })`、`map.getSelected()`、`map.setRegions(...)`、`map.setScale(...)`、
+`map.select(uid, { scroll: true })`、`map.getSelected()`、`map.fontSize(cls)`（站名字級，CSS px；`cls`＝站級，0 最大，例：台北、板橋）、`map.setRegions(...)`、`map.setScale(...)`、
 `map.update({...})`、`map.scrollTo(uid)`、`map.locate(uid)`、`map.hitTest(x, y)`、`map.getView()`、
 `map.on('click', fn)` / `map.off('click', fn)`、`map.toDataURL()`、`map.redraw()`、`map.destroy()`。
 
-靜態：`canvasTaiwanRailwayMap.regions()`、`.lines()`、`.station(uid)`、`.group(id)`、
+靜態：`canvasTaiwanRailwayMap.regions()`、`.lines()`、`.station(uid)`、`.group(id)`、`.ring(uid)`（同一個大圈的車站）、
 `.draw(canvas, options)`（只畫到指定的 canvas，不建立 DOM）。
 
 ### 接 Vue 的車站選擇器
@@ -128,7 +128,7 @@ onBeforeUnmount(() => map && map.destroy())   // 會釋放 canvas 的記憶體
 | 規則 | 做法 |
 | --- | --- |
 | 轉乘站 | TransferGroup 的每個車站各畫一個圓圈（可分別點選），**共構**的用一個大圈圈起來 |
-| 站外轉乘 | 可以轉乘但不共構的（`layout-overrides.mjs` 的 `detached`）自己一個點、自己的小字站名，用虛線連過去（例：機場捷運台北車站 ⇢ 台北、北門；龍山寺 ⇢ 萬華） |
+| 站外轉乘 | 可以轉乘但不共構的（`layout-overrides.mjs` 的 `detached`）自己一個點、自己的小字站名，用虛線連過去（例：龍山寺 ⇢ 萬華；機場捷運台北車站圈在台北的大圈裡，另用虛線連到北門） |
 | 站名 | 主要站名取優先順序第一位（高鐵 > 台鐵 > 捷運 > 輕軌）；臺→台；結尾的「站」去掉（「車站」保留）；高鐵與台鐵同名但不同站時高鐵加前綴 |
 | 成員站名不同 | 用自己的中英文小字標在自己的圓圈旁（例：高鐵台中｜新烏日｜高鐵台中(捷運)；台北＝台鐵高鐵共用「台北 Taipei」，捷運是「台北車站 Taipei Main Station」）。放不下時只留中文 |
 | 線條 | 台鐵、高鐵畫成鐵路圖例（路線色與白色相間）；捷運、輕軌畫實線 |

@@ -1,5 +1,6 @@
 import { i18n } from '@/i18n'
 import { nameRules } from '@/i18n/nameRules'
+import { trainTextOn } from '@/train_ui_frame/utils'
 
 /**
  * 資料名稱（名稱物件 Zh_tw／En／Ja／Ko）的取用順序由後端 /txapi/public_info/names 提供
@@ -97,15 +98,7 @@ export function buildRouteText(journey, helpers = {}) {
   return parts.join(' ')
 }
 
-/** 依背景色決定文字色 */
+/** 依背景色決定文字色：白字與深色字取對比度高的（與 train-tag 相同的判斷，trainTextOn） */
 export function textOn(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
-  if (!m) return '#fff'
-  const n = parseInt(m[1], 16)
-  const lin = (c) => {
-    c /= 255
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-  }
-  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin(n >> 8 & 255) + 0.0722 * lin(n & 255)
-  return L + 0.05 >= 1.05 ? '#111' : '#fff'
+  return trainTextOn(hex)
 }

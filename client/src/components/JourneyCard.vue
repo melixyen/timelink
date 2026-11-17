@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePublicLineStore } from '@/stores/publicLine'
+import { usePublicInfoStore } from '@/stores/publicInfo'
+import { usePublicStationStore } from '@/stores/publicStation'
 import { formatMinute2HM, isChineseLocale, nameOf, buildRouteText } from '@/utils/format'
 import TimeBox from '@/components/TimeBox.vue'
 import StationBox from '@/components/StationBox.vue'
@@ -18,6 +20,9 @@ const props = defineProps({
 
 const { t } = useI18n()
 const lineStore = usePublicLineStore()
+const infoStore = usePublicInfoStore()
+const stationStore = usePublicStationStore()
+infoStore.ensureLoaded().catch(() => {})
 
 /** 標記（Fastest、ShortestTime…）改用本地語言 */
 const tagLabels = computed(() =>
@@ -62,6 +67,36 @@ function legLineName(leg) {
 function trainLabel(leg) {
   if (leg.Type !== 'ride') return ''
   return leg.TrainNo || t('journey.noTrainNo')
+}
+
+/** 鐵路系統（臺鐵、高鐵）：步行目的地只寫系統與站名；捷運、輕軌再加上路線 */
+const RAIL_SYSTEMS = ['TRA', 'THSR']
+
+/** 站名加上「站」（各語言的 journey.stationSuffix；站名本身已有就不加，例如台北車站、高鐵桃園站） */
+function stationLabel(name) {
+  const suffix = t('journey.stationSuffix')
+  if (!suffix || name.endsWith(suffix) || name.endsWith('站')) return name
+  return name + suffix
+}
+
+/**
+ * 步行段要前往哪個系統的車站（列車資訊第二行），例如「前往臺鐵南港站」「前往臺北捷運板南線南港站」。
+ * 捷運的路線：下一段在這一站上車的搭乘路線；沒有（走到終點）時用車站所屬的第一條路線
+ */
+function walkTarget(leg, i) {
+  const uid = leg.To?.StationUID
+  if (!uid) return ''
+  const sys = String(uid).split('-')[0]
+  const system = infoStore.systemName(sys)
+  const station = stationLabel(nameOf(leg.To.StationName) || stationStore.stationName(uid) || uid)
+  if (RAIL_SYSTEMS.includes(sys)) return t('journey.walkToRail', { system, station })
+  const next = legs.value[i + 1]
+  const lineUid =
+    next && next.Type === 'ride' && next.From?.StationUID === uid
+      ? next.LineUID
+      : (stationStore.stationMap.get(uid)?.Lines || [])[0]
+  const line = lineUid ? (next?.LineUID === lineUid && next.LineName ? nameOf(next.LineName) : lineStore.lineName(lineUid)) : ''
+  return line ? t('journey.walkTo', { system, line, station }) : t('journey.walkToRail', { system, station })
 }
 
 /** 停靠站視窗：點「列車時刻」「列車資訊」欄開啟 */
@@ -194,7 +229,7 @@ const routeText = computed(() =>
         />
       </template>
 
-      <template #cell-info="{ row: leg }">
+      <template #cell-info="{ row: leg, index: i }">
         <button
           v-if="leg.Type === 'ride'"
           type="button"
@@ -217,6 +252,7 @@ const routeText = computed(() =>
         </button>
         <div v-else class="info-box">
           <div>{{ t('journey.walk', { min: leg.Minutes }) }}</div>
+          <div v-if="walkTarget(leg, i)" class="walk-target">{{ walkTarget(leg, i) }}</div>
           <train-link
             v-for="v in leg.Videos || []"
             :key="v.ID"

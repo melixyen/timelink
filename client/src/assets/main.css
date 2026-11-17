@@ -313,6 +313,11 @@ code {
   margin-left: auto;
 }
 
+/* 桌面版：面板位置與高度由 StationSelect 依畫面空間計算（--station-panel-top、max-height） */
+.station-select .train-dropdown__panel {
+  top: var(--station-panel-top, calc(100% + 6px));
+}
+
 .station-panel {
   padding: 10px;
   max-height: min(74vh, 580px);
@@ -321,14 +326,97 @@ code {
   gap: 8px;
 }
 
-.station-panel .search {
-  width: 100%;
+/* 搜尋列：搜尋框＋路網圖按鈕 */
+.station-panel .search-row {
   flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.station-panel .search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 路網圖按鈕：翠綠底、黃字的方形按鈕，深翠綠立體邊框 */
+.station-panel .map-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: var(--train-ui-height-default);
+  height: var(--train-ui-height-default);
+  padding: 0 10px;
+  border: 1px solid #046c4e;
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  background: linear-gradient(#12a173, #0b8a61);
+  color: #ffd83d;
+  font-family: inherit;
+  font-size: var(--train-ui-font-size-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: filter var(--train-ui-transition-duration), transform var(--train-ui-transition-duration);
+}
+
+.station-panel .map-btn:hover {
+  filter: brightness(1.08);
+}
+
+.station-panel .map-btn:active {
+  transform: translateY(1px);
+  border-bottom-width: 2px;
+}
+
+.station-panel .map-btn:focus-visible {
+  outline: 2px solid #ffd83d;
+  outline-offset: 1px;
+}
+
+/* 手機版：全螢幕 */
+.station-panel .panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.station-panel .panel-title {
+  font-weight: 600;
+}
+
+.station-select.is-mobile .train-dropdown__panel {
+  position: fixed;
+  inset: 0;
+  top: 0;
+  width: auto;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  z-index: var(--train-ui-z-index-modal);
+}
+
+.station-select.is-mobile .station-panel {
+  height: 100vh;
+  height: 100dvh;
+  max-height: none;
+  box-sizing: border-box;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+}
+
+.station-select.is-mobile .line-switch-body {
+  max-height: 30vh;
 }
 
 .option-list {
   flex: 1 1 auto;
-  min-height: 240px;
+  min-height: 150px;
   overflow-y: auto;
   overflow-x: hidden;
   border-top: 1px solid var(--border);
@@ -386,6 +474,17 @@ code {
 .line-switch-group {
   display: grid;
   gap: 4px;
+  padding: 6px 8px;
+  border-radius: var(--train-ui-radius-base);
+}
+
+/* 業者分組深淺交替的底色 */
+.line-switch-group:nth-child(odd) {
+  background: #f2f2f2;
+}
+
+.line-switch-group:nth-child(even) {
+  background: #e5e5e5;
 }
 
 .line-switch-chips {
@@ -403,6 +502,16 @@ code {
 
 .line-chip.active .bar {
   background: currentColor !important;
+}
+
+/* 用路線顏色當底色的按鈕：滑過時稍微變亮；選中的加深色外框 */
+.line-chip.colored:hover {
+  filter: brightness(1.08);
+}
+
+.line-chip.active {
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--train-ui-bg-color), 0 0 0 4px var(--train-ui-text-color-primary);
 }
 
 .option-group .group-title,
@@ -738,9 +847,34 @@ code {
   color: var(--muted);
 }
 
+/*
+ * 每張方案卡片各是一個表格：用固定欄寬（table-layout: fixed），各卡片的欄位才會上下對齊。
+ * 自動欄寬會依各表格的內容分配（例如「自強（對號列車）」比「區間車」長），路線資訊欄的位置就會不同。
+ * 區段、時刻、車站、路線資訊固定寬度，列車資訊拿剩下的寬度
+ */
+.journey-table {
+  table-layout: fixed;
+}
+
 .journey-table .sect {
   width: 42px;
   color: var(--muted);
+}
+
+.journey-table th.line,
+.journey-table td.line {
+  width: 160px;
+}
+
+.journey-table td.info,
+.journey-table td.line {
+  overflow-wrap: anywhere;
+}
+
+.journey-table td.line .train-tag {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
 }
 
 /* 時刻與車站欄為垂直排版，欄寬固定縮小、內容置中 */
@@ -1288,6 +1422,30 @@ td.time .stops-trigger {
 @media (max-width: 640px) {
   .journey-card .header .tags {
     margin-left: 0;
+  }
+
+  /* 手機：欄寬縮小，表格最少 460px（更窄時左右捲動）；車站欄放得下五個字（南港展覽館） */
+  .journey-table {
+    min-width: 460px;
+  }
+
+  .journey-table .sect {
+    width: 30px;
+  }
+
+  .journey-table th.time,
+  .journey-table td.time {
+    width: 72px;
+  }
+
+  .journey-table th.station,
+  .journey-table td.station {
+    width: 92px;
+  }
+
+  .journey-table th.line,
+  .journey-table td.line {
+    width: 96px;
   }
 
   .app-main {

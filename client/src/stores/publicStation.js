@@ -6,7 +6,7 @@ import { groupByOperator } from '@/config'
 import { nameOf } from '@/utils/format'
 import { usePublicInfoStore } from '@/stores/publicInfo'
 
-const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '')
+const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '').replace(/臺/g, '台') // 臺、台視為同一字
 
 /**
  * 車站資料（/txapi/public_station/）。

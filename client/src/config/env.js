@@ -1,3 +1,4 @@
+import { toTai } from '@/utils/tai'
 /**
  * 環境變數設定（讀自 client/.env）。
  * 所有部署環境會不同的項目都放在這裡，缺值時使用預設值。
@@ -47,7 +48,7 @@ export const envConfig = {
   contactEmail: str('VITE_CONTACT_EMAIL', ''),
 
   // 資料來源與授權
-  dataSourceName: str('VITE_DATA_SOURCE_NAME', 'TDX 運輸資料流通服務平臺'),
+  dataSourceName: toTai(str('VITE_DATA_SOURCE_NAME', 'TDX 運輸資料流通服務平台')),
   dataSourceUrl: str('VITE_DATA_SOURCE_URL', 'https://tdx.transportdata.tw/'),
   licenseName: str('VITE_LICENSE_NAME', '政府資料開放授權條款'),
   licenseUrl: str('VITE_LICENSE_URL', 'https://data.gov.tw/license'),

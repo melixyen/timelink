@@ -11,17 +11,30 @@ export function trainUid(prefix = 'train') {
   return `${prefix}-${seed}`
 }
 
-/** 依背景色決定文字色（深底白字、淺底深字）；不是 #RRGGBB 時回白色 */
-export function trainTextOn(hex) {
+/** 相對亮度（WCAG 2.x）；不是 #RRGGBB 回 null */
+export function trainLuminance(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
-  if (!m) return '#fff'
+  if (!m) return null
   const n = parseInt(m[1], 16)
   const lin = (c) => {
     c /= 255
     return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
   }
-  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
-  return L > 0.45 ? '#1f2a3d' : '#fff'
+  return 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255)
+}
+
+/**
+ * 依背景色決定文字色：白字與深灰字（判斷基準固定用 #3c4a5e，各處判斷一致）取對比度（WCAG）高的——深底白字、淺底回 $dark。
+ * 不是 #RRGGBB 時回白色。中間色調（高鐵橘紅、文湖線棕色）是白字
+ */
+const TEXT_ON_DARK_REF = '#3c4a5e'
+
+export function trainTextOn(hex, dark = '#1f2a3d') {
+  const L = trainLuminance(hex)
+  if (L === null) return '#fff'
+  const white = 1.05 / (L + 0.05)
+  const darkContrast = (L + 0.05) / (trainLuminance(TEXT_ON_DARK_REF) + 0.05)
+  return white >= darkContrast ? '#fff' : dark
 }
 
 /** 點擊元素外面時呼叫 handler（下拉選單、彈出面板關閉用） */

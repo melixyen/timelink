@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import StationSelect from '@/components/StationSelect.vue'
@@ -67,16 +67,8 @@ const modeList = computed(() => [
 ])
 const isTraveler = computed(() => search.isTraveler)
 
-/**
- * 旅客模式：改了不搭的列車（extra）就重新查詢（結果依條件不同）；
- * 切換排序（最早到達、最少轉乘、最短行車時間）只在前端重排，不必重新查詢
- */
-watch(
-  () => form.extra,
-  () => {
-    if (isTraveler.value && search.searched && !search.loading && search.canSearch) doSearch()
-  },
-)
+// 查詢框裡的條件（含不搭的列車 extra）調整好後按「尋找」才查詢，勾選時不自動重新查詢（使用者規則 2026-11）；
+// 結果上方切換排序（最早到達、最少轉乘、最短行車時間）只在前端重排，不必重新查詢
 
 function exchange() {
   const tmp = form.from

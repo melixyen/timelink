@@ -90,9 +90,8 @@
       }
       picked.textContent = e.station.StationUID + '　' + e.station.name;
       var where = { station: '點在站點上', label: '點在站名上', group: '點在轉乘站的大圈上' }[e.target];
-      // 好幾個系統共用同一個站名時，再點一次站名會換下一個系統
-      var turn = e.target === 'label' && e.candidates.length > 1
-        ? '（共用站名 ' + (e.candidates.indexOf(e.station.StationUID) + 1) + '/' + e.candidates.length + '，再點一次換下一個）' : '';
+      // 同一個大圈（共構）的車站：使用的一方自己做切換介面（2.1.0 起點站名不再輪替）
+      var turn = e.ring.length > 1 ? '（同一個大圈 ' + e.ring.length + ' 站：' + e.ring.join('、') + '）' : '';
       detail.textContent = e.station.SystemName + '・' + where + turn +
         (e.group ? '・轉乘群組 ' + e.group.TransferGroupID + '（' + e.group.Stations.map(function (s) {
           return s.StationUID + ' ' + s.name;
