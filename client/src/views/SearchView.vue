@@ -388,6 +388,10 @@ onMounted(async () => {
       />
 
       <train-spinner v-if="search.loading" block :text="t('search.loading')" />
+      <!-- 查詢失敗（後端回錯誤、連不上）：錯誤提示「出現異常，請稍後再試」，下面是原因；不再同時出現「找不到這個時間內的列車」 -->
+      <train-alert v-else-if="search.failure" type="error" class="search-failure" :title="t('search.result.failed')">
+        {{ search.failure }}
+      </train-alert>
       <train-empty
         v-else-if="search.visibleJourneys.length === 0"
         icon="clock"

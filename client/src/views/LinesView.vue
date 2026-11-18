@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { apiErrorText } from '@/utils/apiError'
 import { useI18n } from 'vue-i18n'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { usePublicInfoStore } from '@/stores/publicInfo'
@@ -23,7 +24,7 @@ async function showLine(line) {
     // 路線站序由 store 快取，切回同一條路線不會再打 API
     detail.value = await lineStore.loadDetail(line.LineUID)
   } catch (e) {
-    detailError.value = t('common.loadFailed', { msg: e.message || '' })
+    detailError.value = t('common.loadFailed', { msg: apiErrorText(e) })
   } finally {
     detailLoading.value = false
   }

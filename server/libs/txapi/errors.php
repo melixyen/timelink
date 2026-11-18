@@ -3,7 +3,8 @@
  * 錯誤代碼表（ERROR 表）：errorCode → HTTP 狀態碼與 errorMsg。前端依 errorCode 判斷，errorMsg 可直接顯示（中文）。
  * 訊息裡的 {名稱} 由 appError() 代入；/txapi/errors 回傳整張表（JSON）。
  *
- * 回應格式：{"ok": false, "errorCode": 42901, "errorMsg": "…", "error": "…（同 errorMsg，與其他錯誤回應相容）", …其他欄位}
+ * 回應格式：{"ok": false, "errorCode": 42901, "errorMsg": "…", "error": "…（同 errorMsg，與其他錯誤回應相容）",
+ *           "errorVars": {"limit": 30, "retry": 12}（代入訊息的值，前端翻譯用；沒有就不帶）, …其他欄位}
  */
 
 const APP_ERRORS = [
@@ -70,7 +71,10 @@ function appError($code, array $vars = [], array $extra = [])
     $msg = preg_replace_callback('/\{(\w+)\}/', function ($m) use ($vars) {
         return array_key_exists($m[1], $vars) ? (string) $vars[$m[1]] : $m[0];
     }, $e['msg']);
-    sendJson($e['http'], ['ok' => false, 'errorCode' => $code, 'errorName' => $e['name'], 'errorMsg' => $msg, 'error' => $msg] + $extra);
+    // errorVars：代入訊息的值（只放字串、數字），前端依 errorCode 用自己的語言檔組訊息時用
+    $vars = array_filter($vars, 'is_scalar');
+    sendJson($e['http'], ['ok' => false, 'errorCode' => $code, 'errorName' => $e['name'], 'errorMsg' => $msg, 'error' => $msg]
+        + ($vars ? ['errorVars' => $vars] : []) + $extra);
 }
 
 /** /txapi/errors：錯誤代碼表 */

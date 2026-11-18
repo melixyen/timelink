@@ -12,12 +12,19 @@ import { toTaiNames } from '@/utils/tai'
 /** API 網址前綴（設定於 .env 的 VITE_TDX_BASE_URL；空字串＝同源 /txapi） */
 export const API_BASE = config.apiBaseUrl
 
+/**
+ * API 錯誤：code＝後端的 errorCode（沒有時是 HTTP 狀態碼，連不上是 0）、vars＝後端的 errorVars（代入訊息的值）、
+ * kind＝'api'（後端回錯誤）｜'http'（不是 JSON 的錯誤回應）｜'network'（連不上、逾時）。
+ * 顯示用的文字一律用 utils/apiError.js 的 apiErrorText()：有 errorCode 的依各語言的語言檔組訊息
+ */
 export class TxApiError extends Error {
-  constructor(message, code = 0, payload = null) {
+  constructor(message, code = 0, payload = null, kind = 'api') {
     super(message)
     this.name = 'TxApiError'
     this.code = code
     this.payload = payload
+    this.kind = kind
+    this.vars = (payload && payload.errorVars) || {}
   }
 }
 
@@ -46,7 +53,7 @@ async function send(url) {
       signal: controller.signal,
     })
   } catch (e) {
-    const error = new TxApiError(`無法連線到查詢服務：${e.message}`, 0)
+    const error = new TxApiError(`Cannot connect to the search service: ${e.message}`, 0, null, 'network')
     error.status = 0
     throw error
   } finally {
@@ -63,9 +70,8 @@ async function send(url) {
   }
 
   if (!response.ok || !body || body.ok === false) {
-    const message =
-      (body && (body.errorMsg || body.error || body.Message)) || `查詢服務回應錯誤（HTTP ${response.status}）`
-    const error = new TxApiError(message, (body && body.errorCode) || response.status, body)
+    const message = (body && (body.errorMsg || body.error || body.Message)) || `HTTP ${response.status}`
+    const error = new TxApiError(message, (body && body.errorCode) || response.status, body, body ? 'api' : 'http')
     error.status = response.status
     throw error
   }

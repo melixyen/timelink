@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { apiErrorText } from '@/utils/apiError'
 import { defineStore } from 'pinia'
 import { api } from '@/api/txapi'
 import { t } from '@/i18n'
@@ -138,7 +139,7 @@ export const usePublicStationStore = defineStore('publicStation', () => {
         loaded.value = true
         return stations.value
       } catch (e) {
-        error.value = t('common.loadFailed', { msg: e.message || '' })
+        error.value = t('common.loadFailed', { msg: apiErrorText(e) })
         throw e
       } finally {
         loading.value = false

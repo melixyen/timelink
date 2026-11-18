@@ -1,4 +1,5 @@
 import { computed, reactive, ref } from 'vue'
+import { apiErrorText } from '@/utils/apiError'
 import { defineStore } from 'pinia'
 import { api } from '@/api/txapi'
 import { t } from '@/i18n'
@@ -80,6 +81,8 @@ export const useSearchStore = defineStore('search', () => {
   const meta = ref(null)
   const loading = ref(false)
   const error = ref('')
+  /** 查詢失敗（後端回錯誤、連不上）的原因（各語言，apiErrorText）：結果區顯示「出現異常，請稍後再試」＋原因，不再同時顯示「找不到列車」 */
+  const failure = ref('')
   const searched = ref(false)
   const hiddenRoutes = ref(new Set())
   /**
@@ -239,6 +242,7 @@ export const useSearchStore = defineStore('search', () => {
     tags.value = {}
     meta.value = null
     error.value = ''
+    failure.value = ''
     searched.value = false
     hiddenRoutes.value = new Set()
     pickedRoutes.value = []
@@ -299,6 +303,7 @@ export const useSearchStore = defineStore('search', () => {
     if (pickedRoutes.value.length && pickedFor !== routeKey()) pickedRoutes.value = []
     loading.value = true
     error.value = ''
+    failure.value = ''
     hiddenRoutes.value = new Set()
     quickSort.value = ''
     // 旅客模式只給一個時刻（search_time），不指定路由（指定路由屬於研究模式）
@@ -337,8 +342,9 @@ export const useSearchStore = defineStore('search', () => {
       searched.value = true
       return journeys.value
     } catch (e) {
-      error.value = t('search.error.failed', { msg: e.message || '' })
+      failure.value = apiErrorText(e)
       journeys.value = []
+      meta.value = null
       searched.value = true
       return null
     } finally {
@@ -362,6 +368,7 @@ export const useSearchStore = defineStore('search', () => {
     meta,
     loading,
     error,
+    failure,
     searched,
     hiddenRoutes,
     pickedRoutes,

@@ -1648,3 +1648,8 @@ td.time .stops-trigger {
 .base-note {
   margin-bottom: 10px;
 }
+
+/* 查詢失敗：結果區的錯誤提示 */
+.search-failure {
+  margin: 12px 0;
+}

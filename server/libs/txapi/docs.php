@@ -281,7 +281,7 @@ GET https://{$host}/txapi/transfer/stations?q=台北                            
 - 轉乘查詢（route、follow）的出發時間範圍最長 {$qRange}
 - 特定的重功能另外有執行標記，限制同一 IP 在一段時間內最多執行幾次（querylimit.sqlite 的 marks：每個 IP、每個標記一列，記時間窗的開始與次數；超過回 429（42904）與 `Retry-After`）：`journeys` 的 `full_search=1`（標記 `REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP`）{$fullIp} 秒內 {$fullTimes} 次（後臺身分不受限；`QUERY_FULL_SEARCH_IP_SECONDS`、`QUERY_FULL_SEARCH_IP_TIMES`）；`admin_download` 的 `mirror`（本機同步線上的離線資料，標記 `REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP`）{$mirrorSec} 秒內 {$mirrorTimes} 次，清單與每個檔案各算一次（後臺身分也受限；`QUERY_MIRROR_IP_SECONDS`、`QUERY_MIRROR_IP_TIMES`）
 - 上限設定在 `custom/libs/config.json`（`QUERY_RATE_LIMIT_PER_MINUTE`、`QUERY_RATE_LIMIT_PER_HOUR`、`QUERY_MAX_RANGE_MINUTES`）
-- 錯誤回應帶 `errorCode`、`errorName`、`errorMsg`；代碼表 `GET https://{$host}/txapi/errors`（`libs/txapi/errors.php` 的 `APP_ERRORS`）
+- 錯誤回應帶 `errorCode`、`errorName`、`errorMsg`，以及代入訊息的值 `errorVars`（物件，例 `{"limit": 30, "retry": 12}`；前端可依 `errorCode` 用自己的語言組訊息）；代碼表 `GET https://{$host}/txapi/errors`（`libs/txapi/errors.php` 的 `APP_ERRORS`）
 
 ### `/txapi/admin_download_to_sqlite` — finder 資料庫狀態與重建（後臺）
 

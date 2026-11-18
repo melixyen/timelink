@@ -10,6 +10,7 @@
  *   cond          條件摘要文字（起訖站、時段…）
  */
 import { computed, ref, watch } from 'vue'
+import { apiErrorText } from '@/utils/apiError'
 import { useI18n } from 'vue-i18n'
 import { config } from '@/config'
 import { useSearchStore } from '@/stores/search'
@@ -140,7 +141,7 @@ async function load() {
     const known = new Set(routes.value.map((r) => r.route))
     selection.value = selection.value.filter((c) => known.has(c))
   } catch (e) {
-    error.value = t('common.loadFailed', { msg: e.message || '' })
+    error.value = t('common.loadFailed', { msg: apiErrorText(e) })
   } finally {
     loading.value = false
   }
