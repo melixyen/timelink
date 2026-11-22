@@ -163,7 +163,7 @@ function appLineStationsOf($system, $line)
     return $m['lineStations'][$lu] ?? [];
 }
 
-/** 一個搭乘段參考（transferFollowLeg 的 ['trip'|'mrun'|'pattern', …]）的車種等級 */
+/** 一個搭乘段參考（transferLegTrips 的 ['trip'|'mrun'|'pattern', …]）的車種等級 */
 function appRideClass(array &$d, array $par)
 {
     if ($par[0] === 'trip') {
@@ -465,7 +465,7 @@ function appCoreDirect(array &$d, $from, $to, array $opt)
     $rows = [];
     $seen = [];
     foreach ($legs as $leg) {
-        foreach (transferFollowLeg($d, $leg)['list'] as $x) {
+        foreach (transferLegTrips($d, $leg)['list'] as $x) {
             list($dep, $arr, $par, $vid) = $x;
             $t = $byArr ? $arr : $dep;
             if (($start !== null && $t < $start) || ($end !== null && $t > $end) || isset($seen[$vid])) {

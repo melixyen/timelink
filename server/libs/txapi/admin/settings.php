@@ -177,37 +177,19 @@ function adminSetupChecklist()
 
     // 7. 轉乘群組、連結、里程
     $gen = function_exists('transferGeneratedFiles') ? transferGeneratedFiles() : [];
-    $groupKeys = array_values(array_diff(array_keys($gen), ['AccelLearned']));
-    $groupMissing = array_values(array_filter($groupKeys, function ($k) use ($gen) { return $gen[$k]['sha256'] === null; }));
+    $groupMissing = array_values(array_filter(array_keys($gen), function ($k) use ($gen) { return $gen[$k]['sha256'] === null; }));
     $groupsOk = $gen && !$groupMissing;
     $add('transfer_groups', '轉乘群組、連結、里程', $groupsOk ? 'ok' : ($dbOk ? 'todo' : 'wait'),
         $groupsOk ? '已產生（custom/libs/txapi/transfer/data/）'
                   : ($dbOk ? '還沒產生：' . implode('、', $groupMissing) : '要先建立查詢資料庫'),
-        $groupsOk || !$dbOk ? [] : ['api' => '/txapi/admin_transfer/build_groups', 'cli' => $pipeline . ' learn']);
-
-    // 8. 轉乘加速清單
-    $learned = null;
-    if ($dbOk && $groupsOk) {
-        try {
-            $d = ['db' => SqliteDao::open(FINDERDB_NAME, ['readonly' => true])];
-            $learned = transferAccelLearned($d);
-            $d['db']->close();
-        } catch (Throwable $e) {
-            $learned = null;
-        }
-    }
-    // 加速清單不因資料庫或轉乘群組更新而過期（使用者規則 2026-11）：有算好就是 ok，Fresh 只附在說明裡供參考
-    $add('transfer_accel', '轉乘加速清單', $learned ? 'ok' : ($groupsOk ? 'todo' : 'wait'),
-        $learned ? '已算好（' . ($learned['GeneratedAt'] ?? '') . '）' . (empty($learned['Fresh']) ? '；之後資料庫或轉乘群組有改過，清單照常使用，要更新才用 force=1 重算' : '')
-                 : ($groupsOk ? '還沒算過：重複呼叫直到 done=true（每次最多算 20 秒）；沒算好前轉乘查詢照常可用，只是比較慢' : '要先產生轉乘群組'),
-        $learned || !$groupsOk ? [] : ['api' => '/txapi/admin_transfer/learn', 'cli' => $pipeline . ' learn']);
+        $groupsOk || !$dbOk ? [] : ['api' => '/txapi/admin_transfer/build_groups', 'cli' => $pipeline . ' groups']);
 
     $count = ['ok' => 0, 'todo' => 0, 'warn' => 0, 'wait' => 0];
     foreach ($items as $it) {
         $count[$it['status']]++;
     }
     return ['done' => $count['todo'] === 0 && $count['wait'] === 0, 'count' => $count, 'items' => $items,
-            'note' => '離線資料之後也要定期更新：重跑 pipeline.php download learn（資料沒變會自動跳過）'];
+            'note' => '離線資料之後也要定期更新：重跑 pipeline.php download groups（資料沒變會自動跳過）'];
 }
 
 /**

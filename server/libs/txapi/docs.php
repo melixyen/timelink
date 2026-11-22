@@ -156,7 +156,7 @@ https://{$host}/api/basic/v2/Rail/TRA/Station?\$format=JSON
 
 ```
 GET https://{$host}/txapi/<action>                 例如 /txapi/readme
-GET https://{$host}/txapi/<action>/<func>?參數     例如 /txapi/transfer/route?from=…&to=…
+GET https://{$host}/txapi/<action>/<func>?參數     例如 /txapi/app_trip/journeys?from=…&to=…
 GET https://{$host}/txapi                          action 清單（JSON）
 ```
 
@@ -266,19 +266,17 @@ GET https://{$host}/txapi/finder/metro_trip_time?from=TRTC-BL12&to=TRTC-BL05&wee
 ```
 GET https://{$host}/txapi/transfer                                                   說明（Markdown）
 GET https://{$host}/txapi/transfer/groups?station=TRA-1000                       轉乘群組（TransferGroup）；raw=1 下載完整 JSON
-GET https://{$host}/txapi/transfer/network?from=TRA-0900&to=TRTC-BR22             路網結構：路線串與轉乘站（不看時刻表）
-GET https://{$host}/txapi/transfer/route?from=TRA-0900&to=TRTC-BR22&week=1&start=08:00  時刻表轉乘：直通、最短、最快、最佳
-GET https://{$host}/txapi/transfer/follow?week=1&time=08:00&pattern=[…]          同一路由組合的前後班次
+GET https://{$host}/txapi/transfer/lines                                          路線站序與路線連結
 GET https://{$host}/txapi/transfer/stations?q=台北                                車站搜尋（前 10 筆）
 ```
 
 轉乘群組是可互相步行轉乘的一組車站（StationUID，跨營運單位），以及可同站換車的車站；路線以「系統-LineID」表示。
-時刻表轉乘以 RAPTOR 逐輪展開臺鐵、高鐵車次與捷運營運路線（上車站官方公告的車站時刻表＋站間行駛時間），只讀 finder 資料庫與 `libs/txapi/transfer/data/*.json`。
+轉乘查詢在 `/txapi/app_trip`（下方）；這裡只提供轉乘群組、路線與車站搜尋，只讀 finder 資料庫與 `libs/txapi/transfer/data/*.json`。
 
 ### 查詢限制與錯誤代碼（`/txapi/transfer`、`/txapi/finder`、`public_`、`app_`）
 
 - 同一 IP 每分鐘最多 {$qMin}、每小時最多 {$qHour}查詢（說明文件不計），超過回 HTTP 429 與 `Retry-After`；來源網域不限
-- 轉乘查詢（route、follow）的出發時間範圍最長 {$qRange}
+- `app_trip` 的查詢時段最長 {$qRange}
 - 特定的重功能另外有執行標記，限制同一 IP 在一段時間內最多執行幾次（querylimit.sqlite 的 marks：每個 IP、每個標記一列，記時間窗的開始與次數；超過回 429（42904）與 `Retry-After`）：`journeys` 的 `full_search=1`（標記 `REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP`）{$fullIp} 秒內 {$fullTimes} 次（後臺身分不受限；`QUERY_FULL_SEARCH_IP_SECONDS`、`QUERY_FULL_SEARCH_IP_TIMES`）；`admin_download` 的 `mirror`（本機同步線上的離線資料，標記 `REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP`）{$mirrorSec} 秒內 {$mirrorTimes} 次，清單與每個檔案各算一次（後臺身分也受限；`QUERY_MIRROR_IP_SECONDS`、`QUERY_MIRROR_IP_TIMES`）
 - 上限設定在 `custom/libs/config.json`（`QUERY_RATE_LIMIT_PER_MINUTE`、`QUERY_RATE_LIMIT_PER_HOUR`、`QUERY_MAX_RANGE_MINUTES`）
 - 錯誤回應帶 `errorCode`、`errorName`、`errorMsg`，以及代入訊息的值 `errorVars`（物件，例 `{"limit": 30, "retry": 12}`；前端可依 `errorCode` 用自己的語言組訊息）；代碼表 `GET https://{$host}/txapi/errors`（`libs/txapi/errors.php` 的 `APP_ERRORS`）
@@ -389,13 +387,15 @@ GET https://{$host}/txapi/app_trip/route_trains?route=TRA-0950.TRA.local.TRA-100
 
 1. **路由**（核心 A）：從路網與轉乘站推導所有可能的走法，推導途中每接一段就檢查排除條件，違反的前綴整串不再展開。路線連結圖找路線串（同一鐵路系統在交會站換線不算轉乘；同一路線最多搭 2 次，例如文湖線→板南線→文湖線、山線→海線→山線；有支線的捷運路線依營運路線站序，跨支線要在分岔站換車，例如蘆洲→大橋頭→三重），再逐段選轉乘站。寫死的只有通則：**重複經過同一個車站**（上下車站與沿途通過的站都算，同一個轉乘群組視為同一站；例如汐止到忠孝復興經板橋轉板南線會重複經過臺北，不列）、跨支線不能直接搭（在分岔站換車）。其餘都在**找路規則檔** `transfer/data/transfer_route_rules.json`（受版控）：`Search` 搜尋範圍參數（深度、路線數、同路線次數、上限）；`DirectPairs` 排除名單（不這樣走）——路由經過名單上的兩站時，兩站之間必須直接搭同一條路線（一段搭乘內完成；換線、換系統、步行、繞環島都算拆開），例如臺鐵南港、松山、臺北、萬華、板橋兩兩之間不繞捷運或高鐵，高鐵南港、台北、板橋兩兩之間不繞臺鐵或捷運；`LineTransfers` 加速清單（只這樣走）——兩條路線之間只用列出的轉乘群組；`RouteBans` 經由排除——同一系統連續搭乘中，經過 `From` 範圍的站、再經過 `Via` 的站、又到 `To` 範圍的站（省略＝同 `From`）就不列（`AnySystem`＝跨系統也算，整條路由一起看）；範圍是 `[{Line, StationRange?}]`，`Line` 必填，`StationRange` [A, B] 選填，只算該路線 A 到 B 之間的車站（環狀線依路線站序從 A 往後數到 B，兩站先後決定是哪一邊的弧）；範圍清單的每一項也可以寫單一車站代碼、`{Stations: [...]}` 或 `{Regex: "^TRTC-G0[1-9]$"}`，混寫一起進同一個過濾。`RouteBans` 另一種寫法是**轉乘走法排除**：`Transfers`（依序的轉乘站，每項一個範圍清單，同轉乘群組視為同一站）＋選填的 `Ends`（`Pair` [A, B] 起站在 A、迄站在 B 或反過來；`Any` 起站或迄站在清單內；`All` 兩站都在），整條路由的轉乘站串（正反向）完全相同時不列，不轉乘的直達不受影響；railtime（接軌時刻）的 52 條「依起訖站排除的轉乘走法」（bypassStationReg、bypassBothStationReg）就是用這個寫法併進來的（`Source`＝`railtime`），其中與本站已知最佳結果衝突的 11 條停用（`Disabled`，附 `DisabledReason`）。臺鐵環島由產生器依 `RouteBanRings` 把環切成 16 個區段，兩區段之間遠的一邊里程 ≥ 近的一邊 1.5 倍時，排除經由遠的一邊（例如嘉義～大橋到八堵～浮洲不經玉里、高雄到臺東不經北部）；`NoTransferStations` 不當轉乘站的車站——資料上的別名站（臺鐵臺北-環島 `TRA-1001`，`AliasOf` 臺北 `TRA-1000`），路由不在那裡轉乘，起訖是它時直接當臺北查；排除名單比對時同一轉乘群組裡同一鐵路系統的車站視為同一站。排除名單由 `agent/skills/rail-transfer/scripts/build_route_rules.php` 依估計時間產生（直接搭比任何其他走法快至少 max(5 分, 10%) 才列入；人工項目與 `Disabled` 會保留），每筆附 `Evidence`。**不轉乘的路由（同一路線、同一鐵路系統直通）一定會列出**，即使比轉乘慢，排序在前（轉乘次數優先）。
    **系統直達段**：臺鐵、高鐵的連續搭乘合成一段，連接寫業者代碼（`TRA`、`THSR`），代表不分路線直接查兩站之間的直達班車（例如八堵不停的車也查得到）；經過的路線串放在該段的 `Paths`（第一條是里程最短的，其他是同起訖的其他路線串，例如山線、海線），前端需要時再拿來顯示；
-   **綜合指數找路**（`app/indexroute.php`，短程查詢與中長途分解的生活圈端共用）：不依轉乘次數截斷，而是依綜合指數（站間行駛分鐘＋中間站數 × 1 分停靠＋每次轉乘的步行分鐘與轉搭那一站全天平均班距的一半；臺鐵候車依生活圈手寫，`transfer_regions.json` 的 `TraWaitMinutes`）由小到大取前 20 條不繞圈的路徑（A* 搜尋，排除條件相同），另外把直達與一次轉乘的走法全部列出，最少要轉 2 次以上時另外保留最少轉乘那一層的前 3 條（轉乘少但慢的方案不會漏），起訖同群組的每個車站各至少 3 條；每條路由帶 `Index`（綜合指數，分鐘），生活圈端依 `Index` 取每個幹線站前 3 條（轉乘最少的不在前 3 時另外附上）。轉乘多但真的快的走法（捷運平行轉乘）因此不會被先丟掉；`deeper` 參數（轉乘次數比最少多幾次還要找）只對中長途的幹線段有作用，短程與生活圈端不看它。「最少轉乘」排序（`sort=transfers`）依時刻串出的方案排序，不受影響
+   **綜合指數找路**（`app/indexroute.php`，短程查詢與中長途分解的生活圈端共用）：不依轉乘次數截斷，而是依綜合指數（站間行駛分鐘＋中間站數 × 1 分停靠＋每次轉乘的步行分鐘與轉搭那一站全天平均班距的一半；臺鐵候車依生活圈手寫，`transfer_regions.json` 的 `TraWaitMinutes`）由小到大取前 20 條不繞圈的路徑（A* 搜尋，排除條件相同），另外把直達與一次轉乘的走法全部列出，最少要轉 2 次以上時另外保留最少轉乘那一層的前 3 條（轉乘少但慢的方案不會漏），起訖同群組的每個車站各至少 3 條；每條路由帶 `Index`（綜合指數，分鐘），生活圈端依 `Index` 取每個幹線站前 3 條（轉乘最少的不在前 3 時另外附上）。轉乘多但真的快的走法（捷運平行轉乘）因此不會被先丟掉。「最少轉乘」排序（`sort=transfers`）依時刻串出的方案排序，不受影響
    **補充資料**（`transfer/data/transfer_route_supplements.json`，人工維護、受版控）：自動找完後，每條路由逐一比對補充資料，條件（`Operators` 業者、`Classes` 車種等級、`From`／`To` 上下車站或路線範圍、`ViaLines`／`ViaStations`，都是陣列）百分之百符合的各多一條路由，由 `Logic` 指定的函式依 `Meta` 改寫：`TRA.LocalRelay` 臺鐵全程區間車在接力站換車、`TRA.HubTransfer` 中長途（搭乘段起訖的生活圈不相鄰）經由生活圈大站轉對號（`transfer/data/transfer_regions.json` 的 `TraHubs`：上車端取起點生活圈內離起站最近的大站，往行進方向、往反方向各最多兩個，往行進方向沒有時沿站序往下找第一個大站，下車端對稱；每種大站組合各一條；臺鐵段前後接捷運、輕軌時那一端只在端點本身上下對號（轉乘在大站，不產生大站下車再搭區間車到小站轉捷運）；出發、到達、轉乘都相同的方案取對號坐得久的（最靠近目的地的大站下車）；起訖站是捷運、輕軌時臺鐵段也一樣）、`TRA.ExpressTransfer` 區間車到大站換對號／大站換區間車（中長途改用大站轉乘）、`TRA.ChangeAt` 在指定的路線交會站換車、`TRA.Via` 改經指定車站換車（山線、海線車站之間經竹南、彰化折返，每個換車站各一條）、`ClassChange` 高鐵在台中、機捷在 A8 換快車或慢車。`ViaTra` 機捷機場第一航廈～老街溪的車站往返臺北生活圈時，路由經過臺北或板橋之後到機捷下車的那一段改成「臺鐵到中壢、老街溪轉機捷」（回程對稱；換掉沿途車站，所以重新檢查排除規則；每個樞紐站最多 `MaxRoutes` 條，取估計最好的基本路由改出來的）。補充路由帶 `Supplement`（補充項目名稱）與 `BaseRoute`（從哪條自動路由展開）
    **中長途分解**（`app/trunk.php`，`transfer/data/transfer_regions.json` 的 `Trunk`）：起訖站的生活圈不相鄰時，拆成「起點端（起站→起點生活圈與相鄰生活圈的高鐵站、臺鐵大站）＋幹線（只搭臺鐵、高鐵）＋終點端」組合：兩端先各自做一般的短程找路（與單純查往大站、高鐵站的路由一致），依估計每個系統留前幾個幹線站，再與幹線組合；meta `trunk` 列出兩端留下的幹線站與組合數
 2. **路由層排除**：`extra` 含 2 時高鐵路線不進圖；含 1 時不產生臺鐵對號段。**生活圈幹線規則**（`transfer/data/transfer_regions.json`）：起訖站的生活圈不同而且不相鄰時，高鐵或臺鐵對號的轉乘只能在起點、終點的生活圈或與它們相鄰的生活圈（例如臺北→高雄不在新竹、臺中換高鐵或臺鐵），東部往來西部另外可以在北北基或高雄轉乘；純區間車接區間車、捷運之間的轉乘不受限制，表裡沒有的車站不檢查，指定路由（`routes`、`route_trains`）不套用。生活圈以縣市為集合：北北基、新竹縣市、嘉義縣市、彰化與南投各一區，其他縣市各自一區。**高鐵站經過規則**（以生活圈判斷，同一生活圈內不檢查，例如汐止從南港、台北、板橋上高鐵都列；只對在桃園、新竹、苗栗、彰化、雲林、嘉義、台南上下車的檢查（`HsrPassCheck`），南港、台北、板橋、台中、左營停靠的直達車多，不檢查，例如桃園經由板橋上高鐵可以）：高鐵下車後的轉乘路線不能再經過另一個生活圈的高鐵站（含它轉乘群組裡的車站，例如臺鐵新左營＝高鐵左營），例如高鐵台南下車轉沙崙線、再經新左營往高雄不列；上車前也不能先經過另一個生活圈的高鐵站不搭；高鐵會經過起點（終點）生活圈有接其他鐵路的高鐵站時，要從那一站上車（下車），例如中壢不搭臺鐵到板橋上高鐵再經過桃園
 3. **每段取時刻**（核心 B）並**排除列車**：依該段的車種等級與 `extra`
 4. **串接**：每一班接下一段「到站＋轉乘分鐘」後最早到的那班；同一班車繼續坐（交會站直通、接力站沒換車）不算轉乘、不加分鐘；同一個銜接只留最晚出發的
-5. **分類排序**：所有路由的方案合在一起，留下互不支配的（出發較晚、到達較早、轉乘較少），明顯繞遠的不列，再依 `sort` 排序並標上 Fastest、ShortestTime、FewestTransfers、Direct
+5. **補充演算法（RAPTOR）**：路由經過臺鐵或高鐵時，用 RAPTOR 在使用者條件與各保底條件下各找一班，基本演算法（1～4）沒有同樣好的才補進來。只搭捷運、輕軌時不跑：捷運只有車站時刻表、沒有整列車的時刻表，RAPTOR 在有每班車時刻的臺鐵、高鐵才有價值
+6. **去重複**：同一組班次（不同路由串出同一組車）只留一個（轉乘最少的）
+7. **分類排序**：所有路由的方案合在一起，留下互不支配的（出發較晚、到達較早、轉乘較少），明顯繞遠的不列，再依 `sort` 排序並標上 Fastest、ShortestTime、FewestTransfers、Direct
 
 時段參數（`app_trip` 的 direct、route_trains、journeys 共用）：`start`～`end`（營運日 `HH:MM`），`by=dep`（出發時刻在時段內，預設）或 `by=arr`（抵達時刻在時段內）。只給 `start` 時 `end`＝`start`＋系統最長可查詢時段（`QUERY_MAX_RANGE_MINUTES`，目前 {$qRange}；不限時到營運日結束）；只給 `end` 時往前同樣長度；都省略時從現在起算（direct 為全日）。route_trains、journeys 最長沿用 `QUERY_MAX_RANGE_MINUTES`。舊參數照收：`depart`＝`start`（by=dep）、`arrive`＝`end`（by=arr），不能混用。meta 回 `by`、`start`、`end`。單站、路線時刻表的 `start`／`end` 比的是發車時刻。
 
@@ -454,7 +454,7 @@ TRA-0950.TRA.local.TRA-1000.TRA.express.TRA-3300                                
 | `admin_cache` | `summary`、`purge` | 見上方 |
 | `admin_download` | `sync`、`prune`、`refresh`、`mirror` | 見 `/txapi/download` 說明（`mirror`：讀取權限，主機上已存檔的清單與檔案，給本機新環境同步離線資料） |
 | `admin_download_to_sqlite` | `status`、`build` | 見上方 |
-| `admin_transfer` | `build_groups`、`learn`、`history`、`restore` | 轉乘群組產生、加速清單演算、產生檔舊版與換回。`transfer_seed.json` 改過（雜湊與上次重建不同）時，第一次查詢會自動重建轉乘群組與里程（不必手動 `build_groups`）。加速清單不因資料或轉乘群組更新而過期，有就一直使用；要更新才 `learn` 加 `force=1`，要撤銷用 `restore` |
+| `admin_transfer` | `build_groups`、`history`、`restore` | 轉乘群組產生、產生檔舊版與換回。`transfer_seed.json` 改過（雜湊與上次重建不同）時，第一次查詢會自動重建轉乘群組與里程（不必手動 `build_groups`） |
 | `admin_finder` | `status`；其餘同 `/txapi/finder` 的查詢 | 面板「查詢功能」（`admin_finder`）、「查詢測試」（`admin_finder_try`） |
 | `admin_traffic` | `list`、`ip`、`blocks`；`block`、`unblock`（POST） | 各 IP 的請求頻率與總量（保留 {$trafficDays} 天）、封鎖與解鎖；被封鎖的 IP 回 403（40303），已登入或帶 PAT 的請求除外 |
 

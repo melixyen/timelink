@@ -23,8 +23,7 @@ php server/agent/skills/data-pipeline/scripts/pipeline.php mirror --build
   實際值看 `server/libs/config.json`（預設值；各站在 `custom/libs/config.json` 或後臺「設定管理」覆蓋），例如「2 小時內 200 次」。清單與每個檔案各算一次，全新環境同步一次＝下載清單的檔案數＋1。
   不要反覆執行；超過回 429，回應會說還要等幾秒
 - 只讀主機既有存檔，不會讓主機向 TDX 下載、不耗 TDX 額度；沒帶 PAT 或錯誤回 401，沒有權限回 403
-- 不同步的：轉乘產生檔（本機第一次查詢自動重建）、加速清單（沒有時不套用加速，結果正確；要一樣就本機另跑 `pipeline.php learn`）、
-  `custom/` 的設定與後臺帳號
+- 不同步的：轉乘產生檔（本機第一次查詢自動重建）、`custom/` 的設定與後臺帳號
 - 細節：[server/agent/skills/data-pipeline/SKILL.md](server/agent/skills/data-pipeline/SKILL.md)「本機同步線上的離線資料」；API 說明在網站的 `/txapi/download/help`
 
 查詢測試可以不經網頁伺服器，直接在命令列載入 `server/libs/` 呼叫函式（例如 `appCoreRoutes`、`appTripJourneys`）。

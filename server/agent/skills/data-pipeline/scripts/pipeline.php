@@ -14,16 +14,13 @@
  *              存到本機資料根目錄的 download/tdx/（libs/env_path.php 的 appEnvPath()，或 --dir=）。只讀主機既有存檔，不會觸發主機向 TDX 下載。
  *              本機的 finder 資料庫第一次查詢時會依來源檔自動重建；加 --build 立刻重建。
  *              主機限制同一 IP 2 小時內最多呼叫 mirror 200 次（清單、每個檔案各算一次；全新環境同步一次約 60 次）
- *   learn      最佳化加速清單演算：/txapi/admin_transfer/build_groups（轉乘群組與里程，內容沒變不重寫）→
- *              重複呼叫 /txapi/admin_transfer/learn 直到 done（資料庫與輸入都沒變時直接跳過）；
- *              摘要的 changedFiles 列出這次有變動的產生檔（custom/libs/txapi/transfer/data/，舊版在 history/）
+ *   groups     重建轉乘群組、連結紀錄與里程：/txapi/admin_transfer/build_groups（內容沒變不重寫）；
+ *              摘要的 changedFiles 列出這次有變動的產生檔（custom/libs/txapi/transfer/data/，舊版在 history/）。
+ *              舊名 learn 照收（原本另外重算的轉乘加速清單已在 2026-11 移除）
  *
  * 選項：
  *   --base=URL        網站（預設環境變數 TDX_BASE，再沒有用 http://localhost）
  *   --key=PAT         後臺 PAT（建議改用環境變數 TDX_PAT，避免留在命令列歷史）
- *   --force           learn：清單未過期也重算
- *   --reset           learn：捨棄沒算完的進度，從頭算
- *   --verify=N        learn 完成後抽 N 組起訖比對加速開關（verify_accel.php），結果不同時結束碼為 1
  *   --max-minutes=N   整個流程最多跑幾分鐘（預設 180）
  *   --dir=PATH        mirror：本機資料根目錄（預設 libs/env_path.php 的 appEnvPath()，也就是 server/ 或 env_path.php 指定的位置）
  *   --prune           mirror：刪掉本機 download/tdx/ 裡主機清單沒有的檔案（主機已不再下載的舊檔）
@@ -32,17 +29,16 @@
  *
  * 例：
  *   php pipeline.php download            只下載（必要時重建資料庫）
- *   php pipeline.php learn --verify=60   只重算加速清單並驗證
- *   php pipeline.php download learn      先下載，完成後接著重算
+ *   php pipeline.php groups              只重建轉乘群組與里程
+ *   php pipeline.php download groups     先下載，完成後接著重建轉乘群組
  *   php pipeline.php mirror --build      本機新環境：同步線上的離線資料並重建本機資料庫（TDX_BASE 指向線上主機）
  *
- * 結束碼：0 成功、1 失敗或驗證不一致、2 用法錯誤。最後一行 STDOUT 是整個流程的摘要（JSON）。
+ * 結束碼：0 成功、1 失敗、2 用法錯誤。最後一行 STDOUT 是整個流程的摘要（JSON）。
  */
 
 require_once __DIR__ . '/client.php';
-require_once __DIR__ . '/../../rail-transfer-learn/scripts/verify_accel.php';
 
-const PIPELINE_STAGES = ['download', 'learn', 'mirror'];
+const PIPELINE_STAGES = ['download', 'groups', 'mirror'];
 
 /** 階段 download：同步 TDX 下載檔直到完成；回傳摘要 */
 function pipelineDownload(TdxSite $site, $deadline)
@@ -174,80 +170,55 @@ function pipelineMirror(TdxSite $site, $key, array $opt, $deadline)
     return $res;
 }
 
-/** 階段 learn：重建轉乘群組與里程，再重算加速清單；回傳摘要 */
-function pipelineLearn(TdxSite $site, array $opt, $deadline)
+/** 產生檔（custom/libs/txapi/transfer/data/）的 sha256：/txapi/admin_transfer/history；檔名 => sha256 */
+function pipelineGeneratedSha(TdxSite $site)
 {
-    $before = $site->get(['action' => 'transfer', 'func' => 'accel'])['generatedFiles'] ?? [];
+    $j = $site->get(['action' => 'admin_transfer', 'func' => 'history'], true);
+    if (empty($j['ok'])) {
+        throw new RuntimeException('/txapi/admin_transfer/history 失敗：' . ($j['error'] ?? ''));
+    }
+    $out = [];
+    foreach ($j['files'] ?? [] as $f) {
+        $out[$f['file']] = $f['sha256'] ?? null;
+    }
+    return $out;
+}
+
+/** 階段 groups：重建轉乘群組、連結紀錄與里程（/txapi/admin_transfer/build_groups，內容沒變不重寫）；回傳摘要 */
+function pipelineGroups(TdxSite $site)
+{
+    $before = pipelineGeneratedSha($site);
     $b = $site->get(['action' => 'admin_transfer', 'func' => 'build_groups'], true, 600);
     if (empty($b['ok'])) {
         throw new RuntimeException('/txapi/admin_transfer/build_groups 失敗：' . ($b['error'] ?? ''));
     }
     $diff = $b['diff'] ?? [];
-    tdxLog(sprintf('learn：轉乘群組 %s（新增 %d、刪除 %d、改變 %d；無法對應的車站 %d）', !empty($b['unchanged']) ? '沒有變動' : '已更新',
+    tdxLog(sprintf('groups：轉乘群組 %s（新增 %d、刪除 %d、改變 %d；無法對應的車站 %d）', !empty($b['unchanged']) ? '沒有變動' : '已更新',
                    count($diff['added'] ?? []), count($diff['removed'] ?? []), count($diff['changed'] ?? []), count($b['Unresolved'] ?? [])));
     $lk = $b['links'] ?? [];
-    tdxLog(sprintf('learn：轉乘連結 %d 筆；新加入 %d、人工排除 %d、沒再偵測到 %d', $lk['total'] ?? 0, count($lk['added'] ?? []),
+    tdxLog(sprintf('groups：轉乘連結 %d 筆；新加入 %d、人工排除 %d、沒再偵測到 %d', $lk['total'] ?? 0, count($lk['added'] ?? []),
                    count($lk['excluded'] ?? []), count($lk['notDetected'] ?? [])));
     foreach ($lk['added'] ?? [] as $k) {
-        tdxLog('learn：  新加入 ' . $k);
+        tdxLog('groups：  新加入 ' . $k);
     }
-    $params = ['action' => 'admin_transfer', 'func' => 'learn'];
-    if (!empty($opt['reset'])) {
-        $params['reset'] = 1;
-    }
-    if (!empty($opt['force'])) {
-        $params['force'] = 1;
-    }
-    $calls = 0;
-    while (true) {
-        if (time() > $deadline) {
-            throw new RuntimeException('超過時間上限，加速清單尚未算完（進度已存在網站上，下次執行會接著算）');
-        }
-        $j = $site->get($params, true, 600);
-        $calls++;
-        unset($params['reset'], $params['force']);   // 只有第一次帶
-        if (empty($j['ok'])) {
-            throw new RuntimeException('/txapi/admin_transfer/learn 失敗：' . ($j['error'] ?? ''));
-        }
-        if (!empty($j['skipped'])) {
-            tdxLog('learn：' . $j['reason']);
-            $res = ['groupsChanged' => empty($b['unchanged']), 'linksAdded' => $lk['added'] ?? [], 'linksNotDetected' => $lk['notDetected'] ?? [],
-                    'learnCalls' => $calls, 'skipped' => true, 'learnedAt' => $j['learnedAt'] ?? null];
-            break;
-        }
-        tdxLog(sprintf('learn：%s（已算 %.0f 秒）', $j['progress'] ?? '?', $j['seconds'] ?? 0));
-        if (!empty($j['done'])) {
-            tdxLog('learn：完成；推薦換車站 ' . ($j['learnedHubs'] ?? '?') . ' 個；放寬的走廊 ' . json_encode($j['corridorsWidened'] ?? [], JSON_UNESCAPED_UNICODE));
-            $res = ['groupsChanged' => empty($b['unchanged']), 'linksAdded' => $lk['added'] ?? [], 'linksNotDetected' => $lk['notDetected'] ?? [],
-                    'learnCalls' => $calls, 'skipped' => false, 'learnedHubs' => $j['learnedHubs'] ?? null,
-                    'corridorsWidened' => $j['corridorsWidened'] ?? [], 'corridorsLoss' => $j['corridorsLoss'] ?? []];
-            break;
-        }
-    }
-    $a = $site->get(['action' => 'transfer', 'func' => 'accel']);
-    $res['accelDefault'] = $a['default'] ?? null;
+    $res = ['groupsChanged' => empty($b['unchanged']), 'linksAdded' => $lk['added'] ?? [], 'linksNotDetected' => $lk['notDetected'] ?? []];
     // 產生檔在主機的 custom/libs/txapi/transfer/data/（不進版控）；有變動時舊版自動留在 history/，可用 /txapi/admin_transfer/restore 換回
     $res['changedFiles'] = [];
-    foreach ($a['generatedFiles'] ?? [] as $k => $f) {
-        if (($before[$k]['sha256'] ?? null) !== $f['sha256']) {
-            $res['changedFiles'][] = $f['file'];
+    foreach (pipelineGeneratedSha($site) as $file => $sha) {
+        if (($before[$file] ?? null) !== $sha) {
+            $res['changedFiles'][] = $file;
         }
     }
-    tdxLog($res['changedFiles'] ? 'learn：產生檔已更新（舊版在 history/）：' . implode('、', $res['changedFiles']) : 'learn：產生檔沒有變動');
-    if (!empty($opt['verify'])) {
-        $v = tdxVerifyAccel($site, (int) $opt['verify']);
-        $res['verify'] = ['pairs' => $v['pairs'], 'secondsOff' => round($v['seconds']['0'], 2), 'secondsOn' => round($v['seconds']['1'], 2),
-                          'diff' => count($v['diff']), 'examples' => array_slice($v['diff'], 0, 5)];
-        tdxLog(sprintf('learn：驗證 %d 組，結果不同 %d 組（不加速 %.1f 秒、加速 %.1f 秒）', $v['pairs'], count($v['diff']), $v['seconds']['0'], $v['seconds']['1']));
-    }
+    tdxLog($res['changedFiles'] ? 'groups：產生檔已更新（舊版在 history/）：' . implode('、', $res['changedFiles']) : 'groups：產生檔沒有變動');
     return $res;
 }
 
 if (PHP_SAPI === 'cli' && realpath($argv[0] ?? '') === __FILE__) {
     list($stages, $opt) = tdxArgs($argv);
+    $stages = array_map(function ($st) { return $st === 'learn' ? 'groups' : $st; }, $stages);   // 舊名
     $bad = array_diff($stages, PIPELINE_STAGES);
     if (!$stages || $bad) {
-        fwrite(STDERR, ($bad ? '不認得的階段：' . implode(', ', $bad) . "\n" : '') . "用法：TDX_BASE=<站址> TDX_PAT=<後臺 PAT> php pipeline.php <download|learn|mirror …> [--verify=N] [--force] [--reset] [--build] [--prune] [--dry-run] [--dir=PATH] [--base=URL]\n");
+        fwrite(STDERR, ($bad ? '不認得的階段：' . implode(', ', $bad) . "\n" : '') . "用法：TDX_BASE=<站址> TDX_PAT=<後臺 PAT> php pipeline.php <download|groups|mirror …> [--build] [--prune] [--dry-run] [--dir=PATH] [--base=URL]\n");
         exit(2);
     }
     $site = new TdxSite(tdxBase($opt), tdxCredential($opt));
@@ -259,11 +230,8 @@ if (PHP_SAPI === 'cli' && realpath($argv[0] ?? '') === __FILE__) {
         tdxLog("== 階段 $st 開始");
         try {
             $r = $st === 'download' ? pipelineDownload($site, $deadline)
-               : ($st === 'mirror' ? pipelineMirror($site, tdxCredential($opt), $opt, $deadline) : pipelineLearn($site, $opt, $deadline));
+               : ($st === 'mirror' ? pipelineMirror($site, tdxCredential($opt), $opt, $deadline) : pipelineGroups($site));
             $r['ok'] = true;
-            if (!empty($r['verify']['diff'])) {
-                $code = 1;
-            }
         } catch (Throwable $e) {
             $r = ['ok' => false, 'error' => $e->getMessage()];
             $code = 1;

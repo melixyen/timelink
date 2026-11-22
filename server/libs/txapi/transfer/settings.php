@@ -3,11 +3,10 @@
  * 轉乘演算法的設定讀取：參數與靜態定義都放在 libs/txapi/transfer/data/*.json（PHP 與 Node.js 共用），
  * 程式只讀檔，不寫死資料。
  *
- *   transfer_settings.json  演算法參數（Router）、方案標籤（Tags）、里程規則（Distance）、轉乘群組資料來源（GroupSources）
+ *   transfer_settings.json  演算法參數（Router）、里程規則（Distance）、轉乘群組資料來源（GroupSources）
  *   transfer_seed.json      轉乘群組的人工補充（群組、步行、同站換車、ID 拼音）
- *   transfer_accel.json     可選的加速清單（地區、地區間走廊、轉乘大站）
  *
- * 產生檔（transfer_settings.json 的 GeneratedFiles：群組、連結紀錄、里程、加速清單）是用主機上的離線資料算的，
+ * 產生檔（transfer_settings.json 的 GeneratedFiles：群組、連結紀錄、里程）是用主機上的離線資料算的，
  * 放在 custom/libs/txapi/transfer/data/（不進版控、隨 custom/ 備份），每次改寫前把舊版留在 history/（TRANSFER_HISTORY_KEEP 份）。
  */
 
@@ -47,9 +46,9 @@ function transferSettings($path = null)
 }
 
 /**
- * 資料檔路徑（$key 為 Files 裡的名稱，例如 'Accel'）：
- *   GeneratedFiles → custom/libs/txapi/transfer/data/（產生檔；新主機還沒有時跑 /txapi/admin_transfer/build_groups、learn 產生）
- *   TempFiles      → download/tdx_proxy_files/transfer/（暫存，加速清單的分析進度）
+ * 資料檔路徑（$key 為 Files 裡的名稱，例如 'Seed'）：
+ *   GeneratedFiles → custom/libs/txapi/transfer/data/（產生檔；新主機還沒有時跑 /txapi/admin_transfer/build_groups 產生，查詢時也會自動重建）
+ *   TempFiles      → download/tdx_proxy_files/transfer/（暫存）
  *   其餘           → libs/txapi/transfer/data/（人工維護的輸入，受版控）
  */
 function transferDataFile($key)
@@ -131,10 +130,4 @@ function transferRestoreGenerated($key, $version)
 if (!defined('TRANSFER_MAX_TRIPS')) {
     define('TRANSFER_MAX_TRIPS', (int) transferSettings('Router.MaxTrips'));
     define('TRANSFER_HORIZON', (int) transferSettings('Router.HorizonSeconds'));
-    define('TRANSFER_ROUTE_BUDGET', (float) transferSettings('Router.RouteBudgetSeconds'));
-    define('TRANSFER_TRANSFER_PENALTY', (int) transferSettings('Router.TransferPenaltySeconds'));
-    define('TRANSFER_WALK_WEIGHT', (float) transferSettings('Router.WalkWeight'));
-    define('TRANSFER_SHIFT_WAIT', (int) transferSettings('Router.ShiftWaitSeconds'));
-    define('TRANSFER_MIN_GAIN', (int) transferSettings('Router.MinGainSeconds'));
-    define('TRANSFER_TAGS', transferSettings('Tags'));
 }

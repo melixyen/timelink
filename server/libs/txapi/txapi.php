@@ -3,7 +3,7 @@
  * txapi（TimeLink eXecute API）：本站自訂 API 的入口與路由。
  *
  *   /txapi/<action>                 例如 /txapi/readme、/txapi/status
- *   /txapi/<action>/<func>?參數     例如 /txapi/transfer/route?from=…&to=…、/txapi/admin_transfer/learn
+ *   /txapi/<action>/<func>?參數     例如 /txapi/app_trip/journeys?from=…&to=…、/txapi/admin_transfer/build_groups
  *   /txapi                          action 清單（JSON）
  * 其餘參數一律放網址參數。/?action= 寫法不再支援（回 404，錯誤代碼 40402）。
  * TDX 原樣轉發在 /api/（libs/proxy.php），兩者不重疊。
@@ -57,12 +57,12 @@ const APP_ACTIONS = [
     'admin_cache'              => 'actionAdminCache',            // 快取統計、清單、清除
     'admin_download'           => 'actionAdminDownload',         // 下載同步、強制更新、清理
     'admin_download_to_sqlite' => 'actionAdminDownloadToSqlite', // finder 資料庫狀態與重建
-    'admin_transfer'           => 'actionAdminTransfer',         // 轉乘群組產生、加速清單演算、產生檔舊版與換回
+    'admin_transfer'           => 'actionAdminTransfer',         // 轉乘群組產生、產生檔舊版與換回
     'admin_finder'             => 'actionAdminFinder',           // 面板「查詢功能」「查詢測試」
     'admin_traffic'            => 'actionAdminTraffic',          // 各 IP 流量、封鎖與解鎖
 ];
 
-/** txapi 網址：txapiUrl('transfer', 'route', ['from' => …]) → /txapi/transfer/route?from=… */
+/** txapi 網址：txapiUrl('app_trip', 'journeys', ['from' => …]) → /txapi/app_trip/journeys?from=… */
 function txapiUrl($action, $func = null, array $params = [])
 {
     return TXAPI_PREFIX . '/' . $action . ($func !== null && $func !== '' ? '/' . $func : '') . ($params ? '?' . http_build_query($params) : '');

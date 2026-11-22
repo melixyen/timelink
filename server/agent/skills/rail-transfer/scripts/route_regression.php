@@ -65,7 +65,7 @@ foreach ($doc['cases'] as &$c) {
     $extra = (int) ($c['extra'] ?? 0);
     $q = ['from' => $c['from'], 'to' => $c['to'], 'extra' => $extra, 'week' => (int) $c['week'], 'date' => null, 'mode' => $mode,
           'start' => $start, 'end' => $end, 'sort' => $back ? 'late' : 'arrival', 'limit' => 50,
-          'opt' => ['extra' => $extra, 'max_transfers' => null, 'via' => null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'deeper' => appRouteSearch()['Deeper']]];
+          'opt' => ['extra' => $extra, 'max_transfers' => null, 'via' => null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true]];
     list($data) = appJourneysCompute($q);
     $got = ['fastest' => null, 'shortest' => null, 'fewest' => null];
     foreach ($data['journeys'] as $j) {
@@ -75,7 +75,7 @@ foreach ($doc['cases'] as &$c) {
             }
         }
     }
-    $rlist = appCoreRoutes($m, $c['from'], $c['to'], ['extra' => $extra, 'limit' => 50, 'deeper' => appRouteSearch()['Deeper']]);
+    $rlist = appCoreRoutes($m, $c['from'], $c['to'], ['extra' => $extra, 'limit' => 50]);
     $routes = array_column($rlist, 'route');
     // 系統直達段經過的路線串（Paths）寫成「站.路線.站.路線.站」，給 paths_include、routes_exclude 比對
     $pathText = [];

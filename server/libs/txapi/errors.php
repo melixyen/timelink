@@ -11,10 +11,6 @@ const APP_ERRORS = [
     // 400：查詢時間範圍
     40001 => ['http' => 400, 'name' => 'QUERY_RANGE_TOO_LONG',
               'msg' => '查詢時間範圍最長 {max} 分鐘：end − start 為 {range} 分鐘，請縮短範圍'],
-    40002 => ['http' => 400, 'name' => 'FOLLOW_RANGE_TOO_LONG',
-              'msg' => '前後班次的時間範圍最長 {max} 分鐘：before＋after 為 {range} 分鐘，請縮短範圍'],
-    40003 => ['http' => 400, 'name' => 'FOLLOW_ALL_DAY_DISABLED',
-              'msg' => '不提供全天查詢（all=1）：時間範圍最長 {max} 分鐘，請改用 before／after 或 prev／next'],
     40010 => ['http' => 400, 'name' => 'ADMIN_INVALID_INPUT',
               'msg' => '輸入有誤：{detail}'],
     // 400：客端 API（public_、app_）的參數

@@ -17,7 +17,7 @@ const APP_TRUNK_DEFAULTS = [
     'Enabled'          => true,
     'Candidates'       => ['TRA' => 4, 'THSR' => 3],   // 每端先依距離取最近的幾個幹線站做短程找路（起站本身另外算）
     'Keep'             => ['TRA' => 4, 'THSR' => 3],   // 每端依估計留下幾個幹線站（起站本身另外算）
-    'AccessPerStation' => 3,                           // 每個幹線站留幾條生活圈端路由（原本演算法排序的前幾名）
+    'AccessPerStation' => 3,                           // 每個幹線站留幾條生活圈端路由（綜合指數排序的前幾名）
     'AccessRail'       => true,                        // 幹線站不是臺鐵時（高鐵），前幾名都沒搭臺鐵就再留一條有搭臺鐵的接駁（松山搭臺鐵到臺北轉高鐵）
     'RailCombos'       => 4,                           // 上面那種接駁的組合不參加 MaxCombos 的排名，另外依估計保留幾條（不擠掉原本選得到的組合）
     'TrunkPerPair'     => 2,                           // 每一對幹線站留幾條幹線路由
@@ -107,7 +107,7 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra, array $trunks 
 
 /**
  * 生活圈端的路由：$u（起站或終站）與幹線站 $x 之間的一般短程找路（不搭高鐵），$toTrunk＝true 是 $u→$x，false 是 $x→$u。
- * 與一般查詢同一套找路（appCoreRoutes，參數同 journeys，只多不搭高鐵），回傳原本演算法排序的前 AccessPerStation 條 [['legs', 'est', 'tc', 'score'], ...]；
+ * 與一般查詢同一套找路（appCoreRoutes，參數同 journeys，只多不搭高鐵），回傳綜合指數排序的前 AccessPerStation 條 [['legs', 'est', 'tc', 'score'], ...]；
  * $u＝$x 時回一條空路由
  */
 function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
@@ -116,8 +116,7 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     static $cache = [];
     $cfg = appTrunkConfig();
     $extra = $opt['extra'] ?? 0;
-    $mode = appIndexConfig()['Enabled'] ? 'index' : 'dev';   // index＝綜合指數（預設）；dev＝原本的找路與排序（Search.IndexRoutes＝false）
-    $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra . '|' . $mode;
+    $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra;
     if (isset($cache[$k])) {
         return $cache[$k];
     }
@@ -139,19 +138,15 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     // 生活圈端與一般查詢共用同一套找路：參數與 journeys 相同（取前 APP_JOURNEY_ROUTES 條基本路由、帶補充路由），只多「不搭高鐵」
     // （不坐高鐵到高鐵站再轉高鐵）。一律用不搭高鐵找一次，各排除條件共用：基本路由的臺鐵段不分車種（串接時才依 extra 選班次），
     // 不搭臺鐵對號時只濾掉補充路由切出的對號段
-    $rk = $u . '|' . $x . '|' . (int) $toTrunk . '|' . ($opt['deeper'] ?? '') . '|' . $mode;
+    $rk = $u . '|' . $x . '|' . (int) $toTrunk;
     if (!isset($raw[$rk])) {
-        $sub = ['extra' => APP_EXTRA_NO_HSR, 'deeper' => $opt['deeper'] ?? null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'noTrunk' => true,
+        $sub = ['extra' => APP_EXTRA_NO_HSR, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'noTrunk' => true,
                 '_pool' => !empty($opt['_pool'])];
         $raw[$rk] = $toTrunk ? appCoreRoutes($m, $u, $x, $sub) : appCoreRoutes($m, $x, $u, $sub);
     }
-    // dev（已棄用，保留給 Search.IndexRoutes＝false）：原本演算法排序（轉乘次數 → 速度等級 → 里程 → 估計分鐘）的前 AccessPerStation 名；
-    //   轉乘次數優先，轉乘多但比較快的接駁（捷運平行轉乘）排不進前 3，生活圈端因此漏掉最快的走法；
-    // index：綜合指數（appRouteIndex：行駛＋停靠＋轉乘步行與平均候車）最小的前 AccessPerStation 名（與短程查詢同一套找路）
+    // 綜合指數（appRouteIndex：行駛＋停靠＋轉乘步行與平均候車）最小的前 AccessPerStation 名（與短程查詢同一套找路）
     $list = $raw[$rk];
-    if ($mode === 'index') {
-        usort($list, function ($a, $b) { return ($a['Index'] ?? INF) <=> ($b['Index'] ?? INF); });
-    }
+    usort($list, function ($a, $b) { return ($a['Index'] ?? INF) <=> ($b['Index'] ?? INF); });
     $ok = [];
     foreach ($list as $r) {
         foreach ($r['legs'] as $l) {
@@ -162,9 +157,9 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
         $ok[] = $r;
     }
     $pick = array_slice($ok, 0, $cfg['AccessPerStation']);
-    // index：轉乘最少的走法不在前 AccessPerStation 名時另外附上（原本的排序轉乘次數優先，一定有它）。
+    // 轉乘最少的走法不在前 AccessPerStation 名時另外附上。
     // 古亭→臺鐵松山：前 3 名是經臺北、松江南京、東門轉乘的，直達松山（松山新店線）排第 4，不附上時古亭→新竹新莊「轉乘最少」從轉 2 次變成轉 3 次
-    if ($mode === 'index' && $ok) {
+    if ($ok) {
         $minTc = min(array_column($ok, 'TransferCount'));
         if (!in_array($minTc, array_column($pick, 'TransferCount'), true)) {
             foreach ($ok as $r) {
@@ -177,7 +172,7 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     }
     // 臺鐵接駁保留（使用者規則 2026-11，AccessRail）：接到高鐵站時前幾名都是捷運，再留指數最好、有搭臺鐵的一條（一般參加組合）。
     // 台北小巨蛋→苗栗：松山新店線到松山搭臺鐵到臺北轉高鐵排第 4，平常比捷運到台北慢，但接得上早一班高鐵（高鐵苗栗一小時一班）
-    if ($mode === 'index' && !empty($cfg['AccessRail']) && appTrunkSystemOf($x) !== 'TRA') {
+    if (!empty($cfg['AccessRail']) && appTrunkSystemOf($x) !== 'TRA') {
         $hasTra = function ($r) {
             foreach ($r['legs'] as $l) {
                 if ($l['Type'] === 'ride' && ($l['System'] ?? '') === 'TRA') {

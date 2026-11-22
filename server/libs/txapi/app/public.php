@@ -365,8 +365,6 @@ function appPublicInfoCalendar()
 {
     $db = appDb();
     $g = transferLoadGroups();
-    $d = ['db' => $db];
-    $accel = transferAccelLearned($d);
     $missing = finderDbMissing();
     appSend([
         'ServiceDay' => ['Start' => '04:00', 'End' => '27:59',
@@ -374,7 +372,6 @@ function appPublicInfoCalendar()
         'Query'      => ['week' => '0～6（0＝星期日）', 'date' => 'YYYY-MM-DD，換算成星期',
                          'Note' => '目前用定期時刻表（依星期），還沒有接指定日期的時刻表（國定假日、連假加班車）'],
         'Data'       => ['DataUpdatedAt' => appDataUpdatedAt($db), 'TransferGroupsGeneratedAt' => $g['GeneratedAt'] ?? null,
-                         'AccelGeneratedAt' => $accel['GeneratedAt'] ?? null, 'AccelFresh' => $accel['Fresh'] ?? false,
                          'DownloadComplete' => !$missing, 'DownloadMissing' => count($missing)],
     ]);
 }

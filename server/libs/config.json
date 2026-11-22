@@ -118,7 +118,7 @@
             "group": "查詢限制",
             "level": "public",
             "default": 180,
-            "desc": "查詢時段的最長範圍（分鐘），也是只給 start（或只給 end）時自動補的長度：app_trip 的 journeys、route_trains（end − start 超過回 40001）、direct、app_line/timetable 只給一端時補這個長度；舊 /txapi/transfer 的 func=route 的 end − start（沒給 end 時最多搜到 start＋這個值）、func=follow 的 before＋after。0＝不限（只給一端時延伸到營運日頭尾）。"
+            "desc": "查詢時段的最長範圍（分鐘），也是只給 start（或只給 end）時自動補的長度：app_trip 的 journeys、route_trains（end − start 超過回 40001）、direct、app_line/timetable 只給一端時補這個長度。0＝不限（只給一端時延伸到營運日頭尾）。"
         },
         "QUERY_NEAR_RANGE_MINUTES": {
             "group": "查詢限制",
@@ -203,12 +203,6 @@
             "level": "public",
             "default": 5,
             "desc": "max_transfers 參數可以給到多少"
-        },
-        "APP_DEEPER_MAX": {
-            "group": "查詢限制",
-            "level": "public",
-            "default": 3,
-            "desc": "deeper 參數（比最少轉乘多找幾次轉乘）可以給到多少；預設值是找路規則檔的 Search.Deeper。短程與生活圈端改用綜合指數找路後只影響中長途的幹線段"
         },
         "APP_ROUTE_MAX_LEGS": {
             "group": "查詢限制",

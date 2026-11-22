@@ -969,7 +969,7 @@ Authorization: Bearer <PAT>
 - 帶 `path`：回傳該存檔，標頭 `X-Mirror-Mtime`、`X-Mirror-Sha1`；**只提供既有存檔，不向 TDX 取得、不消耗額度**（沒有存檔回 404）
 - 本機照 `file` 存放並把 mtime 設成一樣，finder 資料庫就會依來源檔重建成同一份。
   腳本：`TDX_BASE=<主機> TDX_PAT=<PAT> php agent/skills/data-pipeline/scripts/pipeline.php mirror [--build]`
-- 只含 TDX 下載檔；轉乘產生檔（轉乘群組、里程）本機第一次查詢自動重建，加速清單要在本機另跑 `learn`
+- 只含 TDX 下載檔；轉乘產生檔（轉乘群組、里程）本機第一次查詢自動重建
 - 避免被頻繁 dump：同一 IP {$mirrorSec} 秒內最多呼叫 {$mirrorTimes} 次（清單、每個檔案各算一次；全新環境同步一次約 60 次；後臺身分也受限），
   超過回 429（錯誤代碼 42904）與 `Retry-After`。設定 `QUERY_MIRROR_IP_SECONDS`、`QUERY_MIRROR_IP_TIMES`，執行標記 `REQUEST_ADMIN_DOWNLOAD__MIRROR_LIMIT_IP`
 

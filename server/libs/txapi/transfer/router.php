@@ -1,6 +1,7 @@
 <?php
 /**
- * 時刻表轉乘搜尋（逐輪展開，RAPTOR 的做法）。
+ * 時刻表轉乘搜尋（逐輪展開，RAPTOR 的做法）與路網時刻資料。app_trip/journeys 的補充演算法（app/journey.php 的 appJourneyRaptor）用它；
+ * 路網時刻資料（transferRouterData）也是核心 B 點對點時刻表（app/timetable.php）的資料來源。
  *
  * 第 k 輪＝搭第 k 班車：從上一輪「可以上車」的車站出發，掃過所有經過這些車站的列車與捷運營運路線，
  * 更新各站最早到達時間；再依轉乘群組加上步行或同站換車時間，得到下一輪可以上車的車站與時間。
@@ -14,9 +15,8 @@
  * 時間一律以營運日秒數表示（凌晨 00:00～03:59 為 86400 以後，與 sort_min × 60 相同）。
  */
 
-require_once __DIR__ . '/accel.php';
 require_once __DIR__ . '/runs.php';
-require_once __DIR__ . '/settings.php';   // TRANSFER_MAX_TRIPS 等參數與方案標籤 TRANSFER_TAGS 都來自 data/transfer_settings.json
+require_once __DIR__ . '/settings.php';   // TRANSFER_MAX_TRIPS 等參數都來自 data/transfer_settings.json
 
 /** 秒 → HH:MM（00～23 時） */
 function transferHM($sec)
@@ -470,7 +470,7 @@ function transferLowerBounds(array &$d, $to, $fromSide = false)
  */
 function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRIPS, array $bounds = [], &$labels = null)
 {
-    // $to = null：一對多（不設迄站、不剪枝），各輪標籤由 $labels 帶回，給離線分析（learn.php）用
+    // $to = null：一對多（不設迄站、不剪枝），各輪標籤由 $labels 帶回（離線分析用；目前 app_ 都會給迄站）
     $m = $d['m'];
     $INF = PHP_INT_MAX;
     $ready = [0 => [$from => $t0]];
@@ -504,9 +504,6 @@ function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRI
     $arrPar = [];
     $bestDest = $t0 + TRANSFER_HORIZON;
     $lb = $to === null ? null : transferLowerBounds($d, $to);
-    // 可選的加速限制（accel=1）：不展開的車站、不能同站換車的車站
-    $blocked = $d['accel']['blocked'] ?? [];
-    $noChange = $d['accel']['noChange'] ?? [];
     $results = [];
     for ($k = 1; $k <= $maxTrips; $k++) {
         $marked = $ready[$k - 1] ?? [];
@@ -518,8 +515,8 @@ function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRI
         // 剪枝：在 u 的時刻 + u 到迄站最少要花的時間（下界）已經不早於「目前最早到達」或「已知最多搭 k 班的最早到達」，
         // 這條路一定比較慢（或轉乘更多卻沒有更早），不必往下展開
         $cap = min($bestDest, $bounds[$k] ?? $INF);
-        $improve = function ($u, $t, $par) use (&$arr, &$arrPar, &$arrBest, $k, $cap, $INF, &$lb, &$blocked) {
-            if ($t < ($arrBest[$u] ?? $INF) && ($lb === null || $t + ($lb[$u] ?? $INF) < $cap) && !isset($blocked[$u])) {
+        $improve = function ($u, $t, $par) use (&$arr, &$arrPar, &$arrBest, $k, $cap, $INF, &$lb) {
+            if ($t < ($arrBest[$u] ?? $INF) && ($lb === null || $t + ($lb[$u] ?? $INF) < $cap)) {
                 $arr[$k][$u] = $arrBest[$u] = $t;
                 $arrPar[$k][$u] = $par;
             }
@@ -622,7 +619,7 @@ function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRI
         $ready[$k] = [];
         $readyPar[$k] = [];
         foreach ($arr[$k] as $u => $t) {
-            if (isset($m['change'][$u]) && !isset($noChange[$u])) {
+            if (isset($m['change'][$u])) {
                 $r = $t + (int) round($m['change'][$u]['Minutes'] * 60);
                 if ($r < ($readyBest[$u] ?? $INF) && ($lb === null || $r + ($lb[$u] ?? $INF) < $cap)) {
                     $ready[$k][$u] = $readyBest[$u] = $r;
@@ -636,7 +633,7 @@ function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRI
                         continue;
                     }
                     $r = $t + (int) round($w['Minutes'] * 60);
-                    if ($r < ($readyBest[$v] ?? $INF) && ($lb === null || $r + ($lb[$v] ?? $INF) < $cap) && !isset($blocked[$v])) {
+                    if ($r < ($readyBest[$v] ?? $INF) && ($lb === null || $r + ($lb[$v] ?? $INF) < $cap)) {
                         $ready[$k][$v] = $readyBest[$v] = $r;
                         $readyPar[$k][$v] = ['walk', $u, $w + ['TransferGroupID' => $gid]];
                     }
@@ -775,22 +772,6 @@ function transferJourney(array &$d, $k, array $end, array $arrPar, array $readyP
         '_pars'           => array_reverse($pars),
         '_sig'            => implode('>', array_map(function ($s) { return $s['Type'] === 'ride' ? ($s['TrainNo'] ?? $s['RouteID']) . '@' . $s['DepartureTime'] : $s['Type']; }, $steps)),
     ];
-}
-
-/** 由 func=route 方案的 Steps 組出 Pattern（給前端送回 func=follow，見 follow.php） */
-function transferPatternFromSteps($from, $to, array $steps)
-{
-    $p = [['Type' => 'Origin', 'StationUID' => $from]];
-    foreach ($steps as $s) {
-        if ($s['Type'] === 'ride') {
-            $p[] = ['Type' => 'Line', 'LineUID' => $s['LineUID'], 'System' => $s['System'], 'Mode' => $s['Mode']];
-        } else {
-            $p[] = ['Type' => 'Transfer', 'From' => $s['FromStationUID'], 'To' => $s['ToStationUID'],
-                    'Kind' => $s['Type'], 'DefaultMinutes' => $s['Minutes'], 'Minutes' => null] + (isset($s['Videos']) ? ['Videos' => $s['Videos']] : []);
-        }
-    }
-    $p[] = ['Type' => 'Destination', 'StationUID' => $to];
-    return $p;
 }
 
 /** 搭乘段（列車或捷運）的輸出 */
@@ -963,20 +944,6 @@ function transferRideStopsSpread(array &$d, array $st, $p, $k0, $dep, $arr, $dep
     return $out;
 }
 
-/** 方案的搭乘段補上途中各站時刻（StopTimes），並移除內部欄位 _par；$withStops = false 時只移除 */
-function transferAddStops(array &$d, array &$steps, $withStops = true)
-{
-    foreach ($steps as &$s) {
-        if (isset($s['_par'])) {
-            if ($withStops) {
-                $s['StopTimes'] = transferRideStops($d, $s['_par'], $s['_arr'] ?? null);
-            }
-            unset($s['_par']);
-        }
-    }
-    unset($s);
-}
-
 /** 最後一個 ≤ t 的發車（二分搜尋）；沒有回 null */
 function transferPrevDep(array $list, $t)
 {
@@ -1026,8 +993,6 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
     }
     // 剪枝：在 u 最晚 B 上車，起站最晚也只能在 B −（起站到 u 最少要花的時間）出發；不比 $floor 晚就沒有用
     $lbFrom = transferLowerBounds($d, $from, true);
-    $blocked = $d['accel']['blocked'] ?? [];
-    $noChange = $d['accel']['noChange'] ?? [];
     $best = null;
     $Abest = $A;
     $Bbest = [];
@@ -1054,7 +1019,7 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
                     break;
                 }
                 $u = $tr['st'][$i];
-                if ($dep > ($B[$u] ?? $NEG) && $dep > ($Bbest[$u] ?? $NEG) && $dep - ($lbFrom[$u] ?? PHP_INT_MAX >> 1) > $floor && !isset($blocked[$u])) {
+                if ($dep > ($B[$u] ?? $NEG) && $dep > ($Bbest[$u] ?? $NEG) && $dep - ($lbFrom[$u] ?? PHP_INT_MAX >> 1) > $floor) {
                     $B[$u] = $dep;
                 }
             }
@@ -1079,7 +1044,7 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
                         continue;
                     }
                     $u = $p['st'][$j];
-                    if ($dep[0] > ($B[$u] ?? $NEG) && $dep[0] > ($Bbest[$u] ?? $NEG) && $dep[0] - ($lbFrom[$u] ?? PHP_INT_MAX >> 1) > $floor && !isset($blocked[$u])) {
+                    if ($dep[0] > ($B[$u] ?? $NEG) && $dep[0] > ($Bbest[$u] ?? $NEG) && $dep[0] - ($lbFrom[$u] ?? PHP_INT_MAX >> 1) > $floor) {
                         $B[$u] = $dep[0];
                     }
                 }
@@ -1113,7 +1078,7 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
                             break;
                         }
                         $u = $mr['st'][$j];
-                        if ($dep > ($B[$u] ?? $NEG) && $dep > ($Bbest[$u] ?? $NEG) && $dep - ($lbFrom[$u] ?? PHP_INT_MAX >> 1) > $floor && !isset($blocked[$u])) {
+                        if ($dep > ($B[$u] ?? $NEG) && $dep > ($Bbest[$u] ?? $NEG) && $dep - ($lbFrom[$u] ?? PHP_INT_MAX >> 1) > $floor) {
                             $B[$u] = $dep;
                         }
                     }
@@ -1137,7 +1102,7 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
         // 往前一段：同站換車、群組內步行，得到上一班車的下車期限
         $A = [];
         foreach ($B as $u => $t) {
-            if (isset($m['change'][$u]) && !isset($noChange[$u])) {
+            if (isset($m['change'][$u])) {
                 $a = $t - (int) round($m['change'][$u]['Minutes'] * 60);
                 if ($a - ($lbFrom[$u] ?? PHP_INT_MAX >> 1) > $floor && $a > ($Abest[$u] ?? $NEG)) {
                     $A[$u] = $Abest[$u] = $a;
@@ -1150,7 +1115,7 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
                         continue;
                     }
                     $a = $t - (int) round($w['Minutes'] * 60);
-                    if ($a - ($lbFrom[$v] ?? PHP_INT_MAX >> 1) > $floor && $a > ($Abest[$v] ?? $NEG) && !isset($blocked[$v])) {
+                    if ($a - ($lbFrom[$v] ?? PHP_INT_MAX >> 1) > $floor && $a > ($Abest[$v] ?? $NEG)) {
                         $A[$v] = $Abest[$v] = $a;
                     }
                 }
@@ -1160,230 +1125,94 @@ function transferLatestDeparture(array &$d, $from, $to, $arrive, $rides, $floor,
     return $best;
 }
 
-/**
- * 方案中轉乘等候超過 TRANSFER_SHIFT_WAIT 時，把最後一次長等候之前的搭乘改成最晚還趕得上的班次：
- * 反向搜尋算出最晚出發，再從那裡正向搜一次，取同樣班數、不晚到的方案替換。到達與班數不變，只是晚點出發、少等
- */
-function transferShiftLongWait(array &$d, $from, $to, array $j)
+/** transfer_seed.json 的 Settings（同站換車預設分鐘等） */
+function transferSeedSettings()
 {
-    $r = $j['_rides'];
-    $k = null;
-    for ($i = count($r) - 1; $i >= 1; $i--) {
-        if ($r[$i][1] - $r[$i - 1][3] > TRANSFER_SHIFT_WAIT) {
-            $k = $i;
-            break;
-        }
+    static $s = null;
+    if ($s === null) {
+        $s = json_decode((string) @file_get_contents(transferDataFile('Seed')), true)['Settings'] ?? [];
     }
-    if ($k === null) {
-        return $j;
-    }
-    // 第 k 段的上車站與期限（同站換車要扣換車時間）
-    $s = $r[$k][0];
-    $m = $d['m'];
-    $deadline = $r[$k][1] - (isset($m['change'][$s]) ? (int) round($m['change'][$s]['Minutes'] * 60) : 0);
-    $L = transferLatestDeparture($d, $from, $s, $deadline, $k, $j['_dep']);
-    if ($L === null || $L <= $j['_dep']) {
-        return $j;
-    }
-    foreach (transferRaptor($d, $from, $to, $L) as $x) {
-        if ($x['RideCount'] <= $j['RideCount'] && $x['_arr'] <= $j['_arr'] && $x['_dep'] > $j['_dep']) {
-            return $x;
-        }
-    }
-    return $j;
+    return $s;
 }
 
 /**
- * 轉乘查詢：從 start 起多次搜尋（每次從上一批方案的最早發車之後再找），收集不互相支配的方案，
- * 再挑出直通解、最少轉乘、最快、最佳。$runs：最多搜尋幾次；$end：最晚出發（營運日秒，null 不限）
+ * 某一段（系統、路線、上車站、下車站）全天可搭的車（app/timetable.php 的核心 B 用）：[[上車發車秒, 下車到達秒, 來源指標, 車輛代碼], ...]，依發車排序；
+ * 另附 'min'：從第 i 班往後（含）在下車站最早到達的那一班的索引（後綴最小值，同時到達取較早發車）
  */
-function transferRoute(SqliteDao $db, $from, $to, $week, $t0, $runs = 6, $end = null, $budget = TRANSFER_ROUTE_BUDGET, $jump = true, $prune = true, $accel = null, $stops = true)
+function transferLegTrips(array &$d, array $leg)
 {
-    $d = transferRouterData($db, $week);
-    // 加速清單：$accel = true／false，或 null（有算好的 transfer_accel_learned.json 就套用，不會過期）
-    $d['accel'] = transferAccelWanted($d, $accel === null ? null : ($accel ? '1' : '0')) ? transferAccelPlan($d, $from, $to) : null;
-    $all = [];
-    $t = $t0;
-    $clock = microtime(true);
-    $done = 0;
-    $jumps = 0;
-    $backward = 0;
-    $prevSeen = [];
-    $prevSeen2 = [];
-    $stop = 'runs';             // 為什麼停止：runs（次數用完）、end（超過最晚出發）、none（之後沒有方案）、budget（時間用完）
-    for ($i = 0; $i < $runs; $i++) {
-        if ($end !== null && $t > $end) {
-            $stop = 'end';
-            break;
-        }
-        if (microtime(true) - $clock > $budget) {
-            $stop = 'budget';
-            break;
-        }
-        // 已找到、而且出發不早於 t 的方案仍然有效：依搭車班數取「最多搭 k 班最早到達」當上界，這次搜尋從第一班車就能剪枝
-        $bounds = [];
-        $carryDep = null;
-        foreach ($all as $j) {
-            if ($j['_dep'] >= $t) {
-                $bounds[$j['RideCount']] = min($bounds[$j['RideCount']] ?? PHP_INT_MAX, $j['_arr']);
-                $carryDep = $carryDep === null ? $j['_dep'] : min($carryDep, $j['_dep']);
-            }
-        }
-        $cur = PHP_INT_MAX;
-        for ($k = 1; $k <= TRANSFER_MAX_TRIPS; $k++) {
-            $cur = min($cur, $bounds[$k] ?? PHP_INT_MAX);
-            $bounds[$k] = $cur;
-        }
-        $res = transferRaptor($d, $from, $to, $t, TRANSFER_MAX_TRIPS, $prune ? $bounds : []);
-        $done++;
-        if (!$res && $carryDep === null) {
-            $stop = 'none';
-            break;
-        }
-        $minDep = $prune ? $carryDep : null;
-        $keepRes = [];
-        foreach ($res as $j) {
-            if ($end !== null && $j['_dep'] > $end) {
+    list($sys, $lu, $board, $alight) = $leg;
+    $list = [];
+    if ($sys === 'TRA' || $sys === 'THSR') {
+        foreach ($d['stationTrips'][$board] ?? [] as list($ti, $i)) {
+            $tr = $d['trips'][$ti];
+            if ($tr['system'] !== $sys) {
                 continue;
             }
-            $all[$j['_sig']] = $j;
-            $keepRes[] = $j;
-            $minDep = $minDep === null ? $j['_dep'] : min($minDep, $j['_dep']);
-        }
-        if ($minDep === null) {
-            $stop = 'end';
-            break;
-        }
-        // 反向算出每個方案「同樣搭 k 班車、同樣時刻到達，最晚幾點出發」（L）。在 [出發, L] 之間出發的方案不會更早到、
-        // 轉乘也不會更少，下一次可以直接從 min(L) 搜。依出發先後算，L 不會比自己的出發早，所以出發已不早於目前 min(L) 的不用算。
-        // 只有跟前兩次搜尋到達時刻、搭車班數都一樣（＝往後一班一班試只換到更晚的接駁車，已經連續發生）的方案才值得反向算；
-        // 只重複一次就反向算常常白算（反向搜尋第一次要載入沿線捷運時刻表，約 0.1 秒）
-        usort($keepRes, function ($a, $b) { return $a['_dep'] <=> $b['_dep']; });
-        // 沿用的已知方案不反向算，它的出發就是上限（不能跳過它之後、可能更晚出發同樣到達的方案）
-        $latest = $prune ? $carryDep : null;
-        $seen = [];
-        foreach ($keepRes as $j) {
-            $seen[$j['_arr'] . '|' . $j['RideCount']] = true;
-        }
-        foreach ($keepRes as $j) {
-            if ($latest !== null && $j['_dep'] >= $latest) {
-                break;
-            }
-            $L = $j['_dep'];
-            if ($jump && isset($prevSeen[$j['_arr'] . '|' . $j['RideCount']], $prevSeen2[$j['_arr'] . '|' . $j['RideCount']])) {
-                $backward++;
-                $f = transferLatestDeparture($d, $from, $to, $j['_arr'], $j['RideCount'], $j['_dep'], $latest);
-                if ($f !== null && $f > $L) {
-                    $L = $f;
+            for ($k = $i + 1, $n = count($tr['st']); $k < $n; $k++) {
+                if ($tr['st'][$k] === $alight) {
+                    $list[] = [$tr['dep'][$i], $tr['arr'][$k], ['trip', $ti, $i, $k], 'T:' . $tr['key']];
+                    break;
                 }
             }
-            $latest = $latest === null ? $L : min($latest, $L);
-            if ($latest === $minDep) {
-                break;     // 最早出發的方案沒辦法再晚，不會跳
-            }
         }
-        $prevSeen2 = $prevSeen;
-        $prevSeen = $seen;
-        if ($jump && $latest !== null && $latest > $minDep) {
-            $t = $latest;      // 下一次從最晚可出發的時刻搜，直接得到「晚出發、同樣早到」的方案
-            $jumps++;
-        } else {
-            $t = max($t + 60, $minDep + 60);
-        }
-    }
-    $all = array_values($all);
-    // 不互相支配：較晚出發、較早到達、轉乘較少（全部不差、至少一項較好才算支配）。里程不列入：
-    // 時間都一樣只差里程的方案（例如高雄到左營坐捷運或臺鐵）不多列，最短距離從留下的方案中挑
-    $kmOf = function ($j) { return $j['DistanceKm'] ?? INF; };
-    $keep = [];
-    foreach ($all as $a) {
-        $dominated = false;
-        foreach ($all as $b) {
-            if ($a === $b) {
+    } else {
+        // 整列車（TRANSFER_USE_RUNS 開啟時才有）：這班車有停上車站、之後也停下車站
+        foreach ($d['stationMRoutes'][$board] ?? [] as list($rk, $j)) {
+            $mr = $d['mroutes'][$rk];
+            if ($mr['system'] . '-' . $mr['line'] !== $lu) {
                 continue;
             }
-            if ($b['_dep'] >= $a['_dep'] && (
-                    ($b['_arr'] <= $a['_arr'] && $b['TransferCount'] <= $a['TransferCount']
-                     && ($b['_dep'] > $a['_dep'] || $b['_arr'] < $a['_arr'] || $b['TransferCount'] < $a['TransferCount']
-                         || ($b['_arr'] === $a['_arr'] && $b['TransferCount'] === $a['TransferCount'] && $kmOf($b) < $kmOf($a))))
-                    // 多轉一次只早到不到 TRANSFER_MIN_GAIN（例如捷運蘆洲支線在大橋頭多換一次車早 1 分鐘）不算比較好
-                    || ($b['TransferCount'] < $a['TransferCount'] && $b['_arr'] <= $a['_arr'] + TRANSFER_MIN_GAIN * ($a['TransferCount'] - $b['TransferCount']))
-                )) {
-                $dominated = true;
-                break;
-            }
-        }
-        if (!$dominated) {
-            $keep[] = $a;
-        }
-    }
-    // 轉乘要等很久（超過 TRANSFER_SHIFT_WAIT）的方案：等候之前的那幾段改搭最晚還趕得上的車（同樣到達、同樣班數），
-    // 例如東湖→漢本「南港坐區間車 4046 直達」不該寫成 11:07 從東湖出發、在南港等 8 小時
-    $shifted = [];
-    foreach ($keep as $j) {
-        $j = transferShiftLongWait($d, $from, $to, $j);
-        $shifted[$j['_sig']] = $j;
-    }
-    $keep = array_values($shifted);
-    usort($keep, function ($a, $b) { return [$a['_dep'], $a['_arr']] <=> [$b['_dep'], $b['_arr']]; });
-    // picks：各類別挑一個代表方案（options 的索引）
-    $pick = function (callable $key, callable $filter = null) use ($keep) {
-        $best = null;
-        foreach ($keep as $i => $j) {
-            if ($filter && !$filter($j)) {
+            $k = array_search($alight, array_slice($mr['st'], $j + 1), true);
+            if ($k === false) {
                 continue;
             }
-            if ($best === null || $key($j) < $key($keep[$best])) {
-                $best = $i;
+            $k += $j + 1;
+            foreach ($mr['trips'] as $ti => $t) {
+                $list[] = [$t['dep'][$j], $t['arr'][$k], ['mrun', $rk, $j, $k, $ti], 'R:' . $rk . '#' . $ti];
             }
         }
-        return $best;
-    };
-    $dur = function ($j) { return $j['_arr'] - $j['_dep']; };
-    $cats = [
-        'Direct'           => $pick(function ($j) { return [$j['_arr'], -$j['_dep']]; }, function ($j) { return $j['TransferCount'] === 0; }),
-        'Fastest'          => $pick(function ($j) { return [$j['_arr'], $j['TransferCount'], -$j['_dep']]; }),
-        'ShortestTime'     => $pick(function ($j) use ($dur) { return [$dur($j), $j['TransferCount'], $j['_arr']]; }),
-        'ShortestDistance' => $pick(function ($j) use ($kmOf) { return [round($kmOf($j), 1), $j['TransferCount'], $j['_arr']]; }),
-        'FewestTransfers'  => $pick(function ($j) { return [$j['TransferCount'], $j['_arr'], -$j['_dep']]; }),
-        'Best'             => $pick(function ($j) use ($t0) {
-            return [($j['_arr'] - $t0) + $j['TransferCount'] * TRANSFER_TRANSFER_PENALTY + $j['WalkMinutes'] * 60 * (TRANSFER_WALK_WEIGHT - 1), $j['_arr']];
-        }),
-    ];
-    // Tags：每個方案是否具有該屬性（並列的都算，例如兩個方案都只轉 1 次就都有 FewestTransfers）；Best 只有一個
-    $min = ['arr' => INF, 'dur' => INF, 'km' => INF, 'tc' => INF];
-    foreach ($keep as $j) {
-        $min['arr'] = min($min['arr'], $j['_arr']);
-        $min['dur'] = min($min['dur'], $dur($j));
-        $min['km'] = min($min['km'], $kmOf($j));
-        $min['tc'] = min($min['tc'], $j['TransferCount']);
-    }
-    foreach ($keep as $i => &$j) {
-        $has = [
-            'Direct'           => $j['TransferCount'] === 0,
-            'Fastest'          => $j['_arr'] === $min['arr'],
-            'ShortestTime'     => $dur($j) === $min['dur'],
-            'ShortestDistance' => $j['DistanceKm'] !== null && $kmOf($j) <= $min['km'] + 0.05,
-            'FewestTransfers'  => $j['TransferCount'] === $min['tc'],
-            'Best'             => $cats['Best'] === $i,
-        ];
-        $j['Tags'] = $has;
-        $j['TagBits'] = 0;
-        $j['Labels'] = [];
-        foreach ($has as $tag => $on) {
-            if ($on) {
-                $j['TagBits'] |= TRANSFER_TAGS[$tag]['bit'];
-                $j['Labels'][] = $tag;
+        $seen = [];
+        foreach ($d['stationPatterns'][$board] ?? [] as list($pk, $j)) {
+            $p = $d['patterns'][$pk];
+            if ($p['system'] . '-' . $p['line'] !== $lu) {
+                continue;
+            }
+            $k = null;
+            for ($x = $j + 1, $n = count($p['st']); $x < $n; $x++) {
+                if ($p['st'][$x] === $alight) {
+                    $k = $x;
+                    break;
+                }
+            }
+            if ($k === null) {
+                continue;
+            }
+            foreach (transferPatternDeparturesReach($d, $pk, $j, $k) as $dep) {   // 只看開得到下車站的車（短程車不算）
+                $arr = $dep[0] + transferPatternTravel($d, $p, $j, $k)[0];
+                // 同一班車（同一站的同一筆時刻）可能屬於幾條營運路線，留到得最早的
+                $vid = 'M:' . $dep[1] . '@' . $dep[0];
+                if (isset($seen[$vid]) && $list[$seen[$vid]][1] <= $arr) {
+                    continue;
+                }
+                $row = [$dep[0], $arr, ['pattern', $pk, $j, $k, $dep], $vid];
+                if (isset($seen[$vid])) {
+                    $list[$seen[$vid]] = $row;
+                } else {
+                    $seen[$vid] = count($list);
+                    $list[] = $row;
+                }
             }
         }
-        // 路由組合（起站、路線、轉乘站、終點站）：原樣送回 func=follow 就能查同一組合的前後班次
-        $j['Pattern'] = transferPatternFromSteps($from, $to, $j['Steps']);
-        transferAddStops($d, $j['Steps'], $stops);
-        unset($j['_dep'], $j['_arr'], $j['_sig'], $j['_rides'], $j['_pars']);
     }
-    unset($j);
-    $served = function ($u) use ($d) {
-        return !empty($d['stationTrips'][$u]) || !empty($d['stationPatterns'][$u]) || !empty($d['stationMRoutes'][$u]);
-    };
-    return ['options' => $keep, 'picks' => $cats, 'runs' => $done, 'jumps' => $jumps, 'backward' => $backward, 'stop' => $stop, 'accel' => $d['accel']['summary'] ?? null, 'served' => ['from' => $served($from), 'to' => $served($to)]];
+    usort($list, function ($a, $b) { return [$a[0], $a[1]] <=> [$b[0], $b[1]]; });
+    $min = [];
+    $best = null;
+    for ($i = count($list) - 1; $i >= 0; $i--) {
+        if ($best === null || $list[$i][1] <= $list[$best][1]) {
+            $best = $i;
+        }
+        $min[$i] = $best;
+    }
+    return ['list' => $list, 'min' => $min];
 }

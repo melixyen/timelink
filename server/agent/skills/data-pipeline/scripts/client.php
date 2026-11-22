@@ -6,8 +6,8 @@
  * 只用 PHP 內建的 curl 擴充；代理與 CA 依環境變數（https_proxy、CURL_CA_BUNDLE／SSL_CERT_FILE）。
  *
  *   $site = new TdxSite(tdxBase(), tdxCredential());
- *   $j = $site->get(['action' => 'transfer', 'func' => 'accel']);           // GET /txapi/transfer/accel，不帶憑證
- *   $j = $site->get(['action' => 'admin_transfer', 'func' => 'learn'], true);   // 帶憑證（admin_ 開頭的 action）
+ *   $j = $site->get(['action' => 'transfer', 'func' => 'lines']);           // GET /txapi/transfer/lines，不帶憑證
+ *   $j = $site->get(['action' => 'admin_transfer', 'func' => 'history'], true);   // 帶憑證（admin_ 開頭的 action）
  */
 
 class TdxSite

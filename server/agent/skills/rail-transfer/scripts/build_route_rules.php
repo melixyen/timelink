@@ -185,7 +185,7 @@ if ($only === null || $only === 'pairs') {
                 $n++;
                 $alt = null;
                 foreach ([[$a, $b], [$b, $a]] as list($f, $t)) {
-                    foreach (appCoreRoutes($m, $f, $t, ['extra' => 0, 'limit' => 50, 'deeper' => 2]) as $r) {
+                    foreach (appCoreRoutes($m, $f, $t, ['extra' => 0, 'limit' => 50]) as $r) {
                         // 繞道＝不是直接搭這條路線的走法：有步行、或搭了別的路線（換系統、同系統換線、繞環島都算；同站換快慢車不算）
                         $detour = false;
                         // 系統直達段（LineUID＝TRA）看經過的路線串（Path）：全程都在這條路線才算直接搭

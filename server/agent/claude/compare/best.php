@@ -56,7 +56,7 @@ $secs = 0.0;
 foreach ($cases as list($from, $to, $week, $start, $end)) {
     $q = ['from' => $from, 'to' => $to, 'extra' => 0, 'week' => $week, 'date' => null, 'mode' => 'depart', 'start' => $start, 'end' => $end,
           'sort' => 'arrival', 'limit' => 50,
-          'opt' => ['extra' => 0, 'max_transfers' => null, 'via' => null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'deeper' => appRouteSearch()['Deeper']]];
+          'opt' => ['extra' => 0, 'max_transfers' => null, 'via' => null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true]];
     $t1 = microtime(true);
     list($data) = appJourneysCompute($q);
     $dt = microtime(true) - $t1;

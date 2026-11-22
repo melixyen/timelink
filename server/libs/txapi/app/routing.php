@@ -2,7 +2,7 @@
 /**
  * 核心 A：路由演算法（不看時刻）。起訖站 → 所有可能的路由，每段標上車種等級（local／express／不限）。
  *
- *   1. 路網層：路線連結圖上找路線串與跨線轉乘站（同 transfer/network 的做法，參考 railtime getTRA_linkMap）；extra 含 2 時高鐵路線不進圖
+ *   1. 路網層：路線連結圖上找路線串與跨線轉乘站（參考 railtime getTRA_linkMap）；extra 含 2 時高鐵路線不進圖
  *   1b. 鐵路（臺鐵、高鐵）連續搭乘合成系統直達段（LineUID＝業者代碼，經過的路線串在 Path／Paths）
  *   2. 補充資料（transfer_route_supplements.json，supplement.php）：每條符合的多一條路由。原本寫死在這裡的快慢車展開：
  *        臺鐵  不限車種的原路由；全程區間車在接力站分切（不能直達才切，參考 railtime getTRA_linkRouteV1 第一步）；
@@ -15,9 +15,8 @@
  *             ['Type' => 'walk', 'From', 'To', 'Minutes' => null, 'MinutesGiven' => false]
  */
 
-// 搜尋範圍的參數（深度、上限）放在 transfer_route_rules.json 的 Search，見 appRouteSearch()；這裡是檔案沒寫時的預設
+// 搜尋範圍的參數（上限）放在 transfer_route_rules.json 的 Search，見 appRouteSearch()；這裡是檔案沒寫時的預設
 const APP_ROUTE_SEARCH_DEFAULTS = [
-    'Deeper'       => 2,      // 轉乘次數比最少的多幾次還要找（API 的 deeper 預設值）
     'MaxLines'     => 6,      // 一條路由最多幾條路線
     'MaxLineUses'  => 2,      // 同一條路線最多搭幾次
     'NetworkLimit' => 40,     // 估計後取前幾個基本路由展開快慢車（不轉乘的路由一律保留）
@@ -181,11 +180,11 @@ function appTraExpressCounts()
 // 1. 路網層
 
 /**
- * 路線連結圖搜尋（同 transferNetworkSearch，另可排除路線）。回傳基本路由（段落陣列）的清單
+ * 路線連結圖搜尋（可只用部分系統）。回傳基本路由（段落陣列）的清單
  *
- * 用途：中長途分解的幹線段（只搭臺鐵、高鐵）、TRA.Via 補充、規則產生器，以及 Search.IndexRoutes＝false 時的短程列舉。
- * 短程與生活圈端已改用綜合指數找路（app/indexroute.php，2026-11）而棄用這裡：成本＝搭乘段數、只列到「最少＋deeper」，
- * 轉乘次數多但實際比較快的走法會被截斷（例如十四張→松山 大坪林→古亭→松江南京 轉 3 次比直達快），RAPTOR 能找到、這裡找不到
+ * 用途：中長途分解的幹線段（只搭臺鐵、高鐵）、TRA.Via 補充、綜合指數找路的最少轉乘保底（deeper＝0）、規則產生器。
+ * 短程與生活圈端不用這裡（改用綜合指數找路，app/indexroute.php，2026-11）：成本＝搭乘段數、只列到「最少＋deeper」，
+ * 轉乘次數多但實際比較快的走法會被截斷（例如十四張→松山 大坪林→古亭→松江南京 轉 3 次比直達快）
  */
 function appNetworkRoutes(array $m, $from, $to, $extra, $deeper = 1, array $systems = null)
 {
@@ -1834,19 +1833,14 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     if ($from === $to) {
         return [];
     }
-    // 短程（同生活圈、相鄰生活圈）與中長途的生活圈端：綜合指數找路（app/indexroute.php，Search.IndexRoutes；使用者規則 2026-11，方案 A 只跑指數）。
-    // IndexRoutes＝false 才退回原本的 Deeper 列舉（appNetworkRoutes），見下方棄用說明
-    $indexMode = appIndexConfig()['Enabled'];
     // 中長途（起訖生活圈不相鄰）：分解成「生活圈端＋幹線＋生活圈端」組合（app/trunk.php）；不套用時一般找路
     $trunk = empty($opt['via']) && empty($opt['noTrunk']) ? appTrunkBaseRoutes($m, $from, $to, $opt) : null;
     $trunkMode = $trunk !== null && $trunk['routes'];   // 分解組不出路由時退回整段搜尋
     // 基本路由：系統直達段不分路線，經不同路線的同一走法（臺鐵北迴、南迴）合成一條，各自的路線串放進 Paths
     $byCode = [];
-    // 短程（生活圈端、同生活圈或相鄰生活圈）：綜合指數最小的前 K 條（appIndexRoutes，不用 Deeper 截斷）。
-    // 原本的路網列舉（appNetworkRoutes＋Deeper）短程已棄用（保留給 IndexRoutes＝false）：Deeper 依轉乘次數截斷，
-    // 轉乘多但實際比較快的走法（捷運平行轉乘、班距短的轉乘）會先被丟掉；deeper 參數因此對短程與生活圈端沒有作用
-    $baseRoutes = $trunkMode ? $trunk['routes']
-        : ($indexMode ? appIndexRoutes($m, $from, $to, $extra, null, null, !empty($opt['_pool'])) : appNetworkRoutes($m, $from, $to, $extra, $opt['deeper'] ?? $cfg['Deeper']));
+    // 短程（同生活圈、相鄰生活圈）與中長途的生活圈端：綜合指數最小的前 K 條（app/indexroute.php 的 appIndexRoutes；使用者規則 2026-11）。
+    // 不依轉乘次數截斷：轉乘多但實際比較快的走法（捷運平行轉乘、班距短的轉乘）不會先被丟掉
+    $baseRoutes = $trunkMode ? $trunk['routes'] : appIndexRoutes($m, $from, $to, $extra, null, null, !empty($opt['_pool']));
     foreach ($baseRoutes as $legs) {
         $code = appRouteFormat(['Legs' => $legs]);
         if (!isset($byCode[$code])) {

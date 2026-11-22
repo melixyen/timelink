@@ -1,19 +1,18 @@
 ---
 name: rail-transfer
-description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——轉乘群組 TransferGroup（TRANSGRP_ 代碼、StationUID 成員、步行分鐘來源優先順序）的產生與更新、路線連結圖的路網結構搜尋、RAPTOR 時刻表轉乘查詢（直通解、最短解、最快解、最佳解、最少轉乘）、固定路由組合的前後班次（func=follow）、車站搜尋（func=stations），以及 railtime（tratrtc.html）與 rocptx（router.v2.js）轉乘演算法的對照。新增車站或系統、TDX 轉乘資料更新、調整轉乘查詢時使用。
+description: 本站 軌道轉乘的資料與演算法——轉乘群組 TransferGroup（TRANSGRP_ 代碼、StationUID 成員、步行分鐘來源優先順序）的產生與更新、路網模型、RAPTOR（journeys 的補充演算法）、車站搜尋（func=stations）、客端轉乘查詢 app_trip（路由＋時刻表串接），以及 railtime（tratrtc.html）與 rocptx（router.v2.js）轉乘演算法的對照。新增車站或系統、TDX 轉乘資料更新、調整轉乘查詢時使用。
 ---
 
-# 軌道轉乘：轉乘群組、路網結構搜尋、時刻表轉乘
+# 軌道轉乘：轉乘群組、路網模型、RAPTOR、客端轉乘查詢
 
 本 skill 存放於 `agent/skills/rail-transfer/`（進版控）。程式在 `libs/txapi/transfer/`，人工維護的輸入在 `libs/txapi/transfer/data/`，用離線資料算出的產生檔在主機的 `custom/libs/txapi/transfer/data/`（不進版控，舊版在 `history/`）：
 
 | 檔案 | 內容 |
 | --- | --- |
-| `transfer.php` | `/txapi/transfer` 入口與說明文件（func=help／groups／lines／network／route／follow／stations／accel／build_groups／learn） |
+| `transfer.php` | `/txapi/transfer` 入口與說明文件（func=help／groups／lines／stations；admin_transfer 的 build_groups／history／restore） |
 | `groups.php` | 轉乘群組產生器 `transferBuildGroups()`、讀取 `transferLoadGroups()` |
-| `network.php` | 路網結構搜尋 `transferNetworkSearch()`（路線連結圖） |
-| `router.php` | 時刻表轉乘 `transferRoute()`／`transferRaptor()`；方案的路由組合 `transferPatternFromSteps()` |
-| `follow.php` | 固定路由組合的前後班次 `transferFollow()`（func=follow） |
+| `network.php` | 路網模型 `transferNetworkModel()`、步行 `transferWalk()`、轉乘影片、排除記號 |
+| `router.php` | 路網時刻資料 `transferRouterData()`、RAPTOR `transferRaptor()`、反向最晚出發 `transferLatestDeparture()`、一段全天可搭的車 `transferLegTrips()` |
 | `search.php` | 車站搜尋 `transferSearchStations()`（func=stations） |
 | `data/hanzi_pinyin.json` | 車站搜尋的漢字字典（Big5 漢字拼音、異體與簡繁歸一），由 `scripts/build_hanzi.php` 從 Unicode Unihan 產生 |
 | `data/transfer_seed.json` | 人工補充：TDX 沒有的跨系統群組、railtime／rocptx 步行分鐘、同站換車分鐘、群組代碼的漢語拼音、設定 |
@@ -53,7 +52,6 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
    目前：萬華（TRA-1010）↔龍山寺（TRTC-BL10），前後已有臺北、板橋可轉。例：樹林→西門改在板橋轉；萬華出發到西門仍可走到龍山寺搭板南線。
    與 `ExcludePairs` 的差別：ExcludePairs 直接刪掉連結（群組也消失），Bypass 只是不在這裡中途轉
    **查詢時直接讀** seed 的 `Bypass`（`transferSeedBypass()`，network.php 建模型時套用），改了馬上生效、不必跑 build_groups；群組檔裡的 `Bypass` 標記是給其他專案看的，下次 build_groups 才更新。
-   排除記號也算進加速清單的輸入雜湊（`transferInputsHash()`），改了之後加速清單自動停用，直到重跑 learn
 5. 步行分鐘（有向）優先順序：TDX `LineTransfer` → TDX `StationTransfer`（只給單向時反向沿用，`Source` 加 `(反向)`）→ seed `Walks`（railtime／rocptx）
    → 座標推算 `round(4 + 公尺 ÷ 70)`，限 3～15 分（`estimate`）
 6. 同站換車（`TrainChange`）優先順序：TDX 臺鐵／捷運 LineTransfer（交會站、支線分岔）→ seed `TrainChange`（railtime 臺鐵大站 1～4 分、南港、二水、
@@ -64,27 +62,24 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 
 ### 更新流程
 
-1. 自動：資料更新流程的 learn 階段會先跑 `func=build_groups`（見 [data-pipeline](../data-pipeline/SKILL.md)），回應的 `links.added`、`links.notDetected` 是要人工看的地方
+1. 自動：資料更新流程的 groups 階段跑 `func=build_groups`（見 [data-pipeline](../data-pipeline/SKILL.md)），回應的 `links.added`、`links.notDetected` 是要人工看的地方
 2. 人工增加：兩站轉乘加到 seed `Pairs`、多站群組加到 seed `Groups`、同站換車站或分鐘加到 seed `TrainChange`、英文意譯站名補 `IdNames`
 3. 人工移除：把兩站加到 seed `ExcludePairs`（下次 build_groups 會從 `transfer_links.json` 刪掉並不再加入）；人工群組直接從 seed 刪；
    只是「不建議在這裡轉乘」但要保留資料時，用 seed `Bypass` 排除記號
-4. 改 seed 後部署 seed，再跑 `pipeline.php learn`（或 `func=build_groups` 後 `func=learn`）
+4. 改 seed 後部署 seed（可再跑 `pipeline.php groups` 或 `func=build_groups`）
    **自動重建（2026-11 使用者要求）**：部署 seed 後不必手動 build_groups——查詢讀群組時（transferLoadGroups → transferEnsureGroups）比對 seed 的 sha1 與
    `custom/…/transfer_groups_stamp.json` 記錄的不同，就自動跑一次（transferRebuildGroups，與 func=build_groups 共用；檔案鎖同時只有一個請求重建，
-   有舊群組時其他請求不等；失敗用舊群組、同一份 seed 在 `TRANSFER_AUTO_REBUILD_RETRY` 秒內不重試（transfer.php 的常數，例如 10 分鐘））。加速清單不因群組更新而過期（見 rail-transfer-learn）
-5. 驗證：`func=groups&station=<UID>`、`func=network`、`func=route` 幾組代表路線（見下方）
+   有舊群組時其他請求不等；失敗用舊群組、同一份 seed 在 `TRANSFER_AUTO_REBUILD_RETRY` 秒內不重試（transfer.php 的常數，例如 10 分鐘））
+5. 驗證：`func=groups&station=<UID>`，再用 `app_trip/journeys` 查幾組代表路線
 
-## 路網結構搜尋（func=network）
+## 舊的 /txapi/transfer 查詢（2026-11 移除）
 
-1. 節點＝路線，`LineLinks` 為邊（臺鐵路線交會站的單站群組也會連起 WL↔EL 等）
-2. 起點：起站的路線，以及起站所在群組其他成員的路線（先步行）；終點同理
-3. BFS 找換線最少的路線串，再多 `extra`（預設 1）次；不重複經過同一路線，最多 6 條路線
-4. 展開每對相鄰路線的轉乘群組與上下車站組合（每段最多 400 種），同一路線上下車不可同站
-5. 每段估算：捷運 `metro_travel` 站距表 → `metro_travel_od` 矩陣 → 臺鐵、高鐵最快一班（`train_stop` 的 sort_min 差）→ 站數 × 2；
-   加上步行或同站換車分鐘；依轉乘次數、估算分鐘排序
-6. 基隆→東湖：WL 基隆→南港 →（nangang）→ BL 南港→南港展覽館 →（nangangzhanlanguan）→ BR，約 42 分
+`func=network`（路網結構搜尋）、`func=route`（獨立的 RAPTOR 時刻表查詢，含 profile 多次搜尋、Tags／TagBits、長等候改晚出發）、`func=follow`（固定路由組合的前後班次）、
+加速清單（`func=accel`、`admin_transfer/learn`、`transfer_accel.json`、`transfer_accel_learned.json`、`rail-transfer-learn` skill）在 2026-11 重構時移除：
+前端與後臺都已改用 `app_trip`，這些只剩對照用途。下面「RAPTOR」一節保留核心的做法（journeys 的補充演算法仍用它）；
+其中 profile 搜尋、標籤、`transferShiftLongWait`、`TRANSFER_MIN_GAIN` 是舊 func=route 的記錄。
 
-## 時刻表轉乘（func=route，RAPTOR）
+## RAPTOR（transferRaptor；舊 func=route 的記錄與現在的核心）
 
 - 第 k 輪＝搭第 k 班車（最多 `Router.MaxTrips` 班），出發後 `Router.HorizonSeconds` 秒內到達（transfer_settings.json；例如 6 班、12 小時）
 - 列車（臺鐵、高鐵）：`train`、`train_stop` 依星期篩選，每班一條 trip；到站秒＝離站 sort_min×60 −（離站−到站）
@@ -119,19 +114,13 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 - 長等候改晚出發（`transferShiftLongWait`）：方案中轉乘等候超過 30 分鐘（`TRANSFER_SHIFT_WAIT`），對最後一次長等候之前的部分反向搜尋最晚出發，再正向搜一次替換（同樣到達、班數不變）。例：東湖→漢本 08–12 查詢原本列「11:07 東湖出發、南港等 8 小時坐區間車 4046」，改成 18:49 出發。所以 end 查詢的少數方案出發會晚於 end
 - 捷運時刻表每站只查一次並依時刻表群組（終點＋方向）分好（`stationDep`），每條營運路線只判斷群組、不逐班判斷
 
-### 資料與演算法分離、加速清單（2026-10 使用者要求）
+### 資料與演算法分離（2026-10 使用者要求）
 
 - 使用者要求：純資料（靜態資料）一律存成 JSON，PHP 演算法讀檔，格式要讓 PHP 與 Node.js 都能解析（物件、陣列、字串、數字；不用正規表示式）
-- `libs/txapi/transfer/settings.php` 讀 `data/transfer_settings.json`，以 define() 產生 TRANSFER_MAX_TRIPS、TRANSFER_HORIZON、TRANSFER_ROUTE_BUDGET、TRANSFER_TRANSFER_PENALTY、TRANSFER_WALK_WEIGHT、TRANSFER_SHIFT_WAIT、TRANSFER_MIN_GAIN、TRANSFER_TAGS；`transferSettings('Router.MaxTrips')` 讀任一欄位；`transferDataFile('Accel')` 取檔案路徑（Files 對照表）
-- settings 另含 Distance（StationAliases、SplitSegments 山線區段、TripLineAvoidTags、THSRLineTag）與 GroupSources（捷運 LineTransfer／StationTransfer／TransferStations 讀哪些系統、OperatorAliases、SharedStationIdOperators、ZeroPadStationId）。重構後 build_groups 與里程產出和之前逐位元組相同
-- （2026-10 後續）加速清單改由離線再演算產生：`/txapi/admin_transfer/learn`／`learn.php` 算出 `custom/libs/txapi/transfer/data/transfer_accel_learned.json`（推薦換車站、實際使用的走廊），未過期時查詢預設套用；流程見 [rail-transfer-learn](../rail-transfer-learn/SKILL.md)。以下為最初的手寫版說明
-- 加速清單 `data/transfer_accel.json`（`accel.php`，`func=route&accel=1`，預設關）：
-  - Regions：N 北部、NE 宜蘭與北迴、C 中部、S 南部、SL 南迴、E 花東；Lines 以 LineUID＋From／To（依 line_station 站序，含兩端）展開，Systems、Stations 另列；同轉乘群組的車站互相繼承地區
-  - Corridors：地區組合（不分方向）→ Allow 地區或 "*"。被擋的車站在正向與反向搜尋都不展開
-  - TransferHubs：臺鐵同站換車只在這些站，或起訖站附近（Settings.LocalMinutes＝40，以時間下界判斷）；RestrictChangeSystems＝["TRA"]
-- 驗證：73 組（大站、小站、捷運，全日與 08–12）accel 開關方案完全相同，伺服器時間少約 9%；197 組隨機起訖 5 組不同（奇岩→高鐵彰化經嘉義折返、銅鑼→龍埔在北湖換車、凱旋→苑裡經新竹折返、斗六→北埔經新左營南迴、東澳→凱旋武昌經花東南迴），時間少約 16%。之後把 NE↔S 改成不限制，剩 4 組不同
+- `libs/txapi/transfer/settings.php` 讀 `data/transfer_settings.json`，以 define() 產生 TRANSFER_MAX_TRIPS、TRANSFER_HORIZON；`transferSettings('Router.MaxTrips')` 讀任一欄位；`transferDataFile('Seed')` 取檔案路徑（Files 對照表）
+- settings 另含 Distance（StationAliases、SplitSegments 山線區段、TripLineAvoidTags、THSRLineTag）與 GroupSources（捷運 LineTransfer／StationTransfer／TransferStations 讀哪些系統、OperatorAliases、SharedStationIdOperators、ZeroPadStationId）
 
-### 驗證參考值（週一，2026-10）
+### 驗證參考值（週一，2026-10，舊 func=route）
 
 | 查詢 | 結果 |
 | --- | --- |
@@ -146,28 +135,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 
 ## 前端查詢需求（2026-10 使用者要求：做成台灣版 ekitan／jorudan 的核心轉乘查詢，只分星期幾與幾點出發）
 
-| 需求 | API |
-| --- | --- |
-| 任意兩站轉乘（臺鐵、高鐵、捷運；輕軌資料足以轉乘，保留；林業鐵道不在資料內） | `func=route` |
-| 篩選最快抵達、最少轉乘 | `func=route` 的 `Tags`／`TagBits`／`picks` |
-| 每一站的時刻表 | `/txapi/finder/rail_station_time` |
-| 同一路由組合提早或延後任意分鐘的前後班次 | `func=follow`（把 route 方案的 `Pattern` 送回去） |
-| 車站輸入快篩 | `func=stations`（模糊比對前 10 筆） |
-
-### 路由組合 Pattern 與 func=follow（follow.php）
-
-- 使用者規則：前端把路由組合（路線、轉乘站）送到後端，後端只在這個組合裡找前後班車；重複的要篩掉——例如市政府→汐止，板南線班次多、臺鐵少，
-  好幾班板南線接同一班火車時只留一個；**每一班車只出現一次，而且是串起來旅程時間最短的那一次**
-- Pattern：依序 `{"Type":"Origin","StationUID"}`、`{"Type":"Line","LineUID"}`、`{"Type":"Transfer","From","To","Minutes"}`、…、`{"Type":"Destination","StationUID"}`。
-  轉乘的 `Minutes` 可手動設定（保留使用者調整步行速度的可能），null 用資料的轉乘分鐘；`walk_factor` 參數把資料的步行分鐘整體乘上倍數（手動設定的不乘）。
-  route 的 `Pattern` 另帶 `Kind`（walk／train_change）、`DefaultMinutes`（資料的分鐘）
-- Line 的比對：捷運、輕軌＝同一路線（各營運路線、車種都算）經過上下車站的車；臺鐵、高鐵＝該系統先停上車站再停下車站的任何一班（臺鐵 route 給的 LineUID 是列車的第一條路線，只是標示）
-- 演算法：第一段的每一班車各試一次，之後每段搭「趕得上、在下車站最早到」的一班（後綴最小值＋二分搜尋），同站換車不接同一班車；
-  由晚到早出發掃描，留下比所有較晚出發者更早到的旅程（互不支配）；最後依全程時間由短到長收，車輛已出現在別的旅程就不收（保證每班車只出現一次）
-- 驗證（2026-10）：23 個路由組合（2～4 段，含高鐵、捷運、輕軌、步行起訖）與窮舉全部組合後取互不支配的結果逐筆相同；
-  唯一差異是同站換車接到同一班車的組合（已排除）與「同一班車出現在兩個旅程」時只留全程較短的一個（使用者規則）。每次 0.05～0.1 秒
-- 選取：`time` 為基準；早於 time 的一側有 `before`（分鐘）用範圍、否則取 `prev` 筆；不早於 time 的一側有 `after` 用範圍、否則取 `next` 筆（都沒給時 next=5）；
-  `start`＋`end` 等同 time＋after；`all=1` 全天。回應 `focus`（第一個不早於 time 的方案索引）、`earlier`／`later`（範圍外還有幾個）、`prevTime`／`nextTime`
+轉乘查詢用 `app_trip/journeys`（見下方「客端 API」）；車站輸入快篩用 `func=stations`；每一站的時刻表用 `app_station/timetable`。
 
 ### 途中各站時刻 StopTimes 與站間行駛時間（2026-10 使用者要求）
 
@@ -178,9 +146,9 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
   台高鐵給車次、捷運沒有車次給路線編號（`DisplayNo`／`DisplayNoType`）
 - 使用者規則（站間行駛時間）：**以兩站間直接的資料為主，沒有才用該路線一站一站加起來推算**（時刻表與推算的差異可能是有沒有算停站時間）。
   `transferPatternTravel()`：起訖矩陣系統（機捷、淡海、安坑）用 metro_travel_od 的直接秒數，其他（S2STravelTime 只有相鄰兩站）用 metro_travel 累加。
-  用在 RAPTOR 的到站、反向搜尋、下界（直接資料也加成邊，下界不高估）、follow、StopTimes。改了之後機捷部分方案早到 1 分（例如環北→新北產業園區、機場第二航廈→高鐵桃園），
+  用在 RAPTOR 的到站、反向搜尋、下界（直接資料也加成邊，下界不高估）、核心 B 的一段全天可搭的車、StopTimes。改了之後機捷部分方案早到 1 分（例如環北→新北產業園區、機場第二航廈→高鐵桃園），
   其他系統不變；剪枝與不剪枝結果相同（8 組含機捷、輕軌）
-- StopTimes 實作 `router.php`：`transferRideStops()`（`_par` 來源指標留在搭乘段，最後選出的方案才算，`transferAddStops()`；`$arrSec` 下車站時刻）、`transferRideStopsSpread()`（捷運中間站內插）。
+- StopTimes 實作 `router.php`：`transferRideStops()`（`$arrSec` 下車站時刻）、`transferRideStopsSpread()`（捷運中間站內插）。
   整列車串車（runs.php，決定下車站時刻）：逐站「前一站離站＋兩站間直接行駛時間（＋停站）」，±1 分鐘內對時刻表（至少比前一站晚「行駛時間 × 0.6 − 59 秒」，transferRunMinDep：TDX 新北環狀線往新北產業園區的景安與中和、大坪林與十四張、秀朗橋站別時刻表同一分鐘，同分鐘不採用、改內插；不採用的那一班由 transferRunConsumeEarly 標成已用掉，否則第二輪會從它串出不存在的車，例如從十四張出發、其實是大坪林那班的重複）；有真實到站時間（機捷、高捷、新北捷運、輕軌）比到站——機捷 A8 普通車停站 4 分鐘等直達車，比離站會對錯
 - 曾改用「時刻表相鄰兩站發車時間差的眾數」當標準行車時間（對到率較高），使用者指定改回站間行駛時間為主
 - 試過「先定兩端再填中間」（使用者提議，2026-10）：先用點對點時長對到下車站時刻表，再把中途站按行駛時間比例分配後對時刻表。比逐站接著推差：
@@ -280,9 +248,8 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 
 - 同一 IP 每分鐘、每小時的查詢次數上限（`libs/txapi/querylimit.php`，設定見下方，例如每分鐘 60 次、每小時 1000 次；`/txapi/transfer`、`/txapi/finder` 與 public_、app_ 合計，func=help／list 與後臺身分不計），來源網域不限；
   IP 用 REMOTE_ADDR（主機前面的 CDN 需已換成真實 IP），計數存 `download/tdx_proxy_files/cache/querylimit.sqlite`（只存雜湊）
-- 出發時間範圍有上限（`QUERY_MAX_RANGE_MINUTES`；使用者當初的決定是回歸 railtime 原本「間隔不要超過三小時」，例如 180 分鐘）：route 的 end − start，沒給 end 時最多搜到 start＋上限（`searchUntil`）；follow 的 before＋after，不提供 all=1，用班數時回傳跨度也受同一個上限
-- 上限在 `custom/libs/config.json`（沒寫的用 `libs/config.json` 預設值）（QUERY_RATE_LIMIT_PER_MINUTE、QUERY_RATE_LIMIT_PER_HOUR、QUERY_MAX_RANGE_MINUTES）；錯誤代碼表 `libs/txapi/errors.php` 的 `APP_ERRORS`（40001～40003、42901、42902），`/txapi/errors` 查詢
-- 驗證腳本（verify_accel.php）要帶管理密碼，才不受次數與範圍限制
+- 查詢時段有上限（`QUERY_MAX_RANGE_MINUTES`；使用者當初的決定是回歸 railtime 原本「間隔不要超過三小時」，例如 180 分鐘）：app_trip 的 end − start（只給一端時補這個長度）
+- 上限在 `custom/libs/config.json`（沒寫的用 `libs/config.json` 預設值）（QUERY_RATE_LIMIT_PER_MINUTE、QUERY_RATE_LIMIT_PER_HOUR、QUERY_MAX_RANGE_MINUTES）；錯誤代碼表 `libs/txapi/errors.php` 的 `APP_ERRORS`（40001、42901、42902 等），`/txapi/errors` 查詢
 
 ### 捷運整列車 runs（2026-10 使用者要求：起訖站時間越接近正確值越好，依路線資料不同用不同演算法）
 
@@ -291,7 +258,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
   理由：捷運的車可能從中間各站發車（首班車），不像火車都從起站出發；各站時刻表也有錯（環狀線景安＝中和），串車會串出不存在的車。
   不要再提議用複本時刻表辨識或上下車站兩表配對修串車（使用者否決）。runs.php 保留但不用；app_line/timetable 的捷運因此改用營運路線首站發車推算（`app/line.php`）
 - 營運路線的短程車：`transferPatternReach()`（列車終點在營運路線上就只到終點站）。RAPTOR 順向依「能搭到第幾站」分組各掃一次
-  （`transferPatternReaches()`、`transferPatternDeparturesReach(..., true)`），反向與 follow 只取開得到下車站的車（`transferPatternDeparturesReach()`）。
+  （`transferPatternReaches()`、`transferPatternDeparturesReach(..., true)`），反向與核心 B（transferLegTrips）只取開得到下車站的車（`transferPatternDeparturesReach()`）。
   模擬驗證：象山 07:00 往北投、07:05 往淡水，象山→淡水只會搭 07:05（原本 pattern 會算成搭 07:00 直達淡水）
 - 以下是整列車的做法（停用中）：
 
@@ -304,15 +271,15 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 - 週一中途站對到時刻表：北捷 BL／G 100%、R 99.8%、O 99.9%，高捷 100%，新北 LB 99.9%、環狀線 93.5%，安坑、高雄輕軌 100%、淡海 98.5%，機捷 78%（A13 有不在 A12 時刻表的班次，屬資料問題）
 - 修正的既有錯誤：pattern 時代短程車（終點在營運路線中途）會被當成開到營運路線終點（例如象山→淡水搭往北投的車直達淡水）；runs 之後 0 筆
 - 快取：`sqlite/transfer_runs_<星期遮罩>.ser`（約 6 MB／天，資料庫建置時間或 runs.php 改了就重算，建置約 1.3 秒、峰值記憶體約 100 MB；讀快取約 0.1 秒）
-- 驗證：15 組含捷運、輕軌的起訖 06–10 時，剪枝與不剪枝結果相同；follow 23 個路由組合與窮舉相同
+- 驗證：15 組含捷運、輕軌的起訖 06–10 時，剪枝與不剪枝結果相同
 
 ### 轉乘實景影片（2026-10 使用者要求）
 
 - railtime 的轉乘資料（`ttlib/data.js` transStation 的 `video`，鍵是出發的車站或路線；`calc_tymetro.html` 的臺北車站轉乘導覽）有特定兩站間的 YouTube 影片（作者 melix7），
   整理成 `transfer_seed.json` 的 `Videos`：`From`、`To`（StationUID，有方向）、`Type`（YouTube）、`ID`、`Title`、`Source`、`Ref`（railtime 的 transStation id）、`Note`
 - 方向用 YouTube oEmbed 的影片標題確認（例如「轉乘-南港站台鐵轉捷運」＝TRA-0980→TRTC-BL22）。臺北車站「台鐵高鐵轉機捷」「機捷轉台鐵高鐵」同時掛在臺鐵與高鐵；頭前庄、景安、大坪林只有捷運轉環狀線一個方向
-- 共 25 筆（13 個轉乘點），全部對得到轉乘群組裡的轉乘。查詢時直接讀（`network.php` 的 `transferSeedVideos()`／`transferVideos()`），不影響加速清單；
-  輸出在 route／follow 的轉乘步驟與 Pattern、groups 的 Transfers、network 的中途轉乘，網址由 `transfer_settings.json` 的 `Media` 樣式補上
+- 共 25 筆（13 個轉乘點），全部對得到轉乘群組裡的轉乘。查詢時直接讀（`network.php` 的 `transferSeedVideos()`／`transferVideos()`）；
+  輸出在 app_trip/journeys 的轉乘步行段、groups 的 Transfers、public_station 的轉乘，網址由 `transfer_settings.json` 的 `Media` 樣式補上
 
 ### 車站搜尋（search.php）
 
@@ -330,15 +297,15 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
 
 - `public_`：不分身分、可快取（ETag）；`app_`：同一路徑依 Authorization 判斷 Guest／Member（會員系統還沒做，全部 Guest，只有同一 IP 查詢次數限制）
 - 架構：兩個演算法核心＋組合。核心 A 路由演算法（不看時刻，含同系統快慢車展開）；核心 B 點對點時刻表（兩站間直達班次，三種排序）。
-  組合：routes＝A、direct＝B、route_trains＝route 每段 B 再串接、journeys＝A→每段 B→串接→分類排序。transfer/route（RAPTOR）不動，當對照組
+  組合：routes＝A、direct＝B、route_trains＝route 每段 B 再串接、journeys＝A→每段 B→串接＋RAPTOR 補充→去重複→分類排序（計算管線見 app/journey.php 的 appJourneysCompute）
 - 查詢流程：① 找所有路由 → ② 路由層排除（bit 2 去掉高鐵、bit 1 去掉含臺鐵 express 段）→ ③ 每段取時刻 → ④ 列車層排除（在核心 B 取時刻時就排除，
   因為串接每段只接最早到的那班，取完再濾會漏掉區間車組合）→ ⑤ 分類排序（最早到達、最短行車時間、最少轉乘）
-- `extra` 是排除位元（2026-10 使用者改定）：bit 1＝不搭臺鐵對號（莒光、自強以上），bit 2＝不搭高鐵，3＝兩者都不搭；預設 0 不排除。加速清單不設限，所有 extra 共用
+- `extra` 是排除位元（2026-10 使用者改定）：bit 1＝不搭臺鐵對號（莒光、自強以上），bit 2＝不搭高鐵，3＝兩者都不搭；預設 0 不排除
 - 慢車／快車：`transfer_seed.json` 的 `ClassChange`（臺鐵依車種代碼，LocalTypeCodes 6、7、10 是慢車，其他都是快車；高鐵、機捷依停靠站）。
   換車站在補充資料 `transfer_route_supplements.json` 的 Meta（appRelayStations、appClassChangeStations 讀 appSupplementMeta）：區間車接力 10 站（臺北、新竹、彰化、嘉義、高雄、潮州、枋寮、臺東、花蓮、蘇澳新，都已有同站換車；枋寮是 TrainChangeAuto 自動選到）；高鐵台中、機捷 A8 換車
 - 路由代碼 `route`：`車站.連接.車站…`，只用英數字與 `-` `.`（各種網址編碼都不會動）。連接＝路線代碼、業者代碼（`TRA`／`THSR`＝系統直達段，不分路線查站到站）（可接 `local`／`express`）或 `walk`／`walk-<分鐘>`；
   關鍵字要整個元素完全命中（名稱在第一個 `-` 之前）。解析與驗證在 `app/route.php`，`/txapi/public_info/route` 可直接檢查
-- 核心 B（`app/timetable.php` 的 appCoreDirect）：用 transferRouterData（與 transfer/route 同一份路網時刻）＋ transferFollowLeg 取兩站間每一班，取資料時就依 extra、class 排除；
+- 核心 B（`app/timetable.php` 的 appCoreDirect）：用 transferRouterData（與 RAPTOR 同一份路網時刻）＋ transferLegTrips 取兩站間每一班，取資料時就依 extra、class 排除；
   環狀線（高雄輕軌）兩個方向都到得了時，行車時間中位數超過最短方向 1.5 倍的方向不列
 - 班次代碼 `RunCode`（帶給 app_train/stops）：臺鐵、高鐵＝train_key（TRA-1132）；捷運整列車＝`SYS-LINE-R<sha1(mroute key) 前 8 碼>-<班>-w<星期>`；
   營運路線（文湖線、臺中捷運等沒有真實站別時刻表的）＝`SYS-LINE-P<雜湊>-<站序>-<時刻群組>-<秒>-w<星期>`。單站時刻表的捷運班次用「時刻群組＋發車分鐘」對回整列車。
@@ -364,7 +331,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
     - 最少轉乘保底（Search.IndexMinTransfer＝3）：直達與一次轉乘都沒有時，用原本的列舉只找最少轉乘那一層（appNetworkRoutes deeper＝0，0.001～0.006 秒），依指數取前 3 條。
       指數搜尋每站（依抵達路線）展開上限會被之後才違反規則的部分路徑用掉：興南→淡海新市鎮的高鐵走法佔滿紅樹林，機捷直達台北車站轉淡水線（轉 2 次）排不進來，
       使用者選「轉乘最少」排序時第一筆變成轉 3 次。補上後與 dev 一致（環北→大直、領航→耕莘安康院區同）。
-    - 生活圈端最少轉乘：轉乘最少的走法不在依指數的前 AccessPerStation 名時另外附上（appTrunkAccess 的 extra；原本的排序轉乘次數優先一定有它）。
+    - 生活圈端最少轉乘：轉乘最少的走法不在依指數的前 AccessPerStation 名時另外附上（appTrunkAccess 的 extra）。
       古亭→臺鐵松山前 3 名是經臺北、松江南京、東門轉乘的，直達（松山新店線）排第 4，古亭→新竹新莊「轉乘最少」因此從轉 2 次變成轉 3 次。
       附上的走法組出的組合不參加 MaxCombos 的估計排序（不擠掉原本選得到的）；組合裡搭乘段數最少的一條都沒選到時，每個幹線系統補估計最好的一條。
       試過「跳過從另一個臺鐵大站搭臺鐵進幹線站的生活圈端走法」：忠孝復興→南港─臺鐵→臺北再轉西部幹線往斗六、東湖→南港往高雄這類（南港沒有直達車）是正當走法，會漏，撤掉。
@@ -384,10 +351,9 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
       Logic 不限業者：捷運路線、車種寫在 Meta.Line、Meta.Class，別的捷運要「改搭臺鐵到某站再轉回來」只要加一條設定。
       完整比對（加上後）：台電大樓→興南出發、抵達、末班都與 dev 一致；同站較好從 16 次變 52 次（中壢、老街溪附近的查詢），新的變差只有時段最後 5 分鐘 1 次。
     - 站間步行取代法（核心共用）：同一轉乘群組有兩個以上候選幹線站（臺鐵南港＋高鐵南港）時，生活圈端共用群組之間的核心路段，只對這種候選啟用（usePool）。
-    - Deeper（API 的 deeper 參數）對短程與生活圈端不再有作用（只影響中長途幹線段、TRA.Via、IndexRoutes＝false 時的列舉）；前端不送 deeper，
-      「轉乘最少」排序看的是 journeys 依時刻挑出的方案，與 Deeper 無關（見下方驗證）。
-    - 原本的列舉（appNetworkRoutes）與生活圈端依原本排序取前 3（appTrunkAccess 的 dev 分支）保留不刪，註解說明短程棄用原因：
-      Deeper 依轉乘次數截斷，轉乘多但實際比較快的走法（捷運平行轉乘、班距短的轉乘）會被丟掉；生活圈端依轉乘次數優先排序也一樣。
+    - 原本的列舉（appNetworkRoutes＋Deeper）短程與生活圈端已移除（2026-11 重構；IndexRoutes 開關、appTrunkAccess 的 dev 分支、API 的 deeper 參數、
+      Search.Deeper、APP_DEEPER_MAX 一起拿掉）：Deeper 依轉乘次數截斷，轉乘多但實際比較快的走法（捷運平行轉乘、班距短的轉乘）會被丟掉。
+      appNetworkRoutes 本身留著（中長途幹線段、TRA.Via、最少轉乘保底用，深度由呼叫端寫死 0 或 1）。「轉乘最少」排序看的是 journeys 依時刻挑出的方案（見下方驗證）。
     試過「最後轉乘站多元」「生活圈端前 5」「保底併進主搜尋」「記憶共用」，漏失比補回多或沒有加速，撤掉。
   - **臺鐵候車依生活圈（使用者規則 2026-11，transfer_regions.json 的 TraWaitMinutes，手寫）**：該生活圈 TraHubs 大站全日平均候車（班距一半的平均），
     新竹 3.7、臺北 4.7 … 苗栗 12.1、宜蘭 13.9、花蓮 18.4 分；指數在這個生活圈搭臺鐵一律用它，臺鐵第一次上車也算候車（班次少、要照時刻表趕車，
@@ -420,7 +386,7 @@ description: 本站 軌道轉乘（/txapi/transfer）的資料與演算法——
     幾乎都是使用者同意不處理的（時段最後 5 分鐘、幹線中途換車、50 筆上限、不是最佳解）；新版較好 38 次；計算時間 dev 577 秒、新版 554 秒。
     抵達時刻（by=arr）、首班（first）、末班（last）各 780 次（回歸 80＋隨機 400＋同站抽 300）：時間最佳漏掉的 5、3、3 筆（多半在抵達時段開頭 10 分鐘內，或差 1～2 分轉乘較少）；
     「轉乘最少」排序（sort=transfers）第一筆 780 次變差 1 次（永靖→台北小城：dev 轉 2 次 5 小時 12 分、新版轉 3 次 2 小時 31 分，原本就列為「不是最佳解」）。
-  - 路網 BFS（appNetworkRoutes，IndexRoutes 關掉時的短程列舉；中長途的幹線段、TRA.Via 仍用它）：成本＝搭乘的系統段數（同一鐵路系統在交會站換線成本 0）；同一路線最多搭 Search.MaxLineUses（2）次，不分鐵路捷運（文湖線→板南線→文湖線、山線→海線→山線這類捷徑要能找到）；最多 Search.MaxLines 條路線；預設 deeper＝Search.Deeper。
+  - 路網 BFS（appNetworkRoutes；中長途的幹線段、TRA.Via、最少轉乘保底用它）：成本＝搭乘的系統段數（同一鐵路系統在交會站換線成本 0）；同一路線最多搭 Search.MaxLineUses（2）次，不分鐵路捷運（文湖線→板南線→文湖線、山線→海線→山線這類捷徑要能找到）；最多 Search.MaxLines 條路線；deeper 由呼叫端指定。
   - 有支線的捷運路線（中和新蘆線蘆洲支線、淡水信義線新北投支線、松山新店線小碧潭支線）：appLinePaths 用 metro_travel 的營運路線站序，appRideStations 只在同一條站序上直接搭，跨支線回 null；appLineJunctions 找分岔站，BFS 給這種路線自連邊、在分岔站同站換車（蘆洲→大橋頭→三重）；兩段合起來能直接搭到的同線換車不列。transfer 模組的 lineStations 是一條直線（迴龍接三重國小、淡水接新北投），不能直接拿來切沿途車站。
   - 通則（寫死）：重複經過同一個車站（上下車站與沿途都算，同轉乘群組視為同一站，appStationKey）；跨支線不能直接搭。里程上限（起訖直線距離倍數）試過後使用者要求拿掉（不是基礎），改用 RouteBans 範圍規則。
   - 設定（transfer_route_rules.json）：DirectPairs（兩站都經過時要有一段同時包含兩站＝直接搭同一路線；每段搭乘或步行各算一段。以 StationUID 判斷，同轉乘群組同一鐵路系統的車站視同一站 appPairStation；不要改成轉乘群組判斷，試過會誤殺高鐵台中轉臺鐵）、LineTransfers、NoTransferStations（AliasOf）、Search。

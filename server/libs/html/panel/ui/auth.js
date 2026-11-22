@@ -21,7 +21,7 @@ export function can(route, mode = 'read') {
   return !!(auth.user && auth.permissions[route] && auth.permissions[route][mode]);
 }
 
-/** txapi 網址：txapiUrl('transfer', 'route', { from: … }) → /txapi/transfer/route?from=… */
+/** txapi 網址：txapiUrl('app_trip', 'journeys', { from: … }) → /txapi/app_trip/journeys?from=… */
 export function txapiUrl(action, func, query) {
   const qs = query instanceof URLSearchParams ? query.toString() : new URLSearchParams(query || {}).toString();
   return '/txapi/' + action + (func ? '/' + func : '') + (qs ? '?' + qs : '');

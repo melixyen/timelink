@@ -3,7 +3,7 @@
  * railtime 路由與本站路由的轉乘站比對（北北基桃 pairs_nnkt.json）：
  *   node railtime_dump.js <railtime> routes <(php -r '...')   見 ../README.md 的完整指令
  *   php railtime_routes.php <railtime_routes.json> [--list]
- * 每條路由化成「轉乘站串」（同一轉乘群組視為同一站），列出 railtime 有、本站沒有的走法（本站取 appCoreRoutes 前 50 條、deeper 2），
+ * 每條路由化成「轉乘站串」（同一轉乘群組視為同一站），列出 railtime 有、本站沒有的走法（本站取 appCoreRoutes 前 50 條），
  * 並分類原因：重複經過車站（本站通則排除，railtime 沒有這條通則）、轉乘站不相通（本站的轉乘群組沒有這組步行）、其他（排序在前 50 條外或被找路規則排除）
  * 需要 ../data/railtime_lines.json（node railtime_dump.js <railtime> lines）
  */
@@ -22,7 +22,7 @@ foreach (cmpJson(CMP_DATA . '/pairs_nnkt.json')['pairs'] as $p) {
     $k = $p['rt'][0] . '>' . $p['rt'][1];
     // 本站每條路由的轉乘：[下車站群組, 上車站群組]（機捷台北車站在北門群組、railtime 算台北，兩邊都比）
     $ours = [];
-    foreach (appCoreRoutes($m, $p['from'], $p['to'], ['extra' => 0, 'limit' => 50, 'deeper' => 2]) as $r) {
+    foreach (appCoreRoutes($m, $p['from'], $p['to'], ['extra' => 0, 'limit' => 50]) as $r) {
         $sig = [];
         $rides = array_values(array_filter($r['legs'], function ($l) { return $l['Type'] === 'ride'; }));
         foreach ($rides as $i => $l) {

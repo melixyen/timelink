@@ -5,7 +5,7 @@
  * 前端改打本服務，路徑與 TDX 主機完全相同，例如：
  *   https://api.example.com/api/basic/v2/Rail/TRA/Station?$format=JSON
  *   → https://tdx.transportdata.tw/api/basic/v2/Rail/TRA/Station?$format=JSON
- * 自訂功能（TimeLink eXecute API）走 /txapi/<action>[/<func>]?參數，例如 /txapi/transfer/route?from=…&to=…
+ * 自訂功能（TimeLink eXecute API）走 /txapi/<action>[/<func>]?參數，例如 /txapi/app_trip/journeys?from=…&to=…
  *
  * 本檔只負責載入 libs/ 底下的程式再交棒出去，所有邏輯都在 libs/ 內：
  *   libs/config.php    設定項目（清單與預設值在 libs/config.json）；實際值在 custom/libs/config.json（私人，不進版本控制）

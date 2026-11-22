@@ -20,7 +20,6 @@ function appIndexConfig()
 {
     $s = appRouteSearch();
     return [
-        'Enabled'        => (bool) ($s['IndexRoutes'] ?? true),
         'K'              => (int) ($s['IndexK'] ?? 20),
         'StopMinutes'    => (float) ($s['IndexStopMinutes'] ?? 1),
         'DefaultHeadway' => (float) ($s['IndexDefaultHeadway'] ?? 10),
