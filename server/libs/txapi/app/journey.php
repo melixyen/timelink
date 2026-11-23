@@ -1149,11 +1149,43 @@ function appJourneyCategoryPicks(array $keep, array $all, array $kept, $short, $
 }
 
 /**
- * 6. search_time：不列整個時段，只留各組合條件最接近時刻的那班——每個走法類別、每個排除條件最早到達（抵達時刻模式：最晚出發）的一班，
- * 加上接近時刻的最少轉乘、最短行車時間（前端只帶一個時間時的第一頁）。
- * 回傳 [留下的方案（每一班都是某個組合條件的代表，不另外往後排）, 三個排序的代表 標籤 => _sig]
+ * 6. search_time 的最少轉乘、最短行車時間：只在接近查詢時刻的班次（$cand）裡挑（使用者規則 2026-11）。
+ * 出發時刻模式＝$first（這個條件最早到達的那班）出發之後 QUERY_NEAR_RANGE_MINUTES 分鐘內出發的，
+ * 抵達時刻模式＝最晚抵達那班之前 QUERY_NEAR_RANGE_MINUTES 分鐘內抵達的；0＝不限。$first 本身一定算在內。回傳 [最少轉乘, 最短行車時間]
  */
-function appJourneyPickAt(array $all, array $diverse, $back, callable $repCmp)
+function appJourneyNearPicks(array $cand, array $first, $back)
+{
+    $nearMin = max(0, (int) QUERY_NEAR_RANGE_MINUTES);
+    $near = $cand;
+    if ($nearMin > 0) {
+        // 出發時刻模式以最早到達那班的出發時刻為起點（不用所有班次裡最早出發的：轉乘多、慢的走法常有比較早出發的一班，會把範圍拉早）
+        $edge = $back ? max(array_column($cand, 'ArrivalMinute')) : $first['DepartureMinute'];
+        $near = array_filter($cand, function ($j) use ($back, $edge, $nearMin, $first) {
+            return $j['_sig'] === $first['_sig'] || ($back ? $j['ArrivalMinute'] >= $edge - $nearMin : $j['DepartureMinute'] <= $edge + $nearMin);
+        });
+    }
+    $fewest = null;
+    $shortest = null;
+    foreach ($near as $j) {
+        if ($fewest === null || ($back ? [$j['TransferCount'], -$j['DepartureMinute'], $j['ArrivalMinute']] < [$fewest['TransferCount'], -$fewest['DepartureMinute'], $fewest['ArrivalMinute']]
+                                       : [$j['TransferCount'], $j['ArrivalMinute'], -$j['DepartureMinute']] < [$fewest['TransferCount'], $fewest['ArrivalMinute'], -$fewest['DepartureMinute']])) {
+            $fewest = $j;
+        }
+        if ($shortest === null || [$j['TravelMinutes'], $j['TransferCount'], $back ? -$j['DepartureMinute'] : $j['ArrivalMinute']]
+                                  < [$shortest['TravelMinutes'], $shortest['TransferCount'], $back ? -$shortest['DepartureMinute'] : $shortest['ArrivalMinute']]) {
+            $shortest = $j;
+        }
+    }
+    return [$fewest, $shortest];
+}
+
+/**
+ * 6. search_time：不列整個時段，只留各組合條件最接近時刻的那班——每個走法類別、每個排除條件最早到達（抵達時刻模式：最晚出發）的一班，
+ * 加上每個排除條件（使用者的、再加上保底的 $diversity）接近時刻的最少轉乘、最短行車時間（前端只帶一個時間時的第一頁；
+ * 使用者規則 2026-11：旅客一目了然搭或不搭高鐵、臺鐵對號在各種排序下的最佳選擇）。
+ * 回傳 [留下的方案（每一班都是某個組合條件的代表，不另外往後排）, 三個排序的代表 標籤 => _sig, 一定要列出的 _sig => true]
+ */
+function appJourneyPickAt(array $all, array $diverse, array $diversity, $back, callable $repCmp)
 {
     $pool = $all;
     foreach ($diverse as $j) {
@@ -1175,31 +1207,8 @@ function appJourneyPickAt(array $all, array $diverse, $back, callable $repCmp)
     foreach ($diverse as $j) {
         $sel[$j['_sig']] = $j;
     }
-    // 最少轉乘、最短行車時間的第一名也一定附上：前端在最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間之間切換排序時不必重新查詢。
-    // 只在接近查詢時刻的班次裡挑（使用者規則 2026-11）：出發時刻模式＝最早到達那班出發之後 QUERY_NEAR_RANGE_MINUTES 分鐘內出發的，
-    // 抵達時刻模式＝最晚抵達那班之前 QUERY_NEAR_RANGE_MINUTES 分鐘內抵達的；0＝不限
-    $nearMin = max(0, (int) QUERY_NEAR_RANGE_MINUTES);
-    $near = $pool;
-    if ($nearMin > 0) {
-        // 出發時刻模式以最早到達那班的出發時刻為起點（不用所有班次裡最早出發的：轉乘多、慢的走法常有比較早出發的一班，會把範圍拉早）
-        $edge = $back ? max(array_column($pool, 'ArrivalMinute')) : $first['DepartureMinute'];
-        // 最早到達（抵達時刻模式：最晚出發）的那班本身就是最接近查詢時刻的，一定算在內
-        $near = array_filter($pool, function ($j) use ($back, $edge, $nearMin, $first) {
-            return $j['_sig'] === $first['_sig'] || ($back ? $j['ArrivalMinute'] >= $edge - $nearMin : $j['DepartureMinute'] <= $edge + $nearMin);
-        });
-    }
-    $fewest = null;
-    $shortest = null;
-    foreach ($near as $j) {
-        if ($fewest === null || ($back ? [$j['TransferCount'], -$j['DepartureMinute'], $j['ArrivalMinute']] < [$fewest['TransferCount'], -$fewest['DepartureMinute'], $fewest['ArrivalMinute']]
-                                       : [$j['TransferCount'], $j['ArrivalMinute'], -$j['DepartureMinute']] < [$fewest['TransferCount'], $fewest['ArrivalMinute'], -$fewest['DepartureMinute']])) {
-            $fewest = $j;
-        }
-        if ($shortest === null || [$j['TravelMinutes'], $j['TransferCount'], $back ? -$j['DepartureMinute'] : $j['ArrivalMinute']]
-                                  < [$shortest['TravelMinutes'], $shortest['TransferCount'], $back ? -$shortest['DepartureMinute'] : $shortest['ArrivalMinute']]) {
-            $shortest = $j;
-        }
-    }
+    // 使用者條件的最少轉乘、最短行車時間的第一名也一定附上：前端在最早到達（抵達時刻模式：最晚出發）、最少轉乘、最短行車時間之間切換排序時不必重新查詢
+    list($fewest, $shortest) = appJourneyNearPicks($pool, $first, $back);
     $sel[$fewest['_sig']] = $fewest;
     $sel[$shortest['_sig']] = $shortest;
     $shortAt = null;
@@ -1213,12 +1222,33 @@ function appJourneyPickAt(array $all, array $diverse, $back, callable $repCmp)
             $sel[$j['_sig']] = $j;
         }
     }
+    // 保底的各排除條件（不搭對號、不搭高鐵、都不搭）也各附上接近時刻的最少轉乘、最短行車時間：接近範圍以該條件最早到達（最晚出發）的那班為起點。
+    // 一定列出（不受 limit 截掉），不另外加標籤（從方案搭的運具就看得出條件）
+    $must = [];
+    foreach (array_unique(array_values($diversity)) as $mx) {
+        $cand = array_values(array_filter($pool, function ($j) use ($mx) { return appJourneyAllowed($j, $mx); }));
+        if (!$cand) {
+            continue;
+        }
+        $mFirst = null;
+        foreach ($cand as $j) {
+            if ($mFirst === null || $repCmp($j, $mFirst) < 0) {
+                $mFirst = $j;
+            }
+        }
+        foreach (appJourneyNearPicks($cand, $mFirst, $back) as $j) {
+            if (!isset($sel[$j['_sig']])) {
+                $sel[$j['_sig']] = $j;
+                $must[$j['_sig']] = true;
+            }
+        }
+    }
     $keep = [];
     foreach ($sel as $j) {
         $j['_slow'] = false;
         $keep[] = $j;
     }
-    return [$keep, ['Fastest' => $first['_sig'], 'FewestTransfers' => $fewest['_sig'], 'ShortestTime' => $shortest['_sig']]];
+    return [$keep, ['Fastest' => $first['_sig'], 'FewestTransfers' => $fewest['_sig'], 'ShortestTime' => $shortest['_sig']], $must];
 }
 
 /** 7. 排序方式（sort 參數；late＝抵達時刻模式、末班沒給 sort 時）：最少轉乘以外，慢的方案（_slow）排在後面 */
@@ -1264,7 +1294,7 @@ function appJourneyBest(array $keep, array $all, array $diverse, $back, callable
     return $best;
 }
 
-/** 7. 取前 limit 個（$keep 已排序）；之外各標籤的代表方案與走法類別保底（$extraSigs：_sig => true）也一定附上，接在後面 */
+/** 7. 取前 limit 個（$keep 已排序）；之外各標籤的代表方案、走法類別保底、search_time 各排除條件的代表（$extraSigs：_sig => true）也一定附上，接在後面 */
 function appJourneyShown(array $keep, array $best, array $extraSigs, $limit)
 {
     $shown = array_slice($keep, 0, $limit);
@@ -1363,7 +1393,7 @@ function appJourneysCompute(array $q)
         }
     }
     // 6. search_time：只留各組合條件最接近時刻的那班
-    $at = !empty($q['pickAt']) && $all ? appJourneyPickAt($all, $diverse, $back, $repCmp) : null;
+    $at = !empty($q['pickAt']) && $all ? appJourneyPickAt($all, $diverse, $diversity, $back, $repCmp) : null;
     if ($at !== null) {
         $keep = $at[0];
         $catPick = [];
@@ -1374,7 +1404,7 @@ function appJourneysCompute(array $q)
         $best[$tag] = $sig;
     }
     usort($keep, appJourneySortCmp()[$sort]);
-    $keep = appJourneyShown($keep, $best, $catPick, $limit);
+    $keep = appJourneyShown($keep, $best, $catPick + ($at[2] ?? []), $limit);
     $raptorAdded = array_values(array_map(function ($j) { return $j['DepartureTime'] . '→' . $j['ArrivalTime']; },
         array_filter($keep, function ($j) { return !empty($j['_raptor']); })));
     $picks = appJourneyTag($keep, $best);
