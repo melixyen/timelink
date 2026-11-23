@@ -15,7 +15,7 @@
 
 const APP_TRUNK_DEFAULTS = [
     'Enabled'          => true,
-    'Candidates'       => ['TRA' => 4, 'THSR' => 3],   // 每端先依距離取最近的幾個幹線站做短程找路（起站本身另外算）
+    'Candidates'       => ['TRA' => 4, 'THSR' => 3],   // 每端先取最近的幾個幹線站做短程找路（臺鐵依路網距離、高鐵依直線距離；起站本身另外算）
     'Keep'             => ['TRA' => 4, 'THSR' => 3],   // 每端依估計留下幾個幹線站（起站本身另外算）
     'AccessPerStation' => 3,                           // 每個幹線站留幾條生活圈端路由（綜合指數排序的前幾名）
     'AccessRail'       => true,                        // 幹線站不是臺鐵時（高鐵），前幾名都沒搭臺鐵就再留一條有搭臺鐵的接駁（松山搭臺鐵到臺北轉高鐵）
@@ -67,13 +67,83 @@ function appTrunkKm($a, $b)
 }
 
 /**
- * 一端的幹線站候選：生活圈 $regions 內的高鐵站（extra 沒排除高鐵時）與臺鐵大站，依與 $u 的距離每個系統取前 Candidates 個；
- * $u 本身是臺鐵站或高鐵站時也算（直接從起站上幹線）。回傳 [StationUID => 系統]
+ * 路網距離（使用者規則 2026-11）：從 $u 沿路網往外擴展，到各車站的最短距離（公里）。邊＝各路線（捷運依營運路徑，支線不會接錯）相鄰兩站、
+ * 轉乘群組內的車站之間，長度都用兩站座標的直線距離；不走高鐵（高鐵站另外依直線距離選）。
+ * 臺鐵是路網不是單線：山線的大慶、松竹往外先碰到臺中、彰化，經成追線才到海線的沙鹿、清水，直線距離會把海線排在彰化前面。
+ * 回傳 StationUID => 公里（有快取）
  */
-function appTrunkCandidates(array $m, $u, array $regions, $extra, array $trunks = null)
+function appTrunkNetDist(array $m, $u)
+{
+    static $adj = null;
+    static $cache = [];
+    if (isset($cache[$u])) {
+        return $cache[$u];
+    }
+    if ($adj === null) {
+        $adj = [];
+        $add = function ($a, $b) use (&$adj) {
+            if ($a === $b) {
+                return;
+            }
+            $w = appTrunkKm($a, $b) ?? 1.0;
+            if (!isset($adj[$a][$b]) || $adj[$a][$b] > $w) {
+                $adj[$a][$b] = $adj[$b][$a] = $w;
+            }
+        };
+        foreach (array_keys($m['lineStations']) as $lu) {
+            if (appTrunkSystemOf($lu) === 'THSR') {
+                continue;
+            }
+            foreach (appLinePaths($m, $lu) as $seq) {
+                for ($i = 0, $n = count($seq) - 1; $i < $n; $i++) {
+                    $add($seq[$i], $seq[$i + 1]);
+                }
+            }
+        }
+        foreach ($m['groups'] as $g) {
+            $st = array_column($g['Stations'], 'StationUID');
+            foreach ($st as $i => $a) {
+                foreach (array_slice($st, $i + 1) as $b) {
+                    $add($a, $b);
+                }
+            }
+        }
+    }
+    $dist = [$u => 0.0];
+    $q = new SplPriorityQueue();
+    $q->setExtractFlags(SplPriorityQueue::EXTR_BOTH);
+    $q->insert($u, 0.0);
+    while (!$q->isEmpty()) {
+        $top = $q->extract();
+        $x = $top['data'];
+        $dx = -$top['priority'];
+        if ($dx > $dist[$x]) {
+            continue;
+        }
+        foreach ($adj[$x] ?? [] as $y => $w) {
+            $dy = $dx + $w;
+            if (!isset($dist[$y]) || $dy < $dist[$y] - 1e-9) {
+                $dist[$y] = $dy;
+                $q->insert($y, -$dy);
+            }
+        }
+    }
+    return $cache[$u] = $dist;
+}
+
+/**
+ * 一端的幹線站候選：生活圈 $regions 內的高鐵站（extra 沒排除高鐵時）與臺鐵大站，每個系統取前 Candidates 個；
+ * $u 本身是臺鐵站或高鐵站時也算（直接從起站上幹線）。回傳 [StationUID => 系統]
+ *   高鐵站：依與 $u 的直線距離。
+ *   臺鐵大站：依路網距離（appTrunkNetDist，使用者規則 2026-11：比照捷運選轉乘站的擴展法，先碰到的先選）。
+ *   順向大站（使用者規則 2026-11，與 TRA.HubTransfer 相同）：選出的臺鐵大站都不比 $u 更接近另一端（$toward）時，
+ *   再依路網距離補上最近的一個比 $u 更接近另一端的大站（範圍同樣是 $regions，含相鄰生活圈）
+ */
+function appTrunkCandidates(array $m, $u, array $regions, $extra, array $trunks = null, $toward = null)
 {
     $cfg = appTrunkConfig();
     $R = appRegions();
+    $net = appTrunkNetDist($m, $u);
     $by = ['TRA' => [], 'THSR' => []];
     foreach ($R['of'] as $x => $rg) {
         if (!isset($regions[$rg]) || $x === $u) {
@@ -83,7 +153,7 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra, array $trunks 
         if ($sys === 'THSR' && appSystemAllowed($extra, 'THSR')) {
             $by['THSR'][$x] = appTrunkKm($u, $x) ?? INF;
         } elseif ($sys === 'TRA' && isset($R['hubs'][$x]) && ($trunks === null || array_intersect_key($R['hubs'][$x], $trunks))) {
-            $by['TRA'][$x] = appTrunkKm($u, $x) ?? INF;
+            $by['TRA'][$x] = $net[$x] ?? INF;
         }
     }
     $out = [];
@@ -98,8 +168,24 @@ function appTrunkCandidates(array $m, $u, array $regions, $extra, array $trunks 
     }
     foreach ($by as $sys => $list) {
         asort($list);
-        foreach (array_slice(array_keys($list), 0, $cfg['Candidates'][$sys] ?? 0) as $x) {
+        $picked = array_slice(array_keys($list), 0, $cfg['Candidates'][$sys] ?? 0);
+        foreach ($picked as $x) {
             $out[$x] = $sys;
+        }
+        // 順向大站：選出的都不往另一端的方向時，補路網上最近的順向大站
+        if ($sys === 'TRA' && $toward !== null && $list && ($here = appTrunkKm($u, $toward)) !== null) {
+            $forward = function ($x) use ($toward, $here) {
+                $k = appTrunkKm($x, $toward);
+                return $k !== null && $k < $here;
+            };
+            if (!array_filter($picked, $forward)) {
+                foreach (array_keys($list) as $x) {
+                    if (!isset($out[$x]) && $list[$x] < INF && $forward($x)) {
+                        $out[$x] = $sys;
+                        break;
+                    }
+                }
+            }
         }
     }
     return $out;
@@ -116,7 +202,10 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     static $cache = [];
     $cfg = appTrunkConfig();
     $extra = $opt['extra'] ?? 0;
-    $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra;
+    // 快取鍵要含 _pool（站間步行取代法）：同一個幹線站在不同排除條件下（不搭高鐵時沒有高鐵候選站）會不會啟用不一樣，
+    // 同一個行程找好幾種條件（search_time 的保底條件、full_search）時不能共用另一種的結果
+    $pool = !empty($opt['_pool']);
+    $k = $u . '|' . $x . '|' . (int) $toTrunk . '|' . $extra . '|' . (int) $pool;
     if (isset($cache[$k])) {
         return $cache[$k];
     }
@@ -138,10 +227,9 @@ function appTrunkAccess(array $m, $u, $x, $toTrunk, array $opt)
     // 生活圈端與一般查詢共用同一套找路：參數與 journeys 相同（取前 APP_JOURNEY_ROUTES 條基本路由、帶補充路由），只多「不搭高鐵」
     // （不坐高鐵到高鐵站再轉高鐵）。一律用不搭高鐵找一次，各排除條件共用：基本路由的臺鐵段不分車種（串接時才依 extra 選班次），
     // 不搭臺鐵對號時只濾掉補充路由切出的對號段
-    $rk = $u . '|' . $x . '|' . (int) $toTrunk;
+    $rk = $u . '|' . $x . '|' . (int) $toTrunk . '|' . (int) $pool;
     if (!isset($raw[$rk])) {
-        $sub = ['extra' => APP_EXTRA_NO_HSR, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'noTrunk' => true,
-                '_pool' => !empty($opt['_pool'])];
+        $sub = ['extra' => APP_EXTRA_NO_HSR, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true, 'noTrunk' => true, '_pool' => $pool];
         $raw[$rk] = $toTrunk ? appCoreRoutes($m, $u, $x, $sub) : appCoreRoutes($m, $x, $u, $sub);
     }
     // 綜合指數（appRouteIndex：行駛＋停靠＋轉乘步行與平均候車）最小的前 AccessPerStation 名（與短程查詢同一套找路）
@@ -401,7 +489,7 @@ function appTrunkBaseRoutes(array $m, $from, $to, array $opt)
     $ends = [];
     foreach (['A' => [$from, $sideA, true], 'B' => [$to, $sideB, false]] as $side => list($u, $regions, $toTrunk)) {
         $ends[$side] = [];
-        $cands = appTrunkCandidates($m, $u, $regions, $extra, $trunks);
+        $cands = appTrunkCandidates($m, $u, $regions, $extra, $trunks, $toTrunk ? $to : $from);
         // 站間步行取代法：同一個轉乘群組有兩個以上的候選幹線站（臺鐵南港＋高鐵南港）時，綜合指數找路共用群組之間的核心路段
         $grp = [];
         foreach ($cands as $x => $_) {

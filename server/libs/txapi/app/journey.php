@@ -103,9 +103,9 @@ function appChangeMinutes(array $m, $station)
 
 /**
  * 串接一條路由：第一段在出發時段內的每一班都試一次，之後每段接「最早到」的那班（同一班車繼續坐優先）。
- * 回傳互不支配的旅程：['dep', 'arr', 'rides' => [[段落索引, 班次列], ...]]（秒）
+ * 回傳互不支配的旅程：['dep', 'arr', 'rides' => [[段落索引, 班次列], ...]]（秒）。$modes 見 appChainPareto
  */
-function appChainRoute(array &$d, array $legs, $extra, $startMin, $endMin)
+function appChainRoute(array &$d, array $legs, $extra, $startMin, $endMin, array $modes = null)
 {
     $m = $d['m'];
     $lists = [];
@@ -176,14 +176,14 @@ function appChainRoute(array &$d, array $legs, $extra, $startMin, $endMin)
         }
         $chains[] = ['dep' => $dep, 'arr' => $t, 'rides' => $rides];   // 終點步行已在迴圈裡加上
     }
-    return appChainPareto($chains);
+    return appChainPareto($chains, $legs, $modes);
 }
 
 /**
  * 反向串接（抵達時刻模式、末班）：最後一段在抵達時段內的每一班都試一次，往前每段接「趕得上下一段的最晚發車」那班
- * （同一班車繼續坐優先）。回傳格式與 appChainRoute 相同
+ * （同一班車繼續坐優先）。回傳格式與 appChainRoute 相同。$modes 見 appChainPareto
  */
-function appChainRouteBack(array &$d, array $legs, $extra, $startMin, $endMin)
+function appChainRouteBack(array &$d, array $legs, $extra, $startMin, $endMin, array $modes = null)
 {
     $m = $d['m'];
     $lists = [];
@@ -252,12 +252,44 @@ function appChainRouteBack(array &$d, array $legs, $extra, $startMin, $endMin)
         }
         $chains[] = ['dep' => $t, 'arr' => $arr, 'rides' => array_reverse($rides)];   // 起站步行已在迴圈裡扣掉
     }
-    return appChainPareto($chains);
+    return appChainPareto($chains, $legs, $modes);
 }
 
-/** 互不支配：較晚出發、不晚到達的淘汰較早出發的；依出發排序 */
-function appChainPareto(array $chains)
+/**
+ * 互不支配：較晚出發、不晚到達的淘汰較早出發的；依出發排序。
+ * $modes（排除位元的清單，使用者規則 2026-11）：依條件分開篩選——每個條件只在「這個條件下可以搭」的組合（appClassAllowed：臺鐵對號、高鐵）裡
+ * 做互不支配，任一條件下沒被淘汰的都留下。旅客模式要一次回給各條件的最佳班次：全搭時被「區間車＋對號、同時到、晚出發」淘汰的
+ * 全程區間車組合（九張犁 08:04 搭 3167 次到橋頭），在只搭區間車時就是最好的，不能在串接這一步丟掉。null＝只用一個條件（全部組合一起比）
+ */
+function appChainPareto(array $chains, array $legs = [], array $modes = null)
 {
+    if ($modes !== null && count($modes) > 1 && count($chains) > 1) {
+        $allowed = [];
+        foreach ($chains as $i => $c) {
+            foreach ($modes as $mx) {
+                $ok = true;
+                foreach ($c['rides'] as list($li, $row)) {
+                    $sys = $legs[$li]['System'] ?? strtok($legs[$li]['LineUID'], '-');
+                    if (!appClassAllowed($mx, $sys, $row[4] ?? APP_CLASS_LOCAL)) {
+                        $ok = false;
+                        break;
+                    }
+                }
+                if ($ok) {
+                    $allowed[$mx][$i] = $c;
+                }
+            }
+        }
+        $keep = [];
+        foreach ($allowed as $sub) {
+            foreach (appChainPareto($sub) as $c) {
+                $keep[$c['dep'] . '|' . $c['arr'] . '|' . json_encode(array_column($c['rides'], 1))] = $c;
+            }
+        }
+        $keep = array_values($keep);
+        usort($keep, function ($a, $b) { return $a['dep'] <=> $b['dep']; });
+        return $keep;
+    }
     // 同出發、同抵達時，換車少（不同車輛少）的優先
     $veh = function ($c) { return count(array_unique(array_map(function ($r) { return $r[1][3]; }, $c['rides']))); };
     usort($chains, function ($a, $b) use ($veh) { return [$b['dep'], $a['arr'], $veh($a)] <=> [$a['dep'], $b['arr'], $veh($b)]; });
@@ -681,7 +713,7 @@ function appRaptorBan(array &$d, $week, $mask)
  * 出發時刻模式給 $bound（原本的演算法已有的最早到達秒數）時只找同時（同一分鐘）或更早到的；抵達時刻模式的 $bound 是已有的最晚出發，只找不早於它出發的；沒有就回 null。
  * 出發時刻模式往後算到的方案，再用固定路由倒回檢查（appRaptorFixedLater：同一條路由逐段改搭最晚趕得上的班次）。找不到回 null
  */
-function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $mask, $bound = null)
+function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $mask, $bound = null, $horizon = null)
 {
     // 下界（到迄站、從起站）用完整路網算，對排除班次的模式仍然成立；排除的班次在搜尋時直接略過（tripBan），不複製路網資料
     transferLowerBounds($d, $to);
@@ -689,7 +721,7 @@ function appJourneyRaptor(array &$d, $from, $to, $week, $back, $start, $end, $ma
     $saved = $d['tripBan'] ?? null;
     $d['tripBan'] = appRaptorBan($d, $week, $mask) ?: null;
     try {
-        $j = appJourneyRaptorSearch($d, $from, $to, $back, $start, $end, $bound);
+        $j = appJourneyRaptorSearch($d, $from, $to, $back, $start, $end, $bound, $horizon);
     } finally {
         $d['tripBan'] = $saved;
     }
@@ -741,7 +773,7 @@ function appRaptorFixedLater(array &$d, array $j, $week, $mask, $endMin = null)
 }
 
 /** appJourneyRaptor 的搜尋本體（$dd 已設好排除的班次）：回傳 RAPTOR 的方案或 null */
-function appJourneyRaptorSearch(array &$dd, $from, $to, $back, $start, $end, $bound)
+function appJourneyRaptorSearch(array &$dd, $from, $to, $back, $start, $end, $bound, $horizon = null)
 {
     $best = function ($res, $deadline = null) {
         $pick = null;
@@ -760,7 +792,8 @@ function appJourneyRaptorSearch(array &$dd, $from, $to, $back, $start, $end, $bo
         // $bound：原本的演算法在這個模式已找到的最早到達（秒，分鐘取整）。RAPTOR 只找同一分鐘或更早到的（剪枝）：
         // 同時到的也放行，轉乘較少、出發較晚的可以補進來（是否比原本的好由 appJourneyCovered 判斷）；找不到就表示原本的已是最佳
         $bounds = $bound === null ? [] : array_fill(1, TRANSFER_MAX_TRIPS, $bound + 60);
-        $j = $best(transferRaptor($dd, $from, $to, $t0, TRANSFER_MAX_TRIPS, $bounds));
+        $labels = null;
+        $j = $best(transferRaptor($dd, $from, $to, $t0, TRANSFER_MAX_TRIPS, $bounds, $labels, $horizon));
         if ($j === null) {
             return null;
         }
@@ -957,14 +990,14 @@ function appJourneyPoolAdd(array &$pool, array $j)
 
 /**
  * 1. 基本演算法：每條路由在時段內串接所有班次（排除位元 $mask 選班次），同一組班次只留一個（appJourneyPoolAdd）。
- * 回傳 _sig => 方案；$count 帶回去重複前的筆數
+ * $modes：串接時依條件分開做互不支配（appChainPareto），null＝只用 $mask 一個條件。回傳 _sig => 方案；$count 帶回去重複前的筆數
  */
-function appJourneysFromRoutes(array &$d, array $routes, $mask, $back, $start, $end, $week, &$count = null)
+function appJourneysFromRoutes(array &$d, array $routes, $mask, $back, $start, $end, $week, &$count = null, array $modes = null)
 {
     $out = [];
     $count = 0;
     foreach ($routes as $r) {
-        $chains = $back ? appChainRouteBack($d, $r['legs'], $mask, $start, $end) : appChainRoute($d, $r['legs'], $mask, $start, $end);
+        $chains = $back ? appChainRouteBack($d, $r['legs'], $mask, $start, $end, $modes) : appChainRoute($d, $r['legs'], $mask, $start, $end, $modes);
         foreach ($chains as $c) {
             appJourneyPoolAdd($out, appJourneyOut($d, $r, $c, $week));
             $count++;
@@ -991,9 +1024,16 @@ function appJourneyRepCmp($back, $trunk = true)
  * 2. 補充演算法（RAPTOR）：使用者條件（$extra）下最早到達（抵達時刻模式：最晚出發）的一班，基本演算法沒有同樣好的就加進 $all。
  * 保底的排除條件（APP_JOURNEY_DIVERSITY）：限制比較寬的條件下已證明最快的方案也符合這個條件時就是它，不必再跑；
  * 否則以基本演算法在這個條件的最快當上界跑一次。回傳 [$raptor（排除位元 => 方案或 null）, $diversity（保底標籤 => 排除位元）]
+ * $unbounded：search_time 用（使用者規則 2026-11，deadline 校驗）。出發時刻模式：從查詢時刻起第一班車到達的時間就是 deadline，
+ * 任何比它早到的組合都要找到，晚 2 小時出發但搭高鐵、對號更早到的不能因為超出時段結束被漏掉 → RAPTOR 的方案出發不受時段結束限制，
+ * 到達也不受「出發後 Router.HorizonSeconds 內」限制（找到營運日結束：清晨出發、只搭區間車的長途要十幾個小時）；
+ * 抵達時刻模式對稱：比已找到的更晚出發、仍在查詢時刻前抵達的都要找到 → RAPTOR 的搜尋下限不受「時段開始前 6 小時」限制（以已找到的最晚出發剪枝）
  */
-function appJourneyRaptorSupplement(array &$d, array &$all, $from, $to, $week, $back, $start, $end, $extra)
+function appJourneyRaptorSupplement(array &$d, array &$all, $from, $to, $week, $back, $start, $end, $extra, $unbounded = false)
 {
+    $rStart = $unbounded && $back ? APP_SERVICE_DAY_START : $start;
+    $rEnd = $unbounded && !$back ? APP_SERVICE_DAY_END : $end;
+    $horizon = $unbounded && !$back ? max(TRANSFER_HORIZON, (APP_SERVICE_DAY_END - $start) * 60 + 59) : null;
     // 基本演算法在這個條件已找到的最早到達：RAPTOR 只找比它更早到的；抵達時刻模式：已找到的最晚出發，反向搜尋只找不早於它的
     $boundOf = function ($mx) use ($all, $back) {
         $b = null;
@@ -1009,7 +1049,7 @@ function appJourneyRaptorSupplement(array &$d, array &$all, $from, $to, $week, $
         return $b;
     };
     // RAPTOR 只跑使用者目前的模式一次（沒排除＝全部最快、排除高鐵＝不含高鐵最快、排除對號＝不含對號最快、都排除＝都不含最快）
-    $raptor = [$extra => appJourneyRaptor($d, $from, $to, $week, $back, $start, $end, $extra, $boundOf($extra))];
+    $raptor = [$extra => appJourneyRaptor($d, $from, $to, $week, $back, $rStart, $rEnd, $extra, $boundOf($extra), $horizon)];
     $diversity = [];
     foreach (APP_JOURNEY_DIVERSITY as $tag => $bits) {
         $mx = $extra | $bits;
@@ -1040,7 +1080,7 @@ function appJourneyRaptorSupplement(array &$d, array &$all, $from, $to, $week, $
                 continue 2;
             }
         }
-        $raptor[$mx] = appJourneyRaptor($d, $from, $to, $week, $back, $start, $end, $mx, $boundOf($mx));
+        $raptor[$mx] = appJourneyRaptor($d, $from, $to, $week, $back, $rStart, $rEnd, $mx, $boundOf($mx), $horizon);
         $b = $bestAllowed($mx);
         $proven[$mx] = $raptor[$mx] !== null && ($b === null || $repCmp0($raptor[$mx], $b) < 0) ? $raptor[$mx] : $b;
     }
@@ -1364,11 +1404,14 @@ function appJourneysCompute(array $q)
         $routes[$r['route']] = $r;
     }
     $d = &appRouterData($week);
-    $all = array_values(appJourneysFromRoutes($d, $routes, $extra, $back, $start, $end, $week));
+    // 串接時依條件分開做互不支配：使用者的條件再加上不搭對號、不搭高鐵、都不搭（保底與旅客模式各條件的候選）
+    $modes = array_values(array_unique([$extra, $extra | 1, $extra | 2, $extra | 3]));
+    $all = array_values(appJourneysFromRoutes($d, $routes, $extra, $back, $start, $end, $week, $n, $fixed === null ? $modes : null));
     // 2. 補充演算法 RAPTOR（只在路由經過臺鐵或高鐵時；3. 去重複在加入時做）
     $raptorOn = $fixed === null && appRoutesIntercity($routes);
     $tr0 = microtime(true);
-    list($raptor, $diversity) = $raptorOn ? appJourneyRaptorSupplement($d, $all, $from, $to, $week, $back, $start, $end, $extra) : [[], []];
+    // search_time 的 RAPTOR 不受時段限制（deadline 校驗）：出發時刻模式比第一班車更早到的、抵達時刻模式比已找到的更晚出發的組合一律要找到
+    list($raptor, $diversity) = $raptorOn ? appJourneyRaptorSupplement($d, $all, $from, $to, $week, $back, $start, $end, $extra, !empty($q['pickAt'])) : [[], []];
     $raptorSec = round(microtime(true) - $tr0, 3);
     // 4. 篩選：互不支配（指定路由時全部保留）、繞遠
     $keep = $fixed !== null ? $all : appJourneyPareto($all, array_map('appJourneyTrunkMinutes', $all));

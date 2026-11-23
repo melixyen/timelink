@@ -1530,6 +1530,36 @@ function appLineTransferGroups($a, $b)
  * 路由里程：每個搭乘段沿路線上的車站，相鄰兩站取路網最短里程加總（transfer 的里程資料：臺鐵、捷運用 TDX 累計里程，高鐵用座標推算）；
  * 步行不算。各段的公里數寫回 $legs[i]['DistanceKm']；任何一段算不出來回 null
  */
+/**
+ * 全程區間車的估計分鐘（使用者規則 2026-11）：各搭乘段的里程（appRouteDistance）÷ 區間車平均速度（Search.LocalRelaySpeedKmh，
+ * 依系統，沒寫的系統用 Other）＋轉乘步行分鐘。區間車永遠搭最慢的車，速度大致固定，比里程就是比時間；
+ * 加上步行是因為捷運站與臺鐵站之間的步行（烏日 8 分、新烏日 5 分）不算里程。算不出回 null
+ */
+function appRouteLocalMinutes(array $m, array $legs)
+{
+    $speed = appRouteSearch()['LocalRelaySpeedKmh'] ?? null;
+    if (!is_array($speed) || appRouteDistance($m, $legs) === null) {
+        return null;
+    }
+    $t = 0.0;
+    foreach ($legs as $l) {
+        if ($l['Type'] === 'walk') {
+            $w = transferWalk($m, $l['From'], $l['To'], true, true);
+            if ($w === null) {
+                return null;
+            }
+            $t += (float) $w['Minutes'];
+            continue;
+        }
+        $v = (float) ($speed[$l['System'] ?? strtok($l['LineUID'], '-')] ?? $speed['Other'] ?? 0);
+        if ($v <= 0) {
+            return null;
+        }
+        $t += $l['DistanceKm'] / $v * 60;
+    }
+    return round($t, 1);
+}
+
 function appRouteDistance(array $m, array &$legs)
 {
     $total = 0.0;
@@ -1728,7 +1758,7 @@ function appRouteCoverEligible(array $legs)
 
 /**
  * 營運業者保底：$items 是排好序的候選，先取前 $limit 個；所有可保底的候選（appRouteCoverEligible）出現過、
- * 前 $limit 個裡卻沒有的業者鍵（appRouteCoverKeys），各補一條該鍵最好的路由（$better 比較，小的好），
+ * 前 $limit 個裡卻沒有（或不夠 Search.CoverCounts 指定條數）的業者鍵（appRouteCoverKeys），各補該鍵最好的路由（$better 比較，小的好），
  * 擠掉清單最後一個「拿掉也不會讓任何鍵消失」的路由；重複到每個鍵都有為止。
  * $limit 為 null 時取全部已選的、只補不擠（展開前的挑選用，$picked 是已選的索引）。
  * $legsOf 從候選取出段落。回傳選中的索引（依原本順序）
@@ -1741,11 +1771,15 @@ function appRouteCoverPick(array $items, $limit, callable $legsOf, callable $bet
         $keys[$i] = appRouteCoverKeys($legsOf($it));
         $ok[$i] = appRouteCoverEligible($legsOf($it));
     }
+    // 每個鍵要保底幾條：Search.CoverCounts（找路規則檔），沒寫的鍵 1 條；不超過候選裡有的條數。
+    // 全程區間車（main:TRA.local）2 條（使用者規則 2026-11）：只搭區間車時的走法常只有接力路由，上車站不同（大慶、松竹）各一條，
+    // 估計分鐘依最快的區間快算、偏向離起站近的上車站，只留一條會漏掉另一個上車站
+    $want = appRouteSearch()['CoverCounts'] ?? [];
     $need = [];
     foreach ($items as $i => $it) {
         if ($ok[$i]) {
             foreach ($keys[$i] as $k) {
-                $need[$k] = true;
+                $need[$k] = min(($need[$k] ?? 0) + 1, (int) ($want[$k] ?? 1));
             }
         }
     }
@@ -1761,9 +1795,9 @@ function appRouteCoverPick(array $items, $limit, callable $legsOf, callable $bet
         return $c;
     };
     $fixed = [];   // 補進來的不再被擠掉
-    for ($guard = count($need); $guard > 0; $guard--) {
+    for ($guard = array_sum($need); $guard > 0; $guard--) {
         $have = $count();
-        $missing = array_values(array_diff(array_keys($need), array_keys($have)));
+        $missing = array_values(array_filter(array_keys($need), function ($k) use ($have, $need) { return ($have[$k] ?? 0) < $need[$k]; }));
         if (!$missing) {
             break;
         }
@@ -1796,7 +1830,7 @@ function appRouteCoverPick(array $items, $limit, callable $legsOf, callable $bet
                 }
                 $lost = false;
                 foreach ($keys[$i] as $k) {
-                    if (isset($need[$k]) && $after[$k] < 1) {
+                    if (isset($need[$k]) && $after[$k] < $need[$k]) {
                         $lost = true;
                         break;
                     }
@@ -1910,6 +1944,25 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     $pickIdx = appRouteCoverPick($scored, null, function ($x) { return $x[2]; }, function ($a, $b) {
         return [$a[0], $a[1]] <=> [$b[0], $b[1]];
     }, $pickIdx);
+    // 區間車接力最快路徑保底（使用者規則 2026-11，Search.LocalRelayBestExtra）：只搭區間車的人永遠搭最慢的車，比的是走最短的路——
+    // 中長途分解的全程區間車接力候選裡，「里程換算的行駛分鐘＋轉乘步行分鐘」（appRouteLocalMinutes）最小的一條一定展開
+    // （估計分鐘依最快的區間快算，會把它排到 NetworkLimit 之外）
+    $localBest = in_array((int) $extra, array_map('intval', $cfg['LocalRelayBestExtra'] ?? []), true);
+    if ($localBest) {
+        $best = null;
+        foreach ($scored as $i => $x) {
+            if (($x[3] ?? null) !== ['TRA.LocalRelay']) {
+                continue;
+            }
+            $v = appRouteLocalMinutes($m, $x[2]);
+            if ($v !== null && ($best === null || $v < $best[1])) {
+                $best = [$i, $v];
+            }
+        }
+        if ($best !== null && !in_array($best[0], $pickIdx, true)) {
+            $pickIdx[] = $best[0];
+        }
+    }
     $pick = [];
     foreach ($pickIdx as $i) {
         $pick[] = $scored[$i];
@@ -1991,6 +2044,21 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     }
     unset($r);
     $limit = $opt['limit'] ?? $cfg['DefaultLimit'];
+    // 區間車接力最快路徑保底：全程區間車的路由（appRouteCoverKeys 的 main:TRA.local）裡 appRouteLocalMinutes 最小的一條
+    // （同分取指數小的），取前 limit 條之後沒有它就補進去，讓串接時刻表時一定有這條
+    $shortLocal = null;
+    if ($localBest) {
+        $bestV = null;
+        foreach ($out as $i => $r) {
+            if (!in_array('main:TRA.' . APP_CLASS_LOCAL, appRouteCoverKeys($r['legs']), true) || ($v = appRouteLocalMinutes($m, $r['legs'])) === null) {
+                continue;
+            }
+            if ($shortLocal === null || [$v, $r['Index'] ?? INF] < [$bestV, $out[$shortLocal]['Index'] ?? INF]) {
+                $shortLocal = $i;
+                $bestV = $v;
+            }
+        }
+    }
     // 取前 limit 條時做營運業者保底（appRouteCoverPick）：每個業者、主幹（臺鐵對號／非對號、高鐵）至少一條，擠掉排在最後的
     $legsOf = function ($r) { return $r['legs']; };
     $better = function ($a, $b) {
@@ -1999,7 +2067,11 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     if (empty($opt['variants'])) {
         $out = appRouteKeepFewest($out, $limit);
         $sel = [];
-        foreach (appRouteCoverPick($out, $limit, $legsOf, $better) as $i) {
+        $idx = appRouteCoverPick($out, $limit, $legsOf, $better);
+        if ($shortLocal !== null && !in_array($shortLocal, $idx, true)) {
+            $idx[] = $shortLocal;
+        }
+        foreach ($idx as $i) {
             $sel[] = $out[$i];
         }
         return $sel;
@@ -2032,6 +2104,9 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
     }
     foreach (appRouteCoverPick($baseList, $limit, $legsOf, $better) as $i) {
         $bases[$baseList[$i]['BaseRoute']] = true;
+    }
+    if ($shortLocal !== null) {
+        $bases[$out[$shortLocal]['BaseRoute']] = true;   // 區間車接力最快路徑保底（它的基本路由與補充路由一起帶上）
     }
     // 本身串不出班次的直達路由（不在 $out）：它的補充路由一律帶上，跟「直達一律保留」一致
     foreach ($out as $r) {

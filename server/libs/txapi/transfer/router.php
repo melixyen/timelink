@@ -466,9 +466,10 @@ function transferLowerBounds(array &$d, $to, $fromSide = false)
 }
 
 /**
- * 一次搜尋：t0 從 $from 出發到 $to，回傳每一輪改善迄站時的方案（搭 k 班車最早到達）
+ * 一次搜尋：t0 從 $from 出發到 $to，回傳每一輪改善迄站時的方案（搭 k 班車最早到達）。
+ * $horizon：出發後最多找幾秒內到達（null＝Router.HorizonSeconds）
  */
-function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRIPS, array $bounds = [], &$labels = null)
+function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRIPS, array $bounds = [], &$labels = null, $horizon = null)
 {
     // $to = null：一對多（不設迄站、不剪枝），各輪標籤由 $labels 帶回（離線分析用；目前 app_ 都會給迄站）
     $m = $d['m'];
@@ -502,7 +503,7 @@ function transferRaptor(array &$d, $from, $to, $t0, $maxTrips = TRANSFER_MAX_TRI
     $arrBest = [];
     $arr = [];
     $arrPar = [];
-    $bestDest = $t0 + TRANSFER_HORIZON;
+    $bestDest = $t0 + ($horizon ?? TRANSFER_HORIZON);
     $lb = $to === null ? null : transferLowerBounds($d, $to);
     $results = [];
     for ($k = 1; $k <= $maxTrips; $k++) {
