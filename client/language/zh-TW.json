@@ -124,6 +124,8 @@
   "journey.travelTime": "花費時間",
   "journey.startTime": "開始時間",
   "journey.endTime": "到達時間",
+  "journey.dayNext": "(+{n} 日)",
+  "journey.dayPrev": "(-{n} 日)",
   "journey.col.leg": "區段",
   "journey.col.time": "列車時刻",
   "journey.col.station": "車站",

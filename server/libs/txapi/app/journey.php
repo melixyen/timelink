@@ -438,7 +438,8 @@ function appFromTo()
 }
 
 /**
- * 時段參數（app_trip 的 direct、route_trains、journeys 共用）：start～end（營運日 HH:MM），
+ * 時段參數（app_trip 的 direct、route_trains、journeys 共用）：start～end（HH:MM；journeys 是標準時間，00:00～03:59 換算成前一天營運日的深夜，見 appServicePieces；
+ * 其他是營運日時刻），end 早於 start 且都在 24:00 前＝跨午夜（22:00～01:00），
  * by＝dep（出發時刻在時段內，預設）或 arr（抵達時刻在時段內）。舊參數照收：depart＝start（by=dep）、arrive＝end（by=arr）。
  * 只給一端時另一端相差「系統最長可查詢時段」（appTimeWindowSpan：QUERY_MAX_RANGE_MINUTES，不限時到營運日頭尾）；
  * 都沒給時從現在（指定別天時 04:00）起算，$allDay＝true 時改為不限（回傳 null）。
@@ -468,8 +469,11 @@ function appTimeWindow($date, $allDay = false, $limitRange = true)
         $start = ($date === null || $date === $nowDate) && appParam('week') === null ? $nowMin : APP_SERVICE_DAY_START;
     }
     $span = appTimeWindowSpan();
-    $start = $start ?? ($span === null ? APP_SERVICE_DAY_START : max(0, $end - $span));
+    $start = $start ?? ($span === null ? APP_SERVICE_DAY_START : $end - $span);   // 可以是負的：journeys 換算成前一天營運日的深夜
     $end = $end ?? ($span === null ? APP_SERVICE_DAY_END : $start + $span);
+    if ($end < $start && $end < 1440 && $start < 1440) {
+        $end += 1440;   // 標準時間跨午夜，例如 22:00～01:00
+    }
     if ($end < $start) {
         appFail(40020, ['param' => 'end', 'detail' => '要晚於 start']);
     }
@@ -485,6 +489,66 @@ function appTimeWindowSpan()
 {
     $max = queryLimitSettings()['range'];
     return $max > 0 ? $max : null;
+}
+
+/**
+ * 實際時段 → 各營運日的片段（使用者規則 2026-11：前端帶標準時間，由 API 換算成對應營運日的班次）。
+ * $rs、$re：相對於 $week 那天 00:00 的實際分鐘（可以是負的或超過 1440）；營運日 $week+k 涵蓋實際時間 k×1440＋APP_SERVICE_DAY_START～k×1440＋APP_SERVICE_DAY_END，
+ * 所以星期三 02:00＝星期二營運日的 26:00；24:00 以後的寫法（營運日時刻）照舊是 $week 這一天的深夜。
+ * 回傳 [[營運日星期, 起, 迄（該營運日的分鐘）, k], ...]（依時間先後，沒有交集的營運日不列）
+ */
+function appServicePieces($week, $rs, $re)
+{
+    $out = [];
+    $k1 = (int) floor(($re - APP_SERVICE_DAY_START) / 1440);
+    for ($k = (int) ceil(($rs - APP_SERVICE_DAY_END) / 1440); $k <= $k1; $k++) {
+        $s = max($rs, $k * 1440 + APP_SERVICE_DAY_START) - $k * 1440;
+        $e = min($re, $k * 1440 + APP_SERVICE_DAY_END) - $k * 1440;
+        if ($s <= $e) {
+            $out[] = [(($week + $k) % 7 + 7) % 7, $s, $e, $k];
+        }
+    }
+    return $out;
+}
+
+/**
+ * appServicePieces 的片段 → appJourneysCompute 的 pieces（[星期, 起, 迄, 位移分鐘]）與時間軸所在的營運日 k：
+ * 時間軸用最後一個營運日（前一天深夜的班次寫成 00:00～03:59）；時段起點在那一天 00:00 之前時改用第一個營運日（之後的寫 24 時以後）
+ */
+function appServiceAxis(array $pieces, $rs)
+{
+    $axis = end($pieces)[3];
+    if ($rs - $axis * 1440 < 0) {
+        $axis = $pieces[0][3];
+    }
+    return [array_map(function ($p) use ($axis) { return [$p[0], $p[1], $p[2], ($p[3] - $axis) * 1440]; }, $pieces), $axis];
+}
+
+/** meta 的營運日欄位：week、weekday＝使用者給的（標準時間的那一天），service_week、service_weekday、service_date（給了 date 時）＝方案時刻所在的營運日 */
+function appServiceMeta($week, $date, $serviceWeek)
+{
+    $out = ['week' => $week, 'weekday' => FINDER_WEEKDAYS[$week], 'service_week' => $serviceWeek, 'service_weekday' => FINDER_WEEKDAYS[$serviceWeek]];
+    if ($date !== null) {
+        $days = (($serviceWeek - $week) % 7 + 10) % 7 - 3;   // 前後幾天（-3～3）
+        $out['service_date'] = (new DateTime($date, new DateTimeZone('Asia/Taipei')))->modify(($days >= 0 ? '+' : '') . $days . ' day')->format('Y-m-d');
+    }
+    return $out;
+}
+
+/** 方案（或其中一部分，例如 StopTimes）的時刻整個位移 $off 分鐘：…Minute 加上 $off，DepartureTime、ArrivalTime 跟著改（回應的時刻維持 00～23 時） */
+function appJourneyShift(array $x, $off)
+{
+    foreach ($x as $k => $v) {
+        if (is_array($v) && $k !== '_pars') {
+            $x[$k] = appJourneyShift($v, $off);
+        } elseif (($k === 'DepartureMinute' || $k === 'ArrivalMinute') && is_int($v)) {
+            $x[$k] = $v + $off;
+        } elseif (($k === 'DepartureTime' || $k === 'ArrivalTime') && is_string($v) && preg_match('/^(\d+):(\d\d)(:\d\d)?$/', $v, $mm)) {
+            $t = (int) $mm[1] * 60 + (int) $mm[2] + $off;
+            $x[$k] = appHM((($t % 1440) + 1440) % 1440) . ($mm[3] ?? '');
+        }
+    }
+    return $x;
 }
 
 /** 回應 meta 的時段欄位 */
@@ -911,8 +975,30 @@ function appTripJourneys()
         appTripJourneysAt($from, $to, $extra, $week, $date);
     }
     list($mode, $start, $end) = appJourneyMode($date);
+    // 時段是標準時間（使用者規則 2026-11）：星期三 01:00～03:00＝星期二營運日的 25:00～27:00，跨過 04:00 時兩個營運日都查（appServicePieces）；
+    // 24:00 以後的寫法照舊是 week 這一天營運日的深夜。first、last 是 week 這一天的整個營運日
+    $userWeek = $week;
+    $pieces = null;
+    $axisMeta = [];
+    if ($mode === 'depart' || $mode === 'arrive') {
+        $p = appServicePieces($week, $start, $end);
+        if (count($p) > 1 || $p[0][3] !== 0) {
+            if (appParam('full_search') !== null && count($p) > 1) {
+                appFail(40020, ['param' => 'start', 'detail' => 'full_search 的時段不能跨營運日（04:00）']);
+            }
+            list($pieces, $axis) = appServiceAxis($p, $start);
+            $std = function ($t) { return appHM((($t % 1440) + 1440) % 1440); };
+            $axisMeta = ['start' => $std($start), 'end' => $std($end)] + ($mode === 'arrive' ? ['arrive_from' => $std($start), 'arrive' => $std($end)] : ['depart' => $std($start)]);
+            $week = (($week + $axis) % 7 + 7) % 7;
+            list($start, $end) = [$start - $axis * 1440, $end - $axis * 1440];
+            if (count($p) === 1) {
+                $pieces = null;   // 整段在前一天營運日的深夜：就是查那一天
+            }
+        }
+    }
+    $axisMeta = appServiceMeta($userWeek, $date, $week) + $axisMeta;
     if (appParam('full_search') !== null) {
-        appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $end);
+        appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $end, $axisMeta);
     }
     $back = $mode === 'arrive' || $mode === 'last';
     $sort = appParamChoice('sort', ['arrival', 'transfers', 'duration'], $back ? 'late' : 'arrival');
@@ -921,8 +1007,8 @@ function appTripJourneys()
             'via' => appParam('via') !== null ? appStationParam('via') : null, 'limit' => APP_JOURNEY_ROUTES, 'variants' => true];
     $fixed = appParam('routes') !== null ? appJourneyFixedRoutes(appParam('routes'), $extra) : null;
     $stops = appParamInt('stops', 1, 0, 1) === 1;
-    list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops'));
-    appSend($data, $meta);
+    list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops') + ($pieces ? ['pieces' => $pieces] : []));
+    appSend($data, array_merge($meta, $axisMeta));
 }
 
 /**
@@ -1403,16 +1489,43 @@ function appJourneysCompute(array $q)
     foreach ($fixed ?? appCoreRoutesCached($m, $from, $to, $opt) as $r) {
         $routes[$r['route']] = $r;
     }
-    $d = &appRouterData($week);
     // 串接時依條件分開做互不支配：使用者的條件再加上不搭對號、不搭高鐵、都不搭（保底與旅客模式各條件的候選）
     $modes = array_values(array_unique([$extra, $extra | 1, $extra | 2, $extra | 3]));
-    $all = array_values(appJourneysFromRoutes($d, $routes, $extra, $back, $start, $end, $week, $n, $fixed === null ? $modes : null));
-    // 2. 補充演算法 RAPTOR（只在路由經過臺鐵或高鐵時；3. 去重複在加入時做）
     $raptorOn = $fixed === null && appRoutesIntercity($routes);
-    $tr0 = microtime(true);
-    // search_time 的 RAPTOR 不受時段限制（deadline 校驗）：出發時刻模式比第一班車更早到的、抵達時刻模式比已找到的更晚出發的組合一律要找到
-    list($raptor, $diversity) = $raptorOn ? appJourneyRaptorSupplement($d, $all, $from, $to, $week, $back, $start, $end, $extra, !empty($q['pickAt'])) : [[], []];
-    $raptorSec = round(microtime(true) - $tr0, 3);
+    // 時段跨營運日（appServicePieces，例如 03:00～06:00＝前一天營運日的 27:00～27:59＋當天 04:00～06:00）：每個營運日各查一段，
+    // 換到同一條時間軸（$q['pieces'] 的位移分鐘）後合併，接著的篩選、排序、標籤一起做。沒給 pieces＝只查 $week 這一天
+    $pieces = $q['pieces'] ?? [[$week, $start, $end, 0]];
+    $all = [];
+    $raptor = [];
+    $diversity = [];
+    $raptorSec = 0;
+    $repCmp0 = appJourneyRepCmp($back, false);
+    foreach ($pieces as list($pw, $ps, $pe, $off)) {
+        $d = &appRouterData($pw);
+        $pall = array_values(appJourneysFromRoutes($d, $routes, $extra, $back, $ps, $pe, $pw, $pn, $fixed === null ? $modes : null));
+        // 2. 補充演算法 RAPTOR（只在路由經過臺鐵或高鐵時；3. 去重複在加入時做）
+        $tr0 = microtime(true);
+        // search_time 的 RAPTOR 不受時段限制（deadline 校驗）：出發時刻模式比第一班車更早到的、抵達時刻模式比已找到的更晚出發的組合一律要找到
+        list($praptor, $diversity) = $raptorOn ? appJourneyRaptorSupplement($d, $pall, $from, $to, $pw, $back, $ps, $pe, $extra, !empty($q['pickAt'])) : [[], []];
+        $raptorSec += microtime(true) - $tr0;
+        unset($d);
+        if (count($pieces) > 1) {
+            $mark = function ($j) use ($pw, $off) {
+                $j = appJourneyShift($j, $off);
+                $j['_sig'] .= '@' . $pw;
+                return $j + ['_week' => $pw, '_off' => $off];
+            };
+            $pall = array_map($mark, $pall);
+            $praptor = array_map(function ($j) use ($mark) { return $j === null ? null : $mark($j); }, $praptor);
+        }
+        $all = array_merge($all, $pall);
+        foreach ($praptor as $mx => $rj) {
+            if (!isset($raptor[$mx]) || ($rj !== null && $repCmp0($rj, $raptor[$mx]) < 0)) {
+                $raptor[$mx] = $rj;
+            }
+        }
+    }
+    $raptorSec = round($raptorSec, 3);
     // 4. 篩選：互不支配（指定路由時全部保留）、繞遠
     $keep = $fixed !== null ? $all : appJourneyPareto($all, array_map('appJourneyTrunkMinutes', $all));
     list($keep, $short, $slowOver) = appJourneySlowMark($keep, $fixed === null);
@@ -1452,7 +1565,21 @@ function appJourneysCompute(array $q)
         array_filter($keep, function ($j) { return !empty($j['_raptor']); })));
     $picks = appJourneyTag($keep, $best);
     foreach ($keep as &$j) {
-        $j = appJourneyFinal($d, $j, $withStops, isset($catPick[$j['_sig']]) ? ['CategoryPick' => true] : []);
+        // Week＝這班所屬的營運日（星期），查車次停靠站（app_train/stops）要帶這一天
+        $jw = $j['_week'] ?? $week;
+        $off = $j['_off'] ?? 0;
+        unset($j['_week'], $j['_off']);
+        $d = &appRouterData($jw);
+        $j = appJourneyFinal($d, $j, $withStops, ['Week' => $jw] + (isset($catPick[$j['_sig']]) ? ['CategoryPick' => true] : []));
+        unset($d);
+        if ($off && $withStops) {
+            foreach ($j['Legs'] as &$l) {
+                if (isset($l['StopTimes'])) {
+                    $l['StopTimes'] = appJourneyShift($l['StopTimes'], $off);
+                }
+            }
+            unset($l);
+        }
     }
     unset($j);
     return [appJourneysData($m, $from, $to, $keep, $picks, $mode),
@@ -1476,8 +1603,10 @@ function appJourneysCompute(array $q)
  *   by=dep（預設）：時段＝這個時刻起系統最長查詢區間，挑各組合條件下最早到達的那班；
  *   by=arr：時段＝這個時刻往前系統最長查詢區間（抵達時刻在時段內），挑各組合條件下最晚出發的那班。
  * 組合條件＝每個走法類別（appJourneyCategory：主要運具，臺鐵再分對號、區間與路線）＋每個排除條件（extra 再加 0～3）。
- * 最少轉乘、最短行車時間的代表只在接近時刻的 QUERY_NEAR_RANGE_MINUTES 分鐘內挑。00:00～03:59 當營運日深夜（＋24 時）；
- * 這個時刻查不到班次時改以首班車（by=dep）或末班車（by=arr）為起點，meta 帶 base、base_time。
+ * 最少轉乘、最短行車時間的代表只在接近時刻的 QUERY_NEAR_RANGE_MINUTES 分鐘內挑。
+ * week（或 date）＋search_time 是標準時間：星期三 02:00＝星期二營運日的 26:00（appServicePieces），時段跨過 04:00 時兩個營運日都查；
+ * 這個時刻查不到班次時往後（by=dep）找到首班車、往前（by=arr）找到末班車，可以跨營運日，meta 帶 base、base_time（標準時間）、base_week。
+ * 方案的 Week＝它所屬的營運日；meta 的 service_week＝方案時刻所在的營運日（前一天深夜的班次寫 00:00～03:59）
  * 不能和 start、end、depart、arrive、first、last、routes 一起用。回應格式與 journeys 相同（方案帶 Category、CategoryName）
  */
 function appTripJourneysAt($from, $to, $extra, $week, $date)
@@ -1498,43 +1627,60 @@ function appTripJourneysAt($from, $to, $extra, $week, $date)
     $mode = $back ? 'arrive' : 'depart';
     $fixed = null;
     $pickAt = true;
-    // 00:00～03:59 是營運日的深夜（24 時以後），例如 02:40＝26:40
-    $at = $time < APP_SERVICE_DAY_START ? $time + 1440 : $time;
-    $start = $back ? max(APP_SERVICE_DAY_START, $at - $span) : $at;
-    $end = $back ? $at : min(APP_SERVICE_DAY_END, $at + $span);
-    list($data, $meta) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops', 'pickAt'));
+    // search_time 是標準時間（使用者規則 2026-11）：星期三 02:00＝星期二營運日的 26:00，由 appServicePieces 換算到對應營運日的班次；
+    // 時段跨過 04:00 時前一天深夜與當天清晨兩個營運日都查。24:00 以後的寫法照舊是 week 這一天營運日的深夜
+    $run = function ($rs, $re) use ($from, $to, $extra, $week, $date, $mode, $sort, $limit, $opt, $fixed, $stops, $pickAt) {
+        $p = appServicePieces($week, $rs, $re);
+        list($pieces, $axis) = appServiceAxis($p, $rs);
+        $aw = (($week + $axis) % 7 + 7) % 7;
+        // 時間軸那一天的時段（appJourneysCompute 的 start、end 只用於 meta，下面換成標準時間）
+        list($start, $end) = [$rs - $axis * 1440, $re - $axis * 1440];
+        list($data, $meta) = appJourneysCompute(['week' => $aw] + compact('from', 'to', 'extra', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops', 'pickAt', 'pieces'));
+        return [$data, $meta, $aw, $axis];
+    };
+    $at = $time;
+    $win = function ($t) use ($back, $span) { return $back ? [$t - $span, $t] : [$t, $t + $span]; };
+    list($rs, $re) = $win($at);
+    list($data, $meta, $aw, $axis) = $run($rs, $re);
     $base = [];
-    if (!$data['journeys']) {
-        // 這個時刻沒有可搭的班次（例如深夜沒車）：改以營業時段的頭尾為起點（使用者規則 2026-11）——
-        // 出發時刻模式從首班車起查（出發站最早能出發、真的到得了的那班），抵達時刻模式查末班車（抵達站最晚能抵達的那班）。
-        // 用實際的路由查詢推算首末班，比只看車站時刻表準（車站末班車之後可能已經接不上轉乘）
-        // 抵達時刻模式從營運日最後一段時段往前一段一段找，直到找到末班車（捷運、短程的末班車常在營運日結束前好幾個小時）
+    // 時段內最早出發（抵達時刻模式：最晚抵達）那班的實際分鐘（相對於 week 00:00），時段內沒有班次回 null。
+    // RAPTOR 不受時段限制，可能只找到時段外的班次：那不一定是首班（末班）車，不算
+    $edgeIn = function (array $js, $axis, $rs, $re) use ($back) {
+        if (!$js) {
+            return null;
+        }
+        $e = $axis * 1440 + ($back ? max(array_column($js, 'ArrivalMinute')) : min(array_column($js, 'DepartureMinute')));
+        return $e >= $rs && $e <= $re ? $e : null;
+    };
+    $edge = null;
+    if ($edgeIn($data['journeys'], $axis, $rs, $re) === null) {
+        // 這個時刻沒有可搭的班次（例如深夜沒車）：出發時刻模式往後一段一段找到首班車（出發站最早能出發、真的到得了的那班），
+        // 抵達時刻模式往前一段一段找到末班車（抵達站最晚能抵達的那班），可以跨到下一個（前一個）營運日，例如星期三 02:00 出發＝星期三的首班車、
+        // 02:00 抵達＝星期二深夜的末班車。用實際的路由查詢推算首末班，比只看車站時刻表準（車站末班車之後可能已經接不上轉乘）
         $sec = $meta['seconds'];
-        $end = $back ? APP_SERVICE_DAY_END : min(APP_SERVICE_DAY_END, APP_SERVICE_DAY_START + $span);
-        do {
-            $start = $back ? max(APP_SERVICE_DAY_START, $end - $span) : APP_SERVICE_DAY_START;
-            list($data2, $meta2) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops', 'pickAt'));
+        for ($step = 1; $step * $span < 1440 + $span && $edge === null; $step++) {
+            list($rs2, $re2) = $win($back ? $at - $step * $span : $at + $step * $span);
+            list($data2, $meta2, $aw2, $axis2) = $run($rs2, $re2);
             $sec += $meta2['seconds'];
-            $end = $start;
-        } while ($back && !$data2['journeys'] && $start > max(APP_SERVICE_DAY_START, $at));
-        if ($data2['journeys']) {
-            $edge = $back ? max(array_column($data2['journeys'], 'ArrivalMinute')) : min(array_column($data2['journeys'], 'DepartureMinute'));
-            if ($back) {
-                // 抵達時刻模式：再以末班車的抵達時刻為查詢時刻查一次（營運日最後一段時段只涵蓋得到最晚的幾班）
-                $start = max(APP_SERVICE_DAY_START, $edge - $span);
-                $end = $edge;
-                list($data3, $meta3) = appJourneysCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'fixed', 'stops', 'pickAt'));
-                $sec += $meta3['seconds'];
-                if ($data3['journeys']) {
-                    list($data2, $meta2) = [$data3, $meta3];
-                }
-            }
-            $meta2['seconds'] = round($sec, 3);
-            list($data, $meta) = [$data2, $meta2];
-            $base = ['base' => $back ? 'last' : 'first', 'base_time' => appHM($edge % 1440)];
+            $edge = $edgeIn($data2['journeys'], $axis2, $rs2, $re2);
+        }
+        if ($edge !== null) {
+            // 再以首班車出發（末班車抵達）的時刻為查詢時刻查一次：上面那一段只涵蓋得到最早（最晚）的幾班
+            list($rs3, $re3) = $win($edge);
+            list($data3, $meta3, $aw3) = $run($rs3, $re3);
+            $sec += $meta3['seconds'];
+            list($data, $meta, $aw) = $data3['journeys'] ? [$data3, $meta3, $aw3] : [$data2, $meta2, $aw2];
+            $meta['seconds'] = round($sec, 3);
+            $ew = (($week + (int) floor($edge / 1440)) % 7 + 7) % 7;
+            $base = ['base' => $back ? 'last' : 'first', 'base_time' => appHM((($edge % 1440) + 1440) % 1440), 'base_week' => $ew, 'base_weekday' => FINDER_WEEKDAYS[$ew]];
         }
     }
-    appSend($data, $meta + ['search_time' => appHM($time % 1440), 'near_minutes' => max(0, (int) QUERY_NEAR_RANGE_MINUTES)] + $base);
+    // meta 的 week 是使用者給的星期（標準時間的那一天），service_week 是時間軸（方案的時刻）所在的營運日
+    list($rs, $re) = $win($base ? $edge : $at);
+    $std = function ($t) { return appHM((($t % 1440) + 1440) % 1440); };
+    appSend($data, array_merge($meta, appServiceMeta($week, $date, $aw) + ['start' => $std($rs), 'end' => $std($re)]
+        + ($back ? ['arrive_from' => $std($rs), 'arrive' => $std($re)] : ['depart' => $std($rs)]))
+        + ['search_time' => appHM($time % 1440), 'near_minutes' => max(0, (int) QUERY_NEAR_RANGE_MINUTES)] + $base);
 }
 
 /**
@@ -1582,7 +1728,7 @@ function appJourneyCategory(array $j)
  * 不搭高鐵、只搭區間車）在時段內所有互不支配的方案都找出來，合成一份清單依 sort 排序。研究工具：公開，同一 IP
  * QUERY_FULL_SEARCH_IP_SECONDS 秒內最多 QUERY_FULL_SEARCH_IP_TIMES 次（執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP，queryLimitMark），最多算 APP_JOURNEY_FULL_SECONDS 秒。每個方案帶 Modes（在哪些排除條件下是互不支配的方案）與 Source（routes／raptor／both）
  */
-function appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $end)
+function appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $end, array $axisMeta = [])
 {
     if (appParam('full_search') !== '1') {
         appFail(40020, ['param' => 'full_search', 'detail' => '帶 1']);
@@ -1599,7 +1745,7 @@ function appTripJourneysFull($from, $to, $extra, $week, $date, $mode, $start, $e
     // 公開，用 IP 限制頻率（使用者規則 2026-11）：參數都檢查過才記執行標記（參數錯的不佔用次數），同一 IP QUERY_FULL_SEARCH_IP_SECONDS 秒內最多 QUERY_FULL_SEARCH_IP_TIMES 次（QUERY_LIMIT_MARKS）
     queryLimitMark('REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP');
     list($data, $meta) = appJourneysFullCompute(compact('from', 'to', 'extra', 'week', 'date', 'mode', 'start', 'end', 'sort', 'limit', 'opt', 'stops'));
-    appSend($data, $meta);
+    appSend($data, array_merge($meta, $axisMeta));
 }
 
 /**

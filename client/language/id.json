@@ -124,6 +124,8 @@
   "journey.travelTime": "Waktu tempuh",
   "journey.startTime": "Mulai",
   "journey.endTime": "Tiba",
+  "journey.dayNext": "(+{n} hari)",
+  "journey.dayPrev": "(-{n} hari)",
   "journey.col.leg": "Segmen",
   "journey.col.time": "Waktu kereta",
   "journey.col.station": "Stasiun",

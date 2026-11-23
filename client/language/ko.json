@@ -124,6 +124,8 @@
   "journey.travelTime": "소요 시간",
   "journey.startTime": "시작 시각",
   "journey.endTime": "도착 시각",
+  "journey.dayNext": "(+{n}일)",
+  "journey.dayPrev": "(-{n}일)",
   "journey.col.leg": "구간",
   "journey.col.time": "열차 시각",
   "journey.col.station": "역",

@@ -124,6 +124,8 @@
   "journey.travelTime": "Duración del viaje",
   "journey.startTime": "Inicio",
   "journey.endTime": "Llegada",
+  "journey.dayNext": "(+{n} día)",
+  "journey.dayPrev": "(-{n} día)",
   "journey.col.leg": "Tramo",
   "journey.col.time": "Hora del tren",
   "journey.col.station": "Estaciones",

@@ -31,20 +31,25 @@ export function byOptions() {
 }
 
 /**
- * 研究模式的時段換成營運日時刻（04:00～27:59）：時刻選單只有 00～23 時，
- * 00:00～03:59 是營運日的深夜（24 時以後）；end 早於 start 表示跨過午夜（例如 23:40～00:10 → 23:40～24:10）
+ * 標準時間的時段 → route_trains 的營運日時段（route_trains 是營運日時刻 04:00～27:59）：
+ * 00:00～03:59 起的時段是前一天營運日的深夜（24 時以後）；end 早於 start 表示跨過午夜
  */
-function serviceWindow(start, end) {
+function serviceWindow(week, start, end) {
   const toMin = (hm) => {
     const [h, m] = String(hm || '00:00').split(':').map(Number)
     return h * 60 + m
   }
   const toHM = (v) => `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}`
+  let w = Number(week)
   let s = toMin(start)
   let e = toMin(end)
-  if (s < 240) s += 1440
-  if (e < 240 || e < s) e += 1440
-  return { start: toHM(s), end: toHM(Math.min(e, 1679)) }
+  if (e < s) e += 1440
+  if (s < 240) {
+    w = (w + 6) % 7
+    s += 1440
+    e += 1440
+  }
+  return { week: w, start: toHM(s), end: toHM(Math.min(e, 1679)) }
 }
 
 /**
@@ -274,13 +279,14 @@ export const useSearchStore = defineStore('search', () => {
    * 後端還不支援 journeys 的 routes 參數時（meta 沒有 fixed）：每條路由各查 route_trains 再合併排序
    */
   async function fetchByRouteTrains(params) {
+    const win = serviceWindow(params.week, params.start, params.end)
     const list = await Promise.all(
       pickedRoutes.value.map((route) =>
         api.routeTrains({
           route,
-          week: params.week,
-          start: params.start,
-          end: params.end,
+          week: win.week,
+          start: win.start,
+          end: win.end,
           by: params.by,
           extra: params.extra,
         }),
@@ -290,7 +296,8 @@ export const useSearchStore = defineStore('search', () => {
     merged.sort(journeyCompare[params.sort] || journeyCompare.arrival)
     return {
       data: { journeys: merged.slice(0, params.limit).map((j) => ({ ...j, Tags: [] })), picks: {}, tags: {} },
-      meta: { ...(list[0]?.meta || {}), fixed: true },
+      // week＝查詢的那一天、service_week＝時刻所在的營運日（跨日標示用，同 journeys）
+      meta: { ...(list[0]?.meta || {}), week: Number(params.week), service_week: win.week, fixed: true },
     }
   }
 
@@ -309,7 +316,6 @@ export const useSearchStore = defineStore('search', () => {
     // 旅客模式只給一個時刻（search_time），不指定路由（指定路由屬於研究模式）
     if (isTraveler.value) pickedRoutes.value = []
     const routed = pickedRoutes.value.length > 0
-    const win = serviceWindow(form.start, form.end)
     const params = isTraveler.value
       ? {
           from: form.from,
@@ -324,8 +330,9 @@ export const useSearchStore = defineStore('search', () => {
           from: form.from,
           to: form.to,
           week: form.week,
-          start: win.start,
-          end: win.end,
+          // 研究模式的時段是標準時間（00～23 時）：end 早於 start＝跨過午夜；00:00～03:59 屬於前一天營運日的深夜，由後端換算
+          start: form.start,
+          end: form.end,
           by: form.by,
           sort: form.sort,
           extra: form.extra,

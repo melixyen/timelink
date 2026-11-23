@@ -11,6 +11,8 @@
  *   arrivalTime   到達時間字串
  *   duration      乘車時間（已格式化的字串）
  *   walkText      步行時間文字
+ *   departureMark 出發時間後的跨日標示（例如「(+1 日)」，空字串不顯示）
+ *   arrivalMark   到達時間後的跨日標示
  *
  * Slots（皆為選用，預設走上面的 props）：
  *   start   出發端
@@ -23,15 +25,17 @@ const props = defineProps({
   arrivalTime: { type: String, default: '' },
   duration: { type: String, default: '' },
   walkText: { type: String, default: '' },
+  departureMark: { type: String, default: '' },
+  arrivalMark: { type: String, default: '' },
 })
 </script>
 
 <template>
   <div class="time-box" :class="{ walk: props.type === 'walk' }">
     <template v-if="props.type === 'ride'">
-      <div class="value start"><slot name="start">{{ props.departureTime }}</slot></div>
+      <div class="value start"><slot name="start">{{ props.departureTime }}<span v-if="props.departureMark" class="day-mark">{{ props.departureMark }}</span></slot></div>
       <div class="deep"><div class="minute"><slot name="middle">{{ props.duration }}</slot></div></div>
-      <div class="value end"><slot name="end">{{ props.arrivalTime }}</slot></div>
+      <div class="value end"><slot name="end">{{ props.arrivalTime }}<span v-if="props.arrivalMark" class="day-mark">{{ props.arrivalMark }}</span></slot></div>
     </template>
     <template v-else>
       <div class="minute"><slot name="middle">{{ props.walkText }}</slot></div>

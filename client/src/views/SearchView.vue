@@ -10,6 +10,7 @@ import QuickSort from '@/components/QuickSort.vue'
 import { usePublicStationStore } from '@/stores/publicStation'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { byOptions, sortOptions, useSearchStore, weekNames } from '@/stores/search'
+import { serviceDays } from '@/utils/format'
 import { useIsMobile } from '@/utils/media'
 
 const route = useRoute()
@@ -114,37 +115,47 @@ function collapsePanelOnMobile() {
 
 /**
  * 快速重新查詢（比照 ekitan、jorudan）：把時刻往前或往後移 N 分鐘，直接重新查詢。
- * 旅客模式移查詢時刻；研究模式把時段的頭尾一起移。跨過午夜時繞回 00～23 時（營運日深夜，後端當 24 時以後）
+ * 旅客模式移查詢時刻；研究模式把時段的頭尾一起移。時刻是標準時間：跨過午夜時繞回 00～23 時，星期跟著換到前一天或後一天
+ * （查詢時刻、研究模式以時段起點為準）。哪個營運日的班次由後端換算
  */
 const shiftSteps = [10, 30, 60]
 function shiftHM(hm, delta) {
   const [h, m] = String(hm || '00:00').split(':').map(Number)
-  const v = (((h * 60 + m + delta) % 1440) + 1440) % 1440
+  const raw = h * 60 + m + delta
+  const v = ((raw % 1440) + 1440) % 1440
   const pad = (n) => String(n).padStart(2, '0')
-  return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`
+  return { hm: `${pad(Math.floor(v / 60))}:${pad(v % 60)}`, days: Math.floor(raw / 1440) }
 }
 function shiftTime(delta) {
   if (search.loading) return
+  let days
   if (isTraveler.value) {
-    form.time = shiftHM(form.time, delta)
+    ;({ hm: form.time, days } = shiftHM(form.time, delta))
   } else {
-    form.start = shiftHM(form.start, delta)
-    form.end = shiftHM(form.end, delta)
+    ;({ hm: form.start, days } = shiftHM(form.start, delta))
+    form.end = shiftHM(form.end, delta).hm
   }
+  if (days) form.week = (((Number(form.week) + days) % 7) + 7) % 7
   if (!isTraveler.value && search.pickedRoutes.length) searchRoutes(search.pickedRoutes)
   else doSearch()
 }
 
-/** 查詢時刻沒有可搭的班次時，後端改以首班車（出發時刻模式）或末班車（抵達時刻模式）為起點 */
+/**
+ * 查詢時刻沒有可搭的班次時，後端往後找到首班車（出發時刻模式）或往前找到末班車（抵達時刻模式）為起點；
+ * 首末班車不在查詢的那一天（例如星期三 02:00 抵達＝星期二深夜的末班車）時，時刻前面加星期
+ */
 const baseNote = computed(() => {
   const m = search.meta
   if (!m?.base || !m.base_time) return ''
+  const other = m.base_week !== undefined && m.base_week !== null && Number(m.base_week) !== Number(m.week ?? form.week)
   return t(m.base === 'last' ? 'search.result.baseLast' : 'search.result.baseFirst', {
     time: m.search_time,
-    base: m.base_time,
+    base: other ? `${weekList.value[m.base_week]} ${m.base_time}` : m.base_time,
   })
 })
 
+/** 查詢結果的時刻所在營運日比查詢那一天差幾天（各時刻再依 *Minute 判斷是否跨到前一天、隔天） */
+const dayBase = computed(() => serviceDays(search.meta))
 const resultCount = computed(() => search.visibleJourneys.length)
 const weekList = computed(() => weekNames())
 const weekOptions = computed(() => weekList.value.map((label, value) => ({ label, value })))
@@ -403,7 +414,8 @@ onMounted(async () => {
         :key="journey.route + '-' + journey.DepartureMinute + '-' + i"
         :journey="journey"
         :index="i"
-        :week="search.meta?.week ?? search.form.week"
+        :week="journey.Week ?? search.meta?.service_week ?? search.meta?.week ?? search.form.week"
+        :day-base="dayBase"
         :latest-first="!!search.meta?.search_time && search.meta?.by === 'arr'"
       />
     </train-card>

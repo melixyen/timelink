@@ -124,6 +124,8 @@
   "journey.travelTime": "เวลาเดินทาง",
   "journey.startTime": "เวลาเริ่ม",
   "journey.endTime": "เวลาถึง",
+  "journey.dayNext": "(+{n} วัน)",
+  "journey.dayPrev": "(-{n} วัน)",
   "journey.col.leg": "ช่วง",
   "journey.col.time": "เวลารถ",
   "journey.col.station": "สถานี",

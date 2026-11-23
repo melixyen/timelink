@@ -902,6 +902,14 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+/* 跨日標示（+1／-1 日）：接在時刻後面，小字 */
+.day-mark {
+  margin-left: 2px;
+  font-size: var(--train-ui-font-size-xs);
+  font-weight: 400;
+  color: var(--train-ui-color-warning);
+}
+
 .time-box .deep {
   position: relative;
   padding: 2px 0;

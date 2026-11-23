@@ -124,6 +124,8 @@
   "journey.travelTime": "Thời gian đi",
   "journey.startTime": "Bắt đầu",
   "journey.endTime": "Đến nơi",
+  "journey.dayNext": "(+{n} ngày)",
+  "journey.dayPrev": "(-{n} ngày)",
   "journey.col.leg": "Đoạn",
   "journey.col.time": "Giờ tàu",
   "journey.col.station": "Ga",

@@ -15,7 +15,7 @@
  * Props:
  *   modelValue  開關（v-model）
  *   leg         查詢結果的搭乘段（Legs 裡 Type＝ride 的那一段）
- *   week        查詢的星期（0～6），帶給 app_train/stops
+ *   week        這班所屬營運日的星期（0～6，方案的 Week），帶給 app_train/stops
  */
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'

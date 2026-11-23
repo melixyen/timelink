@@ -368,7 +368,7 @@ function appPublicInfoCalendar()
     $missing = finderDbMissing();
     appSend([
         'ServiceDay' => ['Start' => '04:00', 'End' => '27:59',
-                         'Note' => '時刻表依營運日：04:00 起到隔天 03:59 止，午夜後寫 24 時以後（00:30 → 24:30）；火車的營運日是列車從起點發車的那一天。使用者選 00:00～03:59 時，前端把星期（日期）往前一天、時間加 24 小時'],
+                         'Note' => '時刻表依營運日：04:00 起到隔天 03:59 止，午夜後寫 24 時以後（00:30 → 24:30）；火車的營運日是列車從起點發車的那一天。app_trip/journeys 的 search_time、start、end 是標準時間，由 API 換算成對應營運日的班次（星期三 02:00＝星期二營運日的 26:00，時段跨過 04:00 時兩個營運日都查）；其他查詢的時間參數用營運日時刻'],
         'Query'      => ['week' => '0～6（0＝星期日）', 'date' => 'YYYY-MM-DD，換算成星期',
                          'Note' => '目前用定期時刻表（依星期），還沒有接指定日期的時刻表（國定假日、連假加班車）'],
         'Data'       => ['DataUpdatedAt' => appDataUpdatedAt($db), 'TransferGroupsGeneratedAt' => $g['GeneratedAt'] ?? null,

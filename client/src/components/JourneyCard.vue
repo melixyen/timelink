@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { usePublicLineStore } from '@/stores/publicLine'
 import { usePublicInfoStore } from '@/stores/publicInfo'
 import { usePublicStationStore } from '@/stores/publicStation'
-import { formatMinute2HM, isChineseLocale, nameOf, buildRouteText } from '@/utils/format'
+import { dayOffset, formatMinute2HM, isChineseLocale, nameOf, buildRouteText } from '@/utils/format'
 import TimeBox from '@/components/TimeBox.vue'
 import StationBox from '@/components/StationBox.vue'
 import TrainStopsModal from '@/components/TrainStopsModal.vue'
@@ -12,8 +12,10 @@ import TrainStopsModal from '@/components/TrainStopsModal.vue'
 const props = defineProps({
   journey: { type: Object, required: true },
   index: { type: Number, default: 0 },
-  /** 查詢的星期（0～6）：停靠站視窗查 app_train/stops 時帶入 */
+  /** 這班所屬營運日的星期（0～6，方案的 Week；前一天深夜的班次是前一天）：停靠站視窗查 app_train/stops 時帶入 */
   week: { type: [Number, String], default: null },
+  /** 方案時刻所在的營運日比查詢那一天差幾天（serviceDays(meta)）：時刻跨到前一天、隔天時標「(-1 日)」「(+1 日)」 */
+  dayBase: { type: Number, default: 0 },
   /** 時刻檢索的旅客模式（search_time）以抵達時刻為準（by=arr）時：Fastest 是「最晚出發」 */
   latestFirst: { type: Boolean, default: false },
 })
@@ -32,6 +34,13 @@ const tagLabels = computed(() =>
 )
 
 const legs = computed(() => props.journey.Legs || [])
+
+/** 跨日標示：時刻不在查詢的那一天時回「(+1 日)」「(-1 日)」，同一天回空字串 */
+function dayMark(minute) {
+  const n = dayOffset(props.dayBase, minute)
+  if (!n) return ''
+  return n > 0 ? t('journey.dayNext', { n }) : t('journey.dayPrev', { n: -n })
+}
 
 const units = computed(() => ({
   minute: t('time.minuteShort'),
@@ -187,10 +196,10 @@ const routeText = computed(() =>
         {{ t('journey.travelTime') }}: <span class="val">{{ formatDuration(journey.TravelMinutes) }}</span>
       </div>
       <div class="sub startTime">
-        {{ t('journey.startTime') }}: <span class="val">{{ journey.DepartureTime }}</span>
+        {{ t('journey.startTime') }}: <span class="val">{{ journey.DepartureTime }}<span v-if="dayMark(journey.DepartureMinute)" class="day-mark">{{ dayMark(journey.DepartureMinute) }}</span></span>
       </div>
       <div class="sub endTime">
-        {{ t('journey.endTime') }}: <span class="val">{{ journey.ArrivalTime }}</span>
+        {{ t('journey.endTime') }}: <span class="val">{{ journey.ArrivalTime }}<span v-if="dayMark(journey.ArrivalMinute)" class="day-mark">{{ dayMark(journey.ArrivalMinute) }}</span></span>
       </div>
       <div v-if="tagLabels.length" class="tags">
         <train-tag v-for="label in tagLabels" :key="label" effect="dark">{{ label }}</train-tag>
@@ -214,6 +223,8 @@ const routeText = computed(() =>
             type="ride"
             :departure-time="leg.DepartureTime"
             :arrival-time="leg.ArrivalTime"
+            :departure-mark="dayMark(leg.DepartureMinute)"
+            :arrival-mark="dayMark(leg.ArrivalMinute)"
             :duration="formatDuration(leg.TravelMinutes)"
           />
         </button>

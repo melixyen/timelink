@@ -102,3 +102,20 @@ export function buildRouteText(journey, helpers = {}) {
 export function textOn(hex) {
   return trainTextOn(hex)
 }
+
+/**
+ * 查詢結果的時刻相對於查詢那一天差幾天（跨日標示 +1／-1 日用）。
+ * 後端的 *Minute 是 meta.service_week 那個營運日的分鐘數（00:00～03:59 的深夜是 1440 以後；
+ * 合併前一天深夜的班次時可能是負的），meta.week 是使用者查詢的那一天。
+ * 差幾天＝兩個營運日相差的天數＋floor(分鐘 / 1440)。以後改用日期查詢時只要換掉 serviceDays 的算法
+ */
+export function serviceDays(meta) {
+  const w = Number(meta?.week)
+  const sw = Number(meta?.service_week)
+  if (!Number.isInteger(w) || !Number.isInteger(sw)) return 0
+  return ((((sw - w) % 7) + 10) % 7) - 3
+}
+export function dayOffset(base, minute) {
+  if (typeof minute !== 'number') return 0
+  return base + Math.floor(minute / 1440)
+}

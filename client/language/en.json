@@ -124,6 +124,8 @@
   "journey.travelTime": "Travel time",
   "journey.startTime": "Start",
   "journey.endTime": "Arrival",
+  "journey.dayNext": "(+{n} day)",
+  "journey.dayPrev": "(-{n} day)",
   "journey.col.leg": "Leg",
   "journey.col.time": "Train time",
   "journey.col.station": "Stations",
