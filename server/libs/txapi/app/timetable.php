@@ -250,6 +250,13 @@ function appRideOut(array &$d, array $par, $arrSec, $week, $class = null)
         $stops = array_slice($tr['st'], $par[2], $par[3] - $par[2] + 1);
         $lineIds = array_map(function ($l) use ($sys) { return $sys . '-' . $l; }, $info['LineIDs'] ?? []);
         $out['Path'] = appTrainPath($m, $stops, $lineIds, (int) ($info['TripLine'] ?? 0));
+        // LineUID＝這段搭乘的代表路線（使用者規則 2026-11），不是整班車的第一條路線（潮州開出的自強號在高雄→板橋是西部幹線，不是南迴線）；
+        // TrainLines＝整班列車經過的全部路線（LineIDs 依序、不重複）
+        if ($out['Path']) {
+            $out['LineUID'] = appTrainMainLine($m, $sys, $out['Path'], $r['FromStationUID'], $r['ToStationUID']);
+        }
+        $out['TrainLines'] = array_map(function ($lu) use ($m) { return ['LineUID' => $lu, 'LineName' => $m['lineNames'][$lu] ?? null]; },
+                                       array_values(array_unique($lineIds)));
     } else {
         if (!empty($r['TrainType']) && appClassHasSplit($sys)) {
             $out['TrainType'] = ['Code' => (string) $r['TrainType'], 'Name' => appMetroTrainTypeName($r['TrainType'])];
@@ -257,6 +264,54 @@ function appRideOut(array &$d, array $par, $arrSec, $week, $class = null)
         $out['Path'] = [['LineUID' => $r['LineUID'], 'LineName' => $m['lineNames'][$r['LineUID']] ?? null, 'From' => $out['From'], 'To' => $out['To']]];
     }
     return $out;
+}
+
+/**
+ * 列車一段搭乘的代表路線（使用者規則 2026-11，$path＝appTrainPath 的結果）：
+ *   1. 起訖站在同一條路線上：顯示那條路線（共同路線有好幾條時，例如竹南、彰化都在山線與海線上，取 $path 經過里程較長的）
+ *   2. 起訖站在不同路線上、其中一站有兩條以上路線（臺東有東部幹線、南迴線）：顯示列車在那一站行駛的路線
+ *      （臺東經花蓮往臺北＝東部幹線，臺東經潮州往臺南＝南迴線）
+ *   3. 其他（兩站都只有一條、或都有好幾條路線）：$path 裡經過里程比例最高的路線
+ * 里程用路網上該路線兩站間的里程（transferDistanceBetween），算不出來時用站序相差的站數
+ */
+function appTrainMainLine(array $m, $sys, array $path, $from, $to)
+{
+    $lines = array_values(array_unique(array_column($path, 'LineUID')));
+    if (count($lines) === 1) {
+        return $lines[0];
+    }
+    $km = [];
+    foreach ($path as $p) {
+        list($a, $b, $lu) = [$p['From']['StationUID'], $p['To']['StationUID'], $p['LineUID']];
+        $r = transferDistanceBetween($sys, $a, $b, [$lu]);   // LineUID 直接給（transferDistanceLineTags 轉成里程圖的代碼）
+        if ($r === null) {
+            $seq = array_flip($m['lineStations'][$lu] ?? []);
+            $r = [isset($seq[$a], $seq[$b]) ? abs($seq[$a] - $seq[$b]) : 0];
+        }
+        $km[$lu] = ($km[$lu] ?? 0) + $r[0];
+    }
+    $most = function (array $cands) use ($km) {
+        $best = null;
+        foreach ($cands as $lu) {
+            if ($best === null || ($km[$lu] ?? 0) > ($km[$best] ?? 0)) {
+                $best = $lu;
+            }
+        }
+        return $best;
+    };
+    $fl = array_keys($m['stationLines'][$from] ?? []);
+    $tl = array_keys($m['stationLines'][$to] ?? []);
+    $common = array_values(array_intersect($lines, $fl, $tl));
+    if ($common) {
+        return $most($common);
+    }
+    if (count($fl) >= 2 && count($tl) < 2) {
+        return $path[0]['LineUID'];
+    }
+    if (count($tl) >= 2 && count($fl) < 2) {
+        return end($path)['LineUID'];
+    }
+    return $most($lines);
 }
 
 /**

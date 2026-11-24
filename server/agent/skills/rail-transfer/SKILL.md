@@ -99,7 +99,11 @@ description: 本站 軌道轉乘的資料與演算法——轉乘群組 Transfer
 
 - 每個方案有 `Tags`（{標籤: bool}）、`TagBits`（bit 相加整數）、`Labels`（true 的標籤名）；回應有 `tags`（定義）與 `picks`（每個標籤一個代表方案的索引）
 - 標籤與 bit：Direct 1（直達，屬性）、Fastest 2（最早到達）、ShortestTime 4（全程時間最短）、ShortestDistance 8（軌道里程最短）、FewestTransfers 16（轉乘最少）、Best 32（推薦，只有一個）。並列都標，Best 例外。定義在 router.php `TRANSFER_TAGS`
-- 里程（distance.php，資料檔 `custom/libs/txapi/transfer/data/transfer_distance.json`，build_groups 時一起產生；沒有檔案時當場從 download 算）：臺鐵 StationOfLine 累計里程（西部幹線竹南—彰化標 WL-M 山線，海線 WL-C，依列車 TripLine 1／2 排除另一條）、捷運輕軌 StationOfRoute 累計里程（為 0 時用座標直線，estimate）、高鐵沒有里程資料，用相鄰站座標直線（estimate，比實際短約 6%）。搭乘段＝每兩個相鄰停靠站的路網最短里程加總；捷運只走同一路線的邊。TRA-1001 視同 TRA-1000
+- 里程（distance.php，資料檔 `custom/libs/txapi/transfer/data/transfer_distance.json`，build_groups 時一起產生；沒有檔案時當場從 download 算）：臺鐵 StationOfLine 累計里程（西部幹線竹南—彰化標 WL-M 山線，海線 WL-C，依列車 TripLine 1／2 排除另一條）、捷運輕軌 StationOfRoute 累計里程（為 0 時用座標直線，estimate）、高鐵沒有里程資料，用相鄰站座標直線（estimate，比實際短約 6%）。搭乘段＝每兩個相鄰停靠站的路網最短里程加總；捷運只走同一路線的邊。TRA-1001 視同 TRA-1000。
+  路線代碼（使用者 2026-11 要求統一整理，曾兩次因代碼不合查不到里程）：里程圖邊上標 TDX LineID（不帶系統前綴，WL、BL、HSRL），
+  Distance.SplitSegments 另標分段（WL 的竹南—彰化山線＝WL-M）；路線資料 appModel 用 LineUID（TRA-WL，山線併在 TRA-WL）。
+  transferDistanceBetween／transferRideDistance 的 $lines 給 LineUID 或 LineID 都可以，入口由 transferDistanceLineTags 統一轉換（去掉系統前綴、加上分段代碼：TRA-WL → WL、WL-M），
+  呼叫端不要自己切字串；$avoid 是里程圖代碼（TripLine 的 WL-C／WL-M）。全路線相鄰站與頭尾站以兩種寫法查都查得到、結果相同（2026-11 檢查 554 組）
 - 參考值：臺北→高雄 371.4 km、花蓮→臺東 150.9 km、竹南→彰化 山線 85.6／海線 90.3 km、頂埔→南港展覽館 26.7 km、A1→A13 35.9 km
 - 互不支配只看出發、到達、轉乘（時間與轉乘都一樣才比里程）。曾經把里程也列入，但會留下「同樣到達、較早出發、只差幾公里」的雜訊方案，而且和反向跳過不相容（跳過只保證時間上的不支配），已拿掉
 - 多轉乘的方案要每多轉一次至少早到 3 分鐘（`TRANSFER_MIN_GAIN`）才留下，否則被轉乘較少、出發不早於它的方案淘汰（例：花蓮→蘆洲不再出現在大橋頭多換一次蘆洲支線、只早 1 分鐘的方案）
@@ -445,7 +449,9 @@ description: 本站 軌道轉乘的資料與演算法——轉乘群組 Transfer
 - routes 不排除繞遠的走法（使用者 2026-10：高鐵往回坐一站再轉臺鐵，抵達較快就有保留價值，由時刻端判斷）；改算里程（appRouteDistance，transferRideDistance 沿路線相鄰站加總），依轉乘次數 → 里程 → 估計分鐘排序，附 DistanceRatio
 - 組合（`app/journey.php`）：不停交會站的直達車（臺北 06:05 往花蓮的 402 次不停八堵）由系統直達段處理（舊的 appChainUnits 合併單元已刪）；補充路由切出的 Through 段串接時同一班車繼續坐也算得到。互不支配同分時取搭車數少的。appChainRoute 串接時同一班車繼續坐優先（發車不早於到站即可，不加換車分鐘），合併成一段輸出；journeys 合併所有路由的方案後取互不支配、去掉行車時間超過最短的 1.5 倍＋30 分又沒有比較少轉乘的。反向串接 appChainRouteBack（arrive、last 模式）：最後一段在抵達時段內每班都試，往前每段取「到達 ≤ 下一段發車−換車分鐘」中最晚發車的（appLatestBy，appLegTrains 的 arrs／late 索引），同一班車繼續坐優先；已用前向串接交叉驗證（反向每個方案從同一出發時刻前向都到得了）。起終點步行在迴圈裡加減，不要再另外加（曾經重複加過終點步行）
 - 已完成：共用層、route 代碼、列車分類、public_、核心 B、app_trip/direct、app_station、app_train、核心 A、app_trip/routes|route_trains|journeys（depart、arrive、first、last 模式；first／last 是整個營運日 04:00～27:59）、app_line/timetable（`app/line.php`）。
-- 時段參數（使用者 2026-10 定）：所有時間參數用 `start`／`end`，`by=dep|arr` 指定比出發或抵達（appTimeWindow；direct、route_trains、journeys 共用，by=arr 用 appChainRouteBack）；舊的 depart／arrive／time 照收不混用。direct 每班帶 `Path`（appTrainPath：沿停靠站找共同路線，不停交會站時在交會站切開；TripLine 2 優先海線）；方向用 TDX 的 `Direction` 0／1（使用者：TDX 有就用 TDX 的值；臺鐵 0 順行＝順時針［西部北上、東部南下］、1 逆行；高雄輕軌 0＝順時針），`direction=0|1` 篩選（舊名 dir 照收）；繞東部的車照列、由使用者判斷（使用者：只要經過路線、停靠站、時刻都查得到）。
+- 時段參數（使用者 2026-10 定）：所有時間參數用 `start`／`end`，`by=dep|arr` 指定比出發或抵達（appTimeWindow；direct、route_trains、journeys 共用，by=arr 用 appChainRouteBack）；舊的 depart／arrive／time 照收不混用。direct 每班帶 `Path`（appTrainPath：沿停靠站找共同路線，不停交會站時在交會站切開；TripLine 2 優先海線）；
+  搭乘段的 `LineUID`＝這段的代表路線（appTrainMainLine，使用者規則 2026-11：起訖站同一條路線就是那條、共同路線多條取 Path 里程長的；起訖不同路線且一站有兩條以上路線時取列車在那一站行駛的路線，臺東經花蓮往臺北＝東部幹線、經潮州＝南迴線；其他取 Path 里程比例最高的），
+  以前取整班車 LineIDs[0]，潮州開出的自強號在高雄→板橋被標成南迴線；`TrainLines`＝整班列車經過的全部路線。前端路線資訊欄主要路線在前、Path 其他路線小標籤接在後面，路由文字用主要路線；方向用 TDX 的 `Direction` 0／1（使用者：TDX 有就用 TDX 的值；臺鐵 0 順行＝順時針［西部北上、東部南下］、1 逆行；高雄輕軌 0＝順時針），`direction=0|1` 篩選（舊名 dir 照收）；繞東部的車照列、由使用者判斷（使用者：只要經過路線、停靠站、時刻都查得到）。
 - 使用者 2026-10 決定：只給 start 時 end＝start＋系統最長查詢時段（QUERY_MAX_RANGE_MINUTES，appTimeWindowSpan；只給 end 往前同樣長度）；路線時刻表支援 by=arr（比最後一個顯示車站的時刻 ArrivalSortMinute），單站時刻表不用；時刻欄位不寫 24 時以後，維持 00～23 時，但每個時刻都附營運日分鐘數（*Minute、Times 的 ArrMinute／DepMinute、停靠站的 ArrivalMinute／DepartureMinute，appMinuteNear／appStopMinutes），前端用分鐘數判斷跨日；離線資料只用星期幾（不接指定日期時刻表）；會員系統先保留
 - 使用者 2026-10 決定（不要再提案）：方向不靠 TDX 的 Direction 判斷（找車一律看同一班車先停上車站、後停下車站，區間車、支線自然正確；大橋頭往迴龍、往蘆洲在 TDX 都是 Direction 0，只看 Direction 會錯）；路網搜尋不用方向剪枝，也不加「同一營運路線同方向不搭兩次」：有時是必要且比較快，例如新店→松山在古亭轉中和新蘆線到松江南京再搭回松山新店線、南港展覽館→土城在南港轉高鐵到板橋再搭回板南線（實測 17,790 條基本路由中同一路線反方向再搭的 569 條裡有 8 條是最佳解）。
 - 線上 TDX 資料（未來的票價、指定用 TDX 最新時刻表）：用 railCacheFetchData($path, $forceCheck)（libs/railcache.php），與 /api/ 共用快取；憑證看 X-TDX-Authorization（requestUserToken；/txapi/ 的 Authorization 是本站身分，不送 TDX），沒帶用本站金鑰，自帶被拒不改用本站金鑰；回傳 source（cache／revalidated／tdx／stale／error）與 credential

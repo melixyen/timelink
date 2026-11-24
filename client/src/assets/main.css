@@ -902,6 +902,14 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+/* 路線資訊欄：主要路線在前，這段搭乘經過的其他路線以小標籤接在後面 */
+.line-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
 /* 跨日標示（+1／-1 日）：接在時刻後面，小字 */
 .day-mark {
   margin-left: 2px;

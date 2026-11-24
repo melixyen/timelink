@@ -70,6 +70,22 @@ function legLineName(leg) {
 }
 
 /**
+ * 這段搭乘經過的其他路線（主要路線 LineUID 以外、Path 裡依序不重複的路線）：路線資訊欄接在主要路線後面以小標籤列出，
+ * 例如潮州→汐止的自強號主要是西部幹線，另列南迴線；經海線的列出西部幹線 (海線)
+ */
+function legOtherLines(leg) {
+  if (leg.Type !== 'ride') return []
+  const seen = new Set([leg.LineUID])
+  const out = []
+  for (const p of leg.Path || []) {
+    if (!p.LineUID || seen.has(p.LineUID)) continue
+    seen.add(p.LineUID)
+    out.push({ uid: p.LineUID, name: p.LineName ? nameOf(p.LineName) : lineStore.lineName(p.LineUID), color: lineStore.lineColor(p.LineUID) })
+  }
+  return out
+}
+
+/**
  * 車次：只顯示真實車次（臺鐵、高鐵的 TrainNo）。
  * 捷運沒有車次（後端給 null；RunCode 是系統編的查詢代碼，不能當車次顯示），顯示「無車次資訊」
  */
@@ -277,7 +293,10 @@ const routeText = computed(() =>
       </template>
 
       <template #cell-line="{ row: leg }">
-        <train-tag v-if="leg.Type === 'ride'" :color="legColor(leg)">{{ legLineName(leg) }}</train-tag>
+        <div v-if="leg.Type === 'ride'" class="line-tags">
+          <train-tag :color="legColor(leg)">{{ legLineName(leg) }}</train-tag>
+          <train-tag v-for="o in legOtherLines(leg)" :key="o.uid" size="small" effect="plain" :color="o.color">{{ o.name }}</train-tag>
+        </div>
       </template>
     </train-table>
 

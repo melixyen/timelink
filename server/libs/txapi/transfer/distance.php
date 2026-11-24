@@ -168,7 +168,37 @@ function transferDistanceGraph()
 }
 
 /**
- * 同一系統兩站在路網上的最短里程。$lines：只走這些路線的邊（null 不限）；$avoid：不走這些路線的邊。
+ * 路線代碼 → 里程圖邊上的路線代碼（使用者 2026-11：查里程的路線代碼統一在這裡轉換，呼叫端不用自己切字串）。
+ * 里程圖的邊標的是 TDX 的 LineID（不帶系統前綴：WL、WL-C、BL、HSRL），另外 Distance.SplitSegments 把一條路線的一段另標代碼
+ * （西部幹線竹南—彰化的山線標 WL-M，和海線 WL-C 分開）。$lines 可以給 LineUID（TRA-WL，路線資料 appModel 用的）或 LineID（WL），
+ * 一律去掉系統前綴，再加上該路線的分段代碼：TRA-WL → [WL, WL-M]。分段代碼本身（WL-M）照收
+ */
+function transferDistanceLineTags($sys, array $lines)
+{
+    static $splits = null;
+    if ($splits === null) {
+        $splits = [];
+        foreach (transferSettings('Distance.SplitSegments') ?? [] as $sp) {
+            $splits[$sp['LineID']][] = $sp['Tag'];
+        }
+    }
+    $out = [];
+    foreach ($lines as $l) {
+        $l = (string) $l;
+        if (strpos($l, $sys . '-') === 0) {
+            $l = substr($l, strlen($sys) + 1);
+        }
+        $out[$l] = true;
+        foreach ($sys === 'TRA' ? ($splits[$l] ?? []) : [] as $tag) {
+            $out[$tag] = true;
+        }
+    }
+    return array_keys($out);
+}
+
+/**
+ * 同一系統兩站在路網上的最短里程。$lines：只走這些路線的邊（null 不限；LineUID 或 LineID 都可以，見 transferDistanceLineTags）；
+ * $avoid：不走這些里程圖路線代碼的邊（例如 TripLine 的 WL-C、WL-M）。
  * 回傳 [公里, 來源（全部 tdx 為 tdx，有任何一段推估為 estimate）]，找不到回 null
  */
 function transferDistanceBetween($sys, $from, $to, $lines = null, $avoid = [])
@@ -180,6 +210,7 @@ function transferDistanceBetween($sys, $from, $to, $lines = null, $avoid = [])
     if ($from === $to) {
         return [0.0, 'tdx'];
     }
+    $lines = $lines ? transferDistanceLineTags($sys, $lines) : null;
     $key = $sys . '|' . $from . '|' . $to . '|' . ($lines ? implode(',', $lines) : '') . '|' . implode(',', $avoid);
     if (array_key_exists($key, $cache)) {
         return $cache[$key];

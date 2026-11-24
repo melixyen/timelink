@@ -86,10 +86,9 @@ export function buildRouteText(journey, helpers = {}) {
     if (leg.Type === 'walk') {
       label = t('journey.walkShort', { min: leg.Minutes })
     } else {
-      const raw =
-        (leg.LineName && nameOf(leg.LineName)) ||
-        (leg.Path && leg.Path[0] && leg.Path[0].LineName && nameOf(leg.Path[0].LineName)) ||
-        lineName(leg.LineUID)
+      // 主要路線（LineUID：這段搭乘的代表路線）的名稱，Path 裡有就用 Path 的
+      const main = (leg.Path || []).find((p) => p.LineUID === leg.LineUID && p.LineName)
+      const raw = (leg.LineName && nameOf(leg.LineName)) || (main && nameOf(main.LineName)) || lineName(leg.LineUID)
       label = raw
     }
     return `${from} ─${label}→ ${to}`
