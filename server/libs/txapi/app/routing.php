@@ -15,15 +15,21 @@
  *             ['Type' => 'walk', 'From', 'To', 'Minutes' => null, 'MinutesGiven' => false]
  */
 
-// 搜尋範圍的參數（上限）放在 transfer_route_rules.json 的 Search，見 appRouteSearch()；這裡是檔案沒寫時的預設
-const APP_ROUTE_SEARCH_DEFAULTS = [
-    'MaxLines'     => 6,      // 一條路由最多幾條路線
-    'MaxLineUses'  => 2,      // 同一條路線最多搭幾次
-    'NetworkLimit' => 40,     // 估計後取前幾個基本路由展開快慢車（不轉乘的路由一律保留）
-    'DefaultLimit' => 20,     // routes 預設回傳幾條
-    'MaxQueue'     => 30000,  // 路線圖搜尋的佇列上限
-    'MaxRoutes'    => 20000,  // 基本路由上限
-];
+// 搜尋範圍的參數（上限）放在 transfer_route_rules.json 的 Search，見 appRouteSearch()（使用者規則 2026-11：程式不寫預設值，缺了直接報錯）
+const APP_ROUTE_SEARCH_KEYS = ['MaxLines', 'MaxLineUses', 'NetworkLimit', 'DefaultLimit', 'MaxQueue', 'MaxRoutes',
+    'IndexK', 'IndexStopMinutes', 'IndexDefaultHeadway', 'IndexMaxPops', 'IndexPerEnd', 'IndexOneTransfer', 'IndexMinTransfer',
+    'IndexCutoffRatio', 'IndexCutoffPlus', 'IndexExpressKm', 'IndexHsrLocalBoard',
+    'KeepFewest', 'NetworkTransferMinutes', 'SupplementMaxCombos', 'CoverCounts', 'LocalRelayBestExtra', 'LocalRelaySpeedKmh'];
+
+/** 設定檔一定要有的鍵（使用者規則 2026-11：數值放設定檔、程式不寫預設值）：缺了丟出錯誤，寫明在哪個設定、缺哪些鍵 */
+function appConfigRequire(array $cfg, array $keys, $where)
+{
+    $miss = array_values(array_diff($keys, array_keys($cfg)));
+    if ($miss) {
+        throw new RuntimeException($where . ' 缺少設定：' . implode('、', $miss));
+    }
+    return $cfg;
+}
 
 /** 兩站間（同一系統）某等級的最短行駛分鐘；沒有這種車回 null。臺鐵、高鐵依列車時刻，捷運用 transfer 的估算 */
 function appLegMinutes($line, $a, $b, $class = null)
@@ -1217,7 +1223,7 @@ function appRouteRules()
                 $rules['NoTransferStations'][$x['Station']] = $x['AliasOf'] ?? true;   // AliasOf：代表的車站（同一個車站的另一個站碼）
             }
         }
-        $rules['Search'] = (is_array($j) ? ($j['Search'] ?? []) : []) + APP_ROUTE_SEARCH_DEFAULTS;
+        $rules['Search'] = appConfigRequire(is_array($j) && is_array($j['Search'] ?? null) ? $j['Search'] : [], APP_ROUTE_SEARCH_KEYS, 'transfer_route_rules.json 的 Search');
         foreach (is_array($j) ? ($j['DirectPairs'] ?? []) : [] as $x) {
             if (empty($x['Disabled']) && isset($x['Stations'][0], $x['Stations'][1])) {
                 $rules['DirectPairs'][] = [$x['Stations'][0], $x['Stations'][1]];
@@ -1507,7 +1513,7 @@ function appDirectPairs()
     return appRouteRules()['DirectPairs'];
 }
 
-/** 搜尋範圍參數（transfer_route_rules.json 的 Search；沒寫的用 APP_ROUTE_SEARCH_DEFAULTS）。規則關掉時照樣適用 */
+/** 搜尋範圍參數（transfer_route_rules.json 的 Search，鍵見 APP_ROUTE_SEARCH_KEYS）。規則關掉時照樣適用 */
 function appRouteSearch()
 {
     return appRouteRules()['Search'];
@@ -1617,10 +1623,8 @@ function appRouteVia(array $m, array $legs, $via)
  * 只保留「最少轉乘 8 條、多一次 3 條」不夠：同轉乘次數的走法很多時（機場第二航廈→臺中捷運：中壢區間車接力、機捷先回台北再南下…），
  * 實際有直通車、班次轉乘比路由少的區間車接力排在第 10 條，被擠掉
  */
-const APP_ROUTE_KEEP_FEWEST = 12;
-
 /**
- * 依 APP_ROUTE_KEEP_FEWEST 調整順序：要保留、卻排在 limit 以外的路由，移到第 limit 條的位置之前（擠出排在最後、不必保留的路由），
+ * 依 Search.KeepFewest 調整順序：要保留、卻排在 limit 以外的路由，移到第 limit 條的位置之前（擠出排在最後、不必保留的路由），
  * 其他路由順序不變。$list 已依綜合指數排好；回傳調整後的清單
  */
 function appRouteKeepFewest(array $list, $limit)
@@ -1633,7 +1637,7 @@ function appRouteKeepFewest(array $list, $limit)
     usort($order, function ($a, $b) use ($list) {
         return [$list[$a]['TransferCount'], $list[$a]['Index'] ?? INF, $a] <=> [$list[$b]['TransferCount'], $list[$b]['Index'] ?? INF, $b];
     });
-    $keep = array_fill_keys(array_slice($order, 0, min(APP_ROUTE_KEEP_FEWEST, $limit)), true);
+    $keep = array_fill_keys(array_slice($order, 0, min((int) appRouteSearch()['KeepFewest'], $limit)), true);
     $late = array_values(array_filter(array_keys($keep), function ($i) use ($limit) { return $i >= $limit; }));
     if (!$late) {
         return $list;
@@ -1930,8 +1934,9 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             $noEst[] = $legs;   // 沒有直達車（例如枋山→東海）：本身串不出班次，但補充資料（區間車接力）可能可以
         }
     }
-    // 展開前的篩選用「估計分鐘＋每次轉乘 10 分」，避免轉乘少但繞遠的走法擠掉快的走法
-    usort($scored, function ($a, $b) { return $a[1] + 10 * $a[0] <=> $b[1] + 10 * $b[0]; });
+    // 展開前的篩選用「估計分鐘＋每次轉乘 Search.NetworkTransferMinutes 分」，避免轉乘少但繞遠的走法擠掉快的走法
+    $tm = (float) $cfg['NetworkTransferMinutes'];
+    usort($scored, function ($a, $b) use ($tm) { return $a[1] + $tm * $a[0] <=> $b[1] + $tm * $b[0]; });
     $out = [];
     // 取前 NetworkLimit 個展開；不轉乘的（同一路線或同一鐵路系統直通）一律保留：最少轉乘的選項永遠要有。
     // 營運業者保底：前 NetworkLimit 個沒有、但其他基本路由有的業者（例如高鐵走法擠掉了臺鐵南下），各補最好的一條
@@ -2114,5 +2119,72 @@ function appCoreRoutes(array $m, $from, $to, array $opt)
             $bases[$r['BaseRoute']] = true;
         }
     }
-    return array_values(array_filter($out, function ($r) use ($bases) { return isset($bases[$r['BaseRoute']]); }));
+    $sel = array_values(array_filter($out, function ($r) use ($bases) { return isset($bases[$r['BaseRoute']]); }));
+    return appRouteSupplementDedupe($sel, $shortLocal !== null ? [$out[$shortLocal]['route'] => true] : []);
+}
+
+/**
+ * 補充路由去重（使用者規則 2026-11）：同一條補充資料把同一段臺鐵改寫成同一個樣子的（例如永樂→板橋的臺鐵段改成「區間車到蘇澳新、對號到板橋」），
+ * 只對綜合指數最好的那條基本路由套用；其他基本路由（同一段臺鐵、後面接不同捷運）不再各帶一條。
+ * 改寫的那一段＝基本路由與補充路由頭尾相同的段落以外的部分（appRouteRewriteKey），搭乘段全是臺鐵才去重：
+ * 高鐵換快慢車（台中）這類改寫的是最後一段高鐵，前面接駁不同（輕軌轉捷運、轉臺鐵）趕得上的班次就不同，各自保留。
+ * 不去重：基本路由不在清單上的（大站轉乘救回來的、本身沒有直達車的）、$keep 指定的路由（全程區間車最快路徑保底）
+ */
+function appRouteSupplementDedupe(array $sel, array $keep)
+{
+    $base = [];
+    foreach ($sel as $r) {
+        if ($r['Supplement'] === null) {
+            $base[$r['route']] = $r;
+        }
+    }
+    $best = [];   // 改寫鍵 => [索引, 排名]
+    $drop = [];
+    foreach ($sel as $i => $r) {
+        $b = $base[$r['BaseRoute']] ?? null;
+        if ($r['Supplement'] === null || $b === null || isset($keep[$r['route']])) {
+            continue;
+        }
+        $key = appRouteRewriteKey($b['legs'], $r['legs']);
+        if ($key === null) {
+            continue;   // 改寫的段落不全是臺鐵
+        }
+        $key = $r['Supplement'] . '|' . $key;
+        $rank = [$b['Index'] ?? INF, $b['TransferCount'], $i];
+        if (!isset($best[$key])) {
+            $best[$key] = [$i, $rank];
+        } elseif ($rank < $best[$key][1]) {
+            $drop[$best[$key][0]] = true;
+            $best[$key] = [$i, $rank];
+        } else {
+            $drop[$i] = true;
+        }
+    }
+    return array_values(array_diff_key($sel, $drop));
+}
+
+/** 補充路由改寫了基本路由的哪一段：去掉兩者頭尾相同的段落，回傳「原本的段落 > 改寫後的段落」；改寫的搭乘段不全是臺鐵時回 null */
+function appRouteRewriteKey(array $baseLegs, array $legs)
+{
+    $k = function ($l) {
+        return $l['Type'] . ':' . $l['From'] . '>' . $l['To'] . ':' . ($l['LineUID'] ?? '') . ':' . ($l['Class'] ?? '');
+    };
+    $a = array_map($k, $baseLegs);
+    $b = array_map($k, $legs);
+    $p = 0;
+    while ($p < count($a) && $p < count($b) && $a[$p] === $b[$p]) {
+        $p++;
+    }
+    $q = 0;
+    while ($q < count($a) - $p && $q < count($b) - $p && $a[count($a) - 1 - $q] === $b[count($b) - 1 - $q]) {
+        $q++;
+    }
+    foreach ([array_slice($baseLegs, $p, count($a) - $p - $q), array_slice($legs, $p, count($b) - $p - $q)] as $part) {
+        foreach ($part as $l) {
+            if ($l['Type'] === 'ride' && ($l['System'] ?? strtok($l['LineUID'], '-')) !== 'TRA') {
+                return null;
+            }
+        }
+    }
+    return implode(',', array_slice($a, $p, count($a) - $p - $q)) . ' > ' . implode(',', array_slice($b, $p, count($b) - $p - $q));
 }

@@ -94,7 +94,7 @@
             "group": "查詢限制",
             "level": "public",
             "default": 30,
-            "desc": "journeys full_search（研究工具，一次最多算 12 秒）同一 IP 的時間窗秒數：時間窗內最多執行 QUERY_FULL_SEARCH_IP_TIMES 次，超過回 HTTP 429（錯誤代碼 42904）；執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP（querylimit.sqlite 的 marks）。0＝不限制；後臺身分不受限"
+            "desc": "journeys full_search（研究工具，一次最多算 APP_JOURNEY_FULL_SECONDS 秒）同一 IP 的時間窗秒數：時間窗內最多執行 QUERY_FULL_SEARCH_IP_TIMES 次，超過回 HTTP 429（錯誤代碼 42904）；執行標記 REQUEST_JOURNEYS__FULL_SEARCH_LIMIT_IP（querylimit.sqlite 的 marks）。0＝不限制；後臺身分不受限"
         },
         "QUERY_FULL_SEARCH_IP_TIMES": {
             "group": "查詢限制",
@@ -124,13 +124,19 @@
             "group": "查詢限制",
             "level": "public",
             "default": 30,
-            "desc": "journeys 的 search_time（只給一個時刻）挑最少轉乘、最短行車時間代表方案的範圍（分鐘）：出發時刻模式只在最早到達那班出發之後這麼多分鐘內出發的班次裡挑，抵達時刻模式只在最晚抵達那班之前這麼多分鐘內抵達的班次裡挑（太遠的班次不算最接近查詢時刻）。0＝不限（整個查詢時段都可以挑）"
+            "desc": "journeys 的 search_time（只給一個時刻）挑最少轉乘、最短行車時間代表方案的範圍（分鐘）：出發時刻模式只在最早到達那班出發之後這麼多分鐘內出發的班次裡挑，抵達時刻模式只在最晚出發那班的抵達時刻之前這麼多分鐘內抵達的班次裡挑（太遠的班次不算最接近查詢時刻）。0＝不限（整個查詢時段都可以挑）"
         },
         "APP_JOURNEY_ROUTES": {
             "group": "查詢限制",
             "level": "public",
             "default": 25,
             "desc": "journeys 每次最多串接幾條路由（核心 A 取前幾條基本路由，其補充路由另外帶上）；越大越不會漏走法、越吃 CPU"
+        },
+        "APP_JOURNEY_FULL_SECONDS": {
+            "group": "查詢限制",
+            "level": "public",
+            "default": 12,
+            "desc": "journeys full_search（研究工具）最多算幾秒；沒算完時 meta.complete＝false、stopped 說明停在哪裡"
         },
         "APP_ROUTE_CACHE_MAX": {
             "group": "查詢限制",

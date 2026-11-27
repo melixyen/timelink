@@ -15,6 +15,12 @@
         "IndexMaxPops": 30000,
         "IndexOneTransfer": true,
         "IndexMinTransfer": 3,
+        "IndexPerEnd": 3,
+        "IndexExpressKm": 60,
+        "IndexHsrLocalBoard": 3,
+        "KeepFewest": 12,
+        "NetworkTransferMinutes": 10,
+        "SupplementMaxCombos": 25,
         "CoverCounts": {
             "main:TRA.local": 2
         },
@@ -32,7 +38,7 @@
         "LineTransfers": "加速清單（只這樣走）：兩條路線之間有好幾個轉乘群組時，只用 Groups 列出的群組轉乘（不分方向）；沒有列的路線對不限制",
         "Source": "manual＝人工加入；generated＝產生器依估計時間算出（Evidence 記錄依據，例如直達與最快繞道的分鐘數）",
         "NoTransferStations": "不當轉乘站的車站（人工維護）：路由不在這一站上下車轉乘、也不從起訖站步行到這一站。AliasOf＝它代表的車站（同一個車站的另一個站碼）：兩者之間不步行，起訖是它時直接當 AliasOf 查。例如臺鐵臺北-環島（TRA-1001）AliasOf 臺北（TRA-1000）。排除名單比對時，同一轉乘群組裡同一個鐵路系統的車站本來就視為同一站",
-        "Search": "搜尋範圍：MaxLines＝一條路由最多幾條路線；MaxLineUses＝同一條路線最多搭幾次（捷徑如文湖線→板南線→文湖線、山線→海線→山線）；NetworkLimit＝估計後取前幾個基本路由展開快慢車（不轉乘的一律保留）；DefaultLimit＝routes 預設回傳幾條；MaxQueue、MaxRoutes＝運算保護上限。不合理的走法不靠這裡擋，交給通則（重複經過車站）與排除名單。綜合指數找路（短程查詢與中長途的生活圈端共用，使用者規則 2026-11）：IndexK＝依綜合指數取前幾條基本路由（不依轉乘次數截斷）；指數＝站間行駛分鐘＋中間站數 × IndexStopMinutes＋每次轉乘的步行分鐘與該站全天平均班距的一半（沒有時刻資料用 IndexDefaultHeadway）；IndexCutoffRatio、IndexCutoffPlus＝部分路徑下界超過「最好的 × Ratio ＋ Plus」就停止搜尋（符合規則的路由不到 K 條時不必探完整個路網）；IndexMaxPops＝展開上限（運算保護）；IndexOneTransfer＝直接轉乘演算法（直達與一次轉乘全部列出）；IndexMinTransfer＝最少轉乘保底（直達與一次轉乘都沒有時，用原本的列舉只找最少轉乘那一層，依指數取前幾條；使用者選「轉乘最少」排序時第一筆與原本一致）；CoverCounts＝營運業者保底（appRouteCoverPick）每個鍵至少保留幾條，沒寫的鍵 1 條：main:TRA.local（全程區間車）2 條（只搭區間車時常只有接力路由，大慶、松竹這類不同上車站各留一條）；LocalRelayBestExtra＝區間車接力最快路徑保底套用在哪些 extra（使用者規則 2026-11：只搭區間車的人永遠搭最慢的車，比的是走最短的路）：中長途分解的全程區間車接力候選裡「里程換算的行駛分鐘＋轉乘步行分鐘」最小的一條一定展開，最後交給串接的路由裡沒有全程區間車路由中這個分鐘最小的那條就補進去；LocalRelaySpeedKmh＝換算用的區間車平均時速（公里，依系統；Other＝其他系統，捷運、輕軌），臺鐵 48 參考 3167 次新烏日→橋頭 180.6 公里 227 分",
+        "Search": "搜尋範圍：MaxLines＝一條路由最多幾條路線；MaxLineUses＝同一條路線最多搭幾次（捷徑如文湖線→板南線→文湖線、山線→海線→山線）；NetworkLimit＝估計後取前幾個基本路由展開快慢車（不轉乘的一律保留）；DefaultLimit＝routes 預設回傳幾條；MaxQueue、MaxRoutes＝運算保護上限。不合理的走法不靠這裡擋，交給通則（重複經過車站）與排除名單。綜合指數找路（短程查詢與中長途的生活圈端共用，使用者規則 2026-11）：IndexK＝依綜合指數取前幾條基本路由（不依轉乘次數截斷）；指數＝站間行駛分鐘＋中間站數 × IndexStopMinutes＋每次轉乘的步行分鐘與該站全天平均班距的一半（沒有時刻資料用 IndexDefaultHeadway）；IndexCutoffRatio、IndexCutoffPlus＝部分路徑下界超過「最好的 × Ratio ＋ Plus」就停止搜尋（符合規則的路由不到 K 條時不必探完整個路網）；IndexMaxPops＝展開上限（運算保護）；IndexOneTransfer＝直接轉乘演算法（直達與一次轉乘全部列出）；IndexMinTransfer＝最少轉乘保底（直達與一次轉乘都沒有時，用原本的列舉只找最少轉乘那一層，依指數取前幾條；使用者選「轉乘最少」排序時第一筆與原本一致）；CoverCounts＝營運業者保底（appRouteCoverPick）每個鍵至少保留幾條，沒寫的鍵 1 條：main:TRA.local（全程區間車）2 條（只搭區間車時常只有接力路由，大慶、松竹這類不同上車站各留一條）；LocalRelayBestExtra＝區間車接力最快路徑保底套用在哪些 extra（使用者規則 2026-11：只搭區間車的人永遠搭最慢的車，比的是走最短的路）：中長途分解的全程區間車接力候選裡「里程換算的行駛分鐘＋轉乘步行分鐘」最小的一條一定展開，最後交給串接的路由裡沒有全程區間車路由中這個分鐘最小的那條就補進去；LocalRelaySpeedKmh＝換算用的區間車平均時速（公里，依系統；Other＝其他系統，捷運、輕軌），臺鐵 48 參考 3167 次新烏日→橋頭 180.6 公里 227 分。其他（使用者規則 2026-11：數值放設定檔、程式不寫預設值，缺了直接報錯）：IndexPerEnd＝起訖兩端同群組的每一站至少保留幾條；IndexExpressKm＝上下車站有一邊不在生活圈時，搭乘里程達到這個值也當跨生活圈（指數改用快車分鐘）；IndexHsrLocalBoard＝生活圈內搭高鐵的上車成本（分鐘，買票劃位、進站、月台較深）；KeepFewest＝取前 limit 條路由時，依「轉乘次數→綜合指數」的前幾條一定選進來；NetworkTransferMinutes＝展開前挑選（NetworkLimit）的估計每次轉乘加幾分；SupplementMaxCombos＝一條路由有好幾段符合同一條補充資料時，最多取幾種組合",
         "RouteBans": "經由排除（人工＋產生器）：同一系統的連續搭乘（同系統直通或同站換車；步行、換系統就重算）中，先經過 From 範圍的站、再經過 Via 的站、又到 To 範圍的站（To 省略＝同 From）就不列。範圍是 [{Line, StationRange?}, ...]：Line 必填；StationRange [A, B] 選填，有值時只算該路線 A 到 B 之間（含）的車站。一般路線不分先後；環狀線（例如高雄輕軌）依路線站序從 A 往後數到 B，兩站先後決定是哪一邊的弧",
         "RouteBanRings": "環線的經由排除產生設定（人工維護，產生器 --only=bans 讀它）：Path 依環線方向串起各段路線範圍；Boundaries 依環線順序把環切成區段（每段從該站到下一個分界站前一站，分界站要放在路線交會站，區段才會落在同一條路線上）；兩個區段之間所有起訖的「遠的一邊 ÷ 近的一邊」里程都 ≥ MinRatio 而且同一邊比較遠時，產生 From＝區段 A、To＝區段 B、Via＝遠的一邊中間一站的 RouteBans；同一區段來回一律產生（繞一圈回來）。Parallel 是有並行路線的區間（山線／海線），Via 不選在區間內部，避免繞海線就漏掉。AnySystem＝產生的規則跨系統也適用（看整條路由），Via 放遠的一邊全部車站"
     },

@@ -651,7 +651,6 @@ const APP_JOURNEY_MODE_TAGS = [
 ];
 
 /** full_search 模式（研究工具）：最多算幾秒，超過就停下來回傳已找到的（meta.complete＝false） */
-const APP_JOURNEY_FULL_SECONDS = 12;
 
 /** full_search 的排除條件名稱（meta.modes） */
 const APP_JOURNEY_FULL_MODES = [0 => '全搭', 1 => '不搭臺鐵對號', 2 => '不搭高鐵', 3 => '只搭區間車（不搭高鐵與臺鐵對號）'];
@@ -1277,15 +1276,16 @@ function appJourneyCategoryPicks(array $keep, array $all, array $kept, $short, $
 /**
  * 6. search_time 的最少轉乘、最短行車時間：只在接近查詢時刻的班次（$cand）裡挑（使用者規則 2026-11）。
  * 出發時刻模式＝$first（這個條件最早到達的那班）出發之後 QUERY_NEAR_RANGE_MINUTES 分鐘內出發的，
- * 抵達時刻模式＝最晚抵達那班之前 QUERY_NEAR_RANGE_MINUTES 分鐘內抵達的；0＝不限。$first 本身一定算在內。回傳 [最少轉乘, 最短行車時間]
+ * 抵達時刻模式＝最晚出發那班（$first）的抵達時刻之前 QUERY_NEAR_RANGE_MINUTES 分鐘內抵達的；0＝不限。$first 本身一定算在內。回傳 [最少轉乘, 最短行車時間]
  */
 function appJourneyNearPicks(array $cand, array $first, $back)
 {
     $nearMin = max(0, (int) QUERY_NEAR_RANGE_MINUTES);
     $near = $cand;
     if ($nearMin > 0) {
-        // 出發時刻模式以最早到達那班的出發時刻為起點（不用所有班次裡最早出發的：轉乘多、慢的走法常有比較早出發的一班，會把範圍拉早）
-        $edge = $back ? max(array_column($cand, 'ArrivalMinute')) : $first['DepartureMinute'];
+        // 出發時刻模式以最早到達那班的出發時刻為起點（不用所有班次裡最早出發的：轉乘多、慢的走法常有比較早出發的一班，會把範圍拉早）；
+        // 抵達時刻模式對稱，以最晚出發那班的抵達時刻為起點（使用者規則 2026-11：不用所有班次裡最晚抵達的，轉乘多、慢的走法晚到會把範圍拉晚）
+        $edge = $back ? $first['ArrivalMinute'] : $first['DepartureMinute'];
         $near = array_filter($cand, function ($j) use ($back, $edge, $nearMin, $first) {
             return $j['_sig'] === $first['_sig'] || ($back ? $j['ArrivalMinute'] >= $edge - $nearMin : $j['DepartureMinute'] <= $edge + $nearMin);
         });

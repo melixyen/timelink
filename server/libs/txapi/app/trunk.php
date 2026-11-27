@@ -13,25 +13,19 @@
  * 這樣小站、捷運站出發的中長途，前段與單純查往臺鐵大站、高鐵站的路由一致；要調整時可以分開看生活圈端還是幹線端。
  */
 
-const APP_TRUNK_DEFAULTS = [
-    'Enabled'          => true,
-    'Candidates'       => ['TRA' => 4, 'THSR' => 3],   // 每端先取最近的幾個幹線站做短程找路（臺鐵依路網距離、高鐵依直線距離；起站本身另外算）
-    'Keep'             => ['TRA' => 4, 'THSR' => 3],   // 每端依估計留下幾個幹線站（起站本身另外算）
-    'AccessPerStation' => 3,                           // 每個幹線站留幾條生活圈端路由（綜合指數排序的前幾名）
-    'AccessRail'       => true,                        // 幹線站不是臺鐵時（高鐵），前幾名都沒搭臺鐵就再留一條有搭臺鐵的接駁（松山搭臺鐵到臺北轉高鐵）
-    'RailCombos'       => 4,                           // 上面那種接駁的組合不參加 MaxCombos 的排名，另外依估計保留幾條（不擠掉原本選得到的組合）
-    'TrunkPerPair'     => 2,                           // 每一對幹線站留幾條幹線路由
-    'MaxCombos'        => 48,                          // 組合後最多交出幾條基本路由（依估計，臺鐵幹線、高鐵幹線各至少一半）
-    'TransferMinutes'  => 10,                          // 估計排序時每次轉乘加幾分
-];
+// 分解設定的鍵（transfer_regions.json 的 Trunk，使用者規則 2026-11：程式不寫預設值，缺了直接報錯）：
+//   Enabled、Candidates（每端先取最近的幾個幹線站，{TRA, THSR}）、Keep（每端依估計留下幾個幹線站）、AccessPerStation（每個幹線站留幾條生活圈端路由）、
+//   AccessRail（幹線站不是臺鐵時多留一條搭臺鐵的接駁）、RailCombos（上面那種接駁另外保留幾條組合）、TrunkPerPair（每一對幹線站留幾條幹線路由）、
+//   MaxCombos（組合後最多交出幾條基本路由）、TransferMinutes（估計排序時每次轉乘加幾分）
+const APP_TRUNK_KEYS = ['Enabled', 'Candidates', 'Keep', 'AccessPerStation', 'AccessRail', 'RailCombos', 'TrunkPerPair', 'MaxCombos', 'TransferMinutes'];
 
-/** 分解設定（transfer_regions.json 的 Trunk；沒寫的用預設） */
+/** 分解設定（transfer_regions.json 的 Trunk，鍵見 APP_TRUNK_KEYS；缺鍵時報錯） */
 function appTrunkConfig()
 {
     static $c = null;
     if ($c === null) {
         $j = json_decode((string) @file_get_contents(TRANSFER_DATA_DIR . '/transfer_regions.json'), true);
-        $c = (is_array($j) && is_array($j['Trunk'] ?? null) ? $j['Trunk'] : []) + APP_TRUNK_DEFAULTS;
+        $c = appConfigRequire(is_array($j) && is_array($j['Trunk'] ?? null) ? $j['Trunk'] : [], APP_TRUNK_KEYS, 'transfer_regions.json 的 Trunk');
     }
     return $c;
 }

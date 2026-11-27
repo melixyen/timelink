@@ -15,22 +15,24 @@
  * 回傳格式與 appNetworkRoutes 相同（同一鐵路系統的連續搭乘合成系統直達段）。
  */
 
-/** 綜合指數找路的參數（transfer_route_rules.json 的 Search；沒寫用預設） */
+/** 綜合指數找路的參數（transfer_route_rules.json 的 Search；缺鍵時 appRouteRules 已報錯） */
 function appIndexConfig()
 {
     $s = appRouteSearch();
     return [
-        'K'              => (int) ($s['IndexK'] ?? 20),
-        'StopMinutes'    => (float) ($s['IndexStopMinutes'] ?? 1),
-        'DefaultHeadway' => (float) ($s['IndexDefaultHeadway'] ?? 10),
-        'MaxPops'        => (int) ($s['IndexMaxPops'] ?? 30000),
-        'PerEnd'         => (int) ($s['IndexPerEnd'] ?? 3),
-        'OneTransfer'    => (bool) ($s['IndexOneTransfer'] ?? true),
-        'MinTransfer'    => (int) ($s['IndexMinTransfer'] ?? 3),
-        'CutoffRatio'    => (float) ($s['IndexCutoffRatio'] ?? 2),
-        'CutoffPlus'     => (float) ($s['IndexCutoffPlus'] ?? 30),
-        'MaxLines'       => (int) ($s['MaxLines'] ?? 6),
-        'MaxLineUses'    => (int) ($s['MaxLineUses'] ?? 2),
+        'K'              => (int) $s['IndexK'],
+        'StopMinutes'    => (float) $s['IndexStopMinutes'],
+        'DefaultHeadway' => (float) $s['IndexDefaultHeadway'],
+        'MaxPops'        => (int) $s['IndexMaxPops'],
+        'PerEnd'         => (int) $s['IndexPerEnd'],
+        'OneTransfer'    => (bool) $s['IndexOneTransfer'],
+        'MinTransfer'    => (int) $s['IndexMinTransfer'],
+        'CutoffRatio'    => (float) $s['IndexCutoffRatio'],
+        'CutoffPlus'     => (float) $s['IndexCutoffPlus'],
+        'MaxLines'       => (int) $s['MaxLines'],
+        'MaxLineUses'    => (int) $s['MaxLineUses'],
+        'ExpressKm'      => (float) $s['IndexExpressKm'],
+        'HsrLocalBoard'  => (float) $s['IndexHsrLocalBoard'],
     ];
 }
 
@@ -134,14 +136,9 @@ function appIndexRide(array $m, $line, $a, $b)
     return $cache[$k] = $t + max(0, count($st) - 2) * appIndexConfig()['StopMinutes'];
 }
 
-/** 跨生活圈改用快車的里程門檻（公里）：上下車站有一邊不在任何生活圈時，搭乘里程達到這個值也當跨生活圈 */
-const APP_INDEX_EXPRESS_KM = 60;
-
-/**
- * 生活圈內搭高鐵的上車成本（分鐘，使用者規則 2026-11）：買票或劃位、進站閘門、月台較深，路由排序用的指數另外加上。
- * 只加在上下車站同一個生活圈的高鐵段（南港、台北、板橋之間）；中長途這點時間相對整段車程很小，不加
- */
-const APP_INDEX_HSR_LOCAL_BOARD = 3;
+// 跨生活圈改用快車的里程門檻（Search.IndexExpressKm）：上下車站有一邊不在任何生活圈時，搭乘里程達到這個值也當跨生活圈。
+// 生活圈內搭高鐵的上車成本（Search.IndexHsrLocalBoard，分鐘，使用者規則 2026-11）：買票或劃位、進站閘門、月台較深，路由排序用的指數另外加上；
+// 只加在上下車站同一個生活圈的高鐵段（南港、台北、板橋之間），中長途這點時間相對整段車程很小，不加
 
 /**
  * 路由排序用的搭乘段行駛分鐘（使用者規則 2026-11）：各系統都用實際的行駛分鐘（含途中停靠，appLegMinutes），不用逐站累加＋每站停靠
@@ -156,7 +153,7 @@ function appIndexLegClassMinutes(array $l)
     if ($cls === null && (in_array($sys, ['TRA', 'THSR'], true) || appClassHasSplit($sys))) {
         $ra = appRegionOf($l['From']);
         $rb = appRegionOf($l['To']);
-        $cross = ($ra !== null && $rb !== null) ? $ra !== $rb : (float) ($l['DistanceKm'] ?? 0) >= APP_INDEX_EXPRESS_KM;
+        $cross = ($ra !== null && $rb !== null) ? $ra !== $rb : (float) ($l['DistanceKm'] ?? 0) >= appIndexConfig()['ExpressKm'];
         $cls = $cross ? APP_CLASS_EXPRESS : APP_CLASS_LOCAL;
     }
     $t = $cls === null ? null : appLegMinutes($l['LineUID'], $l['From'], $l['To'], $cls);
@@ -191,7 +188,7 @@ function appRouteIndex(array $m, array $legs, $byClass = false)
         if ($r !== null) {
             $total += $r;
             if (($l['System'] ?? '') === 'THSR' && ($rg = appRegionOf($l['From'])) !== null && $rg === appRegionOf($l['To'])) {
-                $total += APP_INDEX_HSR_LOCAL_BOARD;
+                $total += $cfg['HsrLocalBoard'];
             }
             $prevRide = true;
             continue;
